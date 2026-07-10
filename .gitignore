@@ -1,0 +1,10 @@
+dist/
+bin/
+*.exe
+.idea/
+
+# Go
+vendor/
+
+# OS
+.DS_Store
