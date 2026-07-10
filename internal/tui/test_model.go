@@ -31,6 +31,13 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return tm, tea.Quit
+		case "backspace":
+			if tm.Index == 0 {
+				return tm, nil
+			}
+			tm.Keystrokes++
+			tm.Index--
+			tm.Typed = tm.Typed[:tm.Index]
 		default:
 			char := msg.String()[0]
 			tm.Index++
