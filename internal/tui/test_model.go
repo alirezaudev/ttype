@@ -16,7 +16,6 @@ var (
 type TestModel struct {
 	Text       string
 	Typed      []rune
-	Index      int
 	Keystrokes int
 }
 
@@ -25,25 +24,25 @@ func (tm TestModel) Init() tea.Cmd {
 }
 
 func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
+	index := len(tm.Typed)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return tm, tea.Quit
 		case "backspace":
-			if tm.Index == 0 {
+			if index == 0 {
 				return tm, nil
 			}
 			tm.Keystrokes++
-			tm.Index--
-			tm.Typed = tm.Typed[:tm.Index]
+			index--
+			tm.Typed = tm.Typed[:index]
 		default:
 			char := msg.String()[0]
-			tm.Index++
+			index++
 			tm.Keystrokes++
 			tm.Typed = append(tm.Typed, rune(char))
-			if tm.Index+2 == len(tm.Text) {
+			if index+2 == len(tm.Text) {
 				// TODO calculate the result
 				return tm, tea.Quit
 			}
@@ -58,7 +57,7 @@ func (tm TestModel) View() string {
 
 	for i, r := range []rune(tm.Text) {
 		switch {
-		case i == tm.Index:
+		case i == len(tm.Typed):
 			out.WriteString(cursorStyle.Render(string(r)))
 		case i < len(tm.Typed) && tm.Typed[i] == r:
 			out.WriteString(correctStyle.Render(string(r)))
