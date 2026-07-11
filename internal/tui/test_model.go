@@ -44,7 +44,6 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if index == 0 {
 				return tm, nil
 			}
-			tm.Keystrokes++
 			index--
 			tm.Typed = tm.Typed[:index]
 		default:
