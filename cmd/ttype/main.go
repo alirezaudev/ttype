@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/tui"
@@ -19,6 +18,5 @@ func main() {
 	_, err := p.Run()
 	if err != nil {
 		log.Fatalln(err)
-		os.Exit(1)
 	}
 }
