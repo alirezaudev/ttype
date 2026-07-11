@@ -19,8 +19,10 @@ type TestModel struct {
 	Text       string
 	Typed      []rune
 	Keystrokes int
-	Start      time.Time
+	StartedAt  time.Time
+	EndedAt    time.Time
 	Duration   time.Duration
+	finished   bool
 }
 
 func (tm TestModel) Init() tea.Cmd {
@@ -31,9 +33,10 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	index := len(tm.Typed)
 	switch msg := msg.(type) {
 	case tickMsg:
-		if !tm.Start.IsZero() && time.Since(tm.Start) >= tm.Duration {
-			// TODO calculate the result
-			return tm, tea.Quit
+		if !tm.StartedAt.IsZero() && time.Since(tm.StartedAt) >= tm.Duration {
+			tm.finished = true
+			tm.EndedAt = time.Now()
+			return tm, nil
 		}
 		return tm, tick()
 	case tea.KeyMsg:
@@ -41,22 +44,25 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return tm, tea.Quit
 		case "backspace":
-			if index == 0 {
+			if index == 0 || tm.finished {
 				return tm, nil
 			}
 			index--
 			tm.Typed = tm.Typed[:index]
 		default:
-			if tm.Start.IsZero() {
-				tm.Start = time.Now()
+			if tm.finished {
+				return tm, nil
+			}
+			if tm.StartedAt.IsZero() {
+				tm.StartedAt = time.Now()
 			}
 			char := msg.String()[0]
 			index++
 			tm.Keystrokes++
 			tm.Typed = append(tm.Typed, rune(char))
-			if index+2 == len(tm.Text) {
-				// TODO calculate the result
-				return tm, tea.Quit
+			if index-1 == len(tm.Text) {
+				tm.finished = true
+				tm.EndedAt = time.Now()
 			}
 		}
 	}
@@ -67,9 +73,20 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (tm TestModel) View() string {
 	var out strings.Builder
 
+	if tm.finished {
+		correct := 0
+		for i := 0; i < len(tm.Typed); i++ {
+			if tm.Typed[i] == rune(tm.Text[i]) {
+				correct++
+			}
+		}
+		wpm := (float64(correct) / 5.0) / tm.EndedAt.Sub(tm.StartedAt).Minutes()
+		out.WriteString(fmt.Sprintf("WPM: %d", int(wpm)))
+		return out.String()
+	}
 	left := tm.Duration
-	if !tm.Start.IsZero() {
-		left -= time.Since(tm.Start)
+	if !tm.StartedAt.IsZero() {
+		left -= time.Since(tm.StartedAt)
 	}
 	if left < 0 {
 		left = 0
