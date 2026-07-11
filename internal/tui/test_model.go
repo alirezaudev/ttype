@@ -16,13 +16,20 @@ var (
 )
 
 type TestModel struct {
-	Text       string
+	Parts      []rune
 	Typed      []rune
 	Keystrokes int
 	StartedAt  time.Time
 	EndedAt    time.Time
 	Duration   time.Duration
 	finished   bool
+}
+
+func NewTestModel(text string, duration time.Duration) TestModel {
+	return TestModel{
+		Parts:    []rune(text),
+		Duration: duration,
+	}
 }
 
 func (tm TestModel) Init() tea.Cmd {
@@ -33,6 +40,9 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	index := len(tm.Typed)
 	switch msg := msg.(type) {
 	case tickMsg:
+		if tm.finished {
+			return tm, nil
+		}
 		if !tm.StartedAt.IsZero() && time.Since(tm.StartedAt) >= tm.Duration {
 			tm.finished = true
 			tm.EndedAt = time.Now()
@@ -50,17 +60,17 @@ func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			index--
 			tm.Typed = tm.Typed[:index]
 		default:
-			if tm.finished {
+			if len(msg.Runes) == 0 || tm.finished || index >= len(tm.Parts) {
 				return tm, nil
 			}
 			if tm.StartedAt.IsZero() {
 				tm.StartedAt = time.Now()
 			}
-			char := msg.String()[0]
+			char := msg.Runes[0]
 			index++
 			tm.Keystrokes++
-			tm.Typed = append(tm.Typed, rune(char))
-			if index-1 == len(tm.Text) {
+			tm.Typed = append(tm.Typed, char)
+			if index == len(tm.Parts) {
 				tm.finished = true
 				tm.EndedAt = time.Now()
 			}
@@ -75,8 +85,8 @@ func (tm TestModel) View() string {
 
 	if tm.finished {
 		correct := 0
-		for i := 0; i < len(tm.Typed); i++ {
-			if tm.Typed[i] == rune(tm.Text[i]) {
+		for i := 0; i < len(tm.Typed) && i < len(tm.Parts); i++ {
+			if tm.Typed[i] == tm.Parts[i] {
 				correct++
 			}
 		}
@@ -93,7 +103,7 @@ func (tm TestModel) View() string {
 	}
 
 	out.WriteString(fmt.Sprintf("%d\n", int((left+time.Second-1)/time.Second)))
-	for i, r := range []rune(tm.Text) {
+	for i, r := range tm.Parts {
 		switch {
 		case i == len(tm.Typed):
 			out.WriteString(cursorStyle.Render(string(r)))

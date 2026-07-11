@@ -10,10 +10,10 @@ import (
 
 func main() {
 
-	p := tea.NewProgram(tui.TestModel{
-		Text:     "Yes, man has a hard life. I think the best definition of man is this: a creature who can grow accustomed to anything.",
-		Duration: 10 * time.Second,
-	})
+	p := tea.NewProgram(tui.NewTestModel(
+		"Yes, man has a hard life. I think the best definition of man is this: a creature who can grow accustomed to anything.",
+		10*time.Second,
+	))
 
 	_, err := p.Run()
 	if err != nil {
