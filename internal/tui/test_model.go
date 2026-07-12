@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alirezaudev/ttype/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -16,120 +17,84 @@ var (
 )
 
 type TestModel struct {
-	Parts      []rune
-	Typed      []rune
-	Keystrokes int
-	StartedAt  time.Time
-	EndedAt    time.Time
-	Duration   time.Duration
-	width      int
-	height     int
-	finished   bool
+	session *engine.Session
+	width   int
+	height  int
 }
 
 func NewTestModel(text string, duration time.Duration) TestModel {
 	return TestModel{
-		Parts:    []rune(text),
-		Duration: duration,
+		session: engine.NewSession(text, duration),
 	}
 }
 
-func (tm TestModel) Init() tea.Cmd {
+func (m TestModel) Init() tea.Cmd {
 	return tick()
 }
 
-func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	index := len(tm.Typed)
+func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		tm.width = msg.Width
-		tm.height = msg.Height
-		return tm, nil
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case tickMsg:
-		if tm.finished {
-			return tm, nil
+		if m.session.Tick() {
+			return m, nil
 		}
-		if !tm.StartedAt.IsZero() && time.Since(tm.StartedAt) >= tm.Duration {
-			tm.finished = true
-			tm.EndedAt = time.Now()
-			return tm, nil
-		}
-		return tm, tick()
+		return m, tick()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			return tm, tea.Quit
+			return m, tea.Quit
 		case "backspace":
-			if index == 0 || tm.finished {
-				return tm, nil
-			}
-			index--
-			tm.Typed = tm.Typed[:index]
+			m.session.Backspace()
 		default:
-			if len(msg.Runes) == 0 || tm.finished || index >= len(tm.Parts) {
-				return tm, nil
+			if len(msg.Runes) == 0 || m.session.Finished() {
+				return m, nil
 			}
-			if tm.StartedAt.IsZero() {
-				tm.StartedAt = time.Now()
-			}
-			char := msg.Runes[0]
-			index++
-			tm.Keystrokes++
-			tm.Typed = append(tm.Typed, char)
-			if index == len(tm.Parts) {
-				tm.finished = true
-				tm.EndedAt = time.Now()
-			}
+
+			m.session.InputRune(msg.Runes[0])
 		}
 	}
 
-	return tm, nil
+	return m, nil
 }
 
-func (tm TestModel) View() string {
+func (m TestModel) View() string {
 	var out strings.Builder
 
-	if tm.finished {
-		correct := 0
-		for i := 0; i < len(tm.Typed) && i < len(tm.Parts); i++ {
-			if tm.Typed[i] == tm.Parts[i] {
-				correct++
-			}
-		}
-		wpm := (float64(correct) / 5.0) / tm.EndedAt.Sub(tm.StartedAt).Minutes()
-		out.WriteString(fmt.Sprintf("WPM: %d", int(wpm)))
-		return tm.center(out.String())
-	}
-	left := tm.Duration
-	if !tm.StartedAt.IsZero() {
-		left -= time.Since(tm.StartedAt)
-	}
-	if left < 0 {
-		left = 0
+	if m.session.Finished() {
+		out.WriteString(fmt.Sprintf("WPM: %d", int(m.session.WPM())))
+		return m.center(out.String())
 	}
 
-	out.WriteString(fmt.Sprintf("%d\n", int((left+time.Second-1)/time.Second)))
-	for i, r := range tm.Parts {
+	remaining := (m.session.Remaining() + time.Second - 1) / time.Second
+	out.WriteString(fmt.Sprintf("%d\n", int(remaining)))
+
+	cursor := m.session.Cursor()
+	input := m.session.Input()
+	for i, r := range m.session.TargetRunes() {
 		switch {
-		case i == len(tm.Typed):
+		case i == cursor:
 			out.WriteString(cursorStyle.Render(string(r)))
-		case i < len(tm.Typed) && tm.Typed[i] == r:
+		case i < cursor && input[i] == r:
 			out.WriteString(correctStyle.Render(string(r)))
-		case i < len(tm.Typed):
+		case i < cursor:
 			out.WriteString(incorrectStyle.Render(string(r)))
 		default:
 			out.WriteRune(r)
 		}
 	}
 
-	return tm.center(out.String())
+	return m.center(out.String())
 }
 
-func (tm TestModel) center(content string) string {
-	if tm.width == 0 || tm.height == 0 {
+func (m TestModel) center(content string) string {
+	if m.width == 0 || m.height == 0 {
 		return content
 	}
-	return lipgloss.Place(tm.width, tm.height, lipgloss.Center, lipgloss.Center, content)
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 }
 
 type tickMsg time.Time
