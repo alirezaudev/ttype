@@ -10,6 +10,7 @@ type Session struct {
 	correct     int
 	incorrect   int
 	duration    time.Duration
+	clock       Clock
 	startedAt   time.Time
 	endedAt     time.Time
 }
@@ -25,11 +26,15 @@ func (s *Session) Remaining() time.Duration {
 	return left
 }
 
-func NewSession(text string, duration time.Duration) *Session {
+func NewSession(text string, duration time.Duration, clock Clock) *Session {
+	if clock == nil {
+		clock = RealClock{}
+	}
 	return &Session{
 		target:      text,
 		targetRunes: []rune(text),
 		duration:    duration,
+		clock:       clock,
 	}
 }
 
@@ -40,7 +45,7 @@ func (s *Session) InputRune(r rune) {
 
 	pos := len(s.input)
 	if s.startedAt.IsZero() {
-		s.startedAt = time.Now()
+		s.startedAt = s.clock.Now()
 	}
 
 	s.keystrokes++
@@ -52,7 +57,7 @@ func (s *Session) InputRune(r rune) {
 	}
 	s.input = append(s.input, r)
 	if len(s.input) == len(s.targetRunes) {
-		s.endedAt = time.Now()
+		s.endedAt = s.clock.Now()
 	}
 }
 
@@ -71,7 +76,7 @@ func (s *Session) Tick() bool {
 	}
 
 	if s.elapsed() >= s.duration {
-		s.endedAt = time.Now()
+		s.endedAt = s.clock.Now()
 		return true
 	}
 
@@ -95,7 +100,7 @@ func (s *Session) elapsed() time.Duration {
 		return 0
 	}
 	if s.endedAt.IsZero() {
-		return time.Since(s.startedAt)
+		return s.clock.Now().Sub(s.startedAt)
 	}
 	return s.endedAt.Sub(s.startedAt)
 }

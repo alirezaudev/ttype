@@ -24,7 +24,7 @@ type TestModel struct {
 
 func NewTestModel(text string, duration time.Duration) TestModel {
 	return TestModel{
-		session: engine.NewSession(text, duration),
+		session: engine.NewSession(text, duration, nil),
 	}
 }
 
