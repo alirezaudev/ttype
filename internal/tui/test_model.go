@@ -22,6 +22,8 @@ type TestModel struct {
 	StartedAt  time.Time
 	EndedAt    time.Time
 	Duration   time.Duration
+	width      int
+	height     int
 	finished   bool
 }
 
@@ -39,6 +41,10 @@ func (tm TestModel) Init() tea.Cmd {
 func (tm TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	index := len(tm.Typed)
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		tm.width = msg.Width
+		tm.height = msg.Height
+		return tm, nil
 	case tickMsg:
 		if tm.finished {
 			return tm, nil
@@ -92,7 +98,7 @@ func (tm TestModel) View() string {
 		}
 		wpm := (float64(correct) / 5.0) / tm.EndedAt.Sub(tm.StartedAt).Minutes()
 		out.WriteString(fmt.Sprintf("WPM: %d", int(wpm)))
-		return out.String()
+		return tm.center(out.String())
 	}
 	left := tm.Duration
 	if !tm.StartedAt.IsZero() {
@@ -116,7 +122,14 @@ func (tm TestModel) View() string {
 		}
 	}
 
-	return out.String()
+	return tm.center(out.String())
+}
+
+func (tm TestModel) center(content string) string {
+	if tm.width == 0 || tm.height == 0 {
+		return content
+	}
+	return lipgloss.Place(tm.width, tm.height, lipgloss.Center, lipgloss.Center, content)
 }
 
 type tickMsg time.Time
