@@ -74,20 +74,31 @@ func (m TestModel) View() string {
 
 	cursor := m.session.Cursor()
 	input := m.session.Input()
-	for i, r := range m.session.TargetRunes() {
-		switch {
-		case i == cursor:
-			out.WriteString(cursorStyle.Render(string(r)))
-		case i < cursor && input[i] == r:
-			out.WriteString(correctStyle.Render(string(r)))
-		case i < cursor:
-			out.WriteString(incorrectStyle.Render(string(r)))
-		default:
-			out.WriteRune(r)
+	target := m.session.TargetRunes()
+	lines := wordWrapIndices(target, m.typingWidth())
+	for li, line := range lines {
+		for i := line.start; i < line.end; i++ {
+			r := target[i]
+			switch {
+			case i == cursor:
+				out.WriteString(cursorStyle.Render(string(r)))
+			case i < cursor && input[i] == r:
+				out.WriteString(correctStyle.Render(string(r)))
+			case i < cursor:
+				out.WriteString(incorrectStyle.Render(string(r)))
+			default:
+				out.WriteRune(r)
+			}
+		}
+		if li < len(lines)-1 {
+			out.WriteByte('\n')
 		}
 	}
-
-	return m.center(out.String())
+	if m.width == 0 {
+		return out.String()
+	}
+	block := lipgloss.NewStyle().Width(m.typingWidth()).Render(out.String())
+	return m.center(block)
 }
 
 func (m TestModel) center(content string) string {
@@ -103,4 +114,61 @@ func tick() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return tickMsg{}
 	})
+}
+
+func (m TestModel) typingWidth() int {
+	if m.width == 0 {
+		return len(m.session.TargetRunes())
+	}
+
+	return min(m.width-4, 80)
+}
+
+type lineSpan struct {
+	start int
+	end   int
+}
+
+func wordWrapIndices(text []rune, width int) []lineSpan {
+	if len(text) == 0 {
+		return nil
+	}
+
+	if width < 1 {
+		width = 1
+	}
+
+	var lines []lineSpan
+	start := 0
+	for start < len(text) {
+		if len(text)-start <= width {
+			// Last line, or the only line if the text fits on a single line.
+			lines = append(lines, lineSpan{start: start, end: len(text)})
+			break
+		}
+
+		end := start + width
+		breakAt := end
+		space := false
+		for i := end; i > start; i-- {
+			if text[i-1] == ' ' {
+				breakAt = i // Break at the last space so the next word stays together.
+				space = true
+				break
+			}
+		}
+
+		if !space {
+			breakAt = end // No space found, so hard-break at the width.
+		}
+
+		lines = append(lines, lineSpan{start: start, end: breakAt})
+		start = breakAt
+
+		for start < len(text) && text[start] == ' ' {
+			start++ // Skip leading spaces on the next line.
+		}
+	}
+
+	return lines
 }
