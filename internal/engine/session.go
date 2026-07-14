@@ -84,9 +84,6 @@ func (s *Session) InputRune(r rune) {
 		s.incorrect++
 	}
 	s.input = append(s.input, r)
-	if len(s.input) == len(s.targetRunes) {
-		s.endedAt = s.clock.Now()
-	}
 }
 
 func (s *Session) Backspace() bool {

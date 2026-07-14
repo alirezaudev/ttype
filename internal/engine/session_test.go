@@ -20,6 +20,12 @@ func newTestSession(t *testing.T, target string, duration time.Duration) (*engin
 	return s, clock
 }
 
+func typeString(s *engine.Session, text string) {
+	for _, r := range text {
+		s.InputRune(r)
+	}
+}
+
 func TestSessionStartsOnFirstKeypress(t *testing.T) {
 	t.Parallel()
 
@@ -38,7 +44,7 @@ func TestSessionStartsOnFirstKeypress(t *testing.T) {
 		t.Fatalf("input = %v, want nil", s.Input())
 	}
 
-	s.InputRune('a')
+	typeString(s, "a")
 	if s.Cursor() != 1 {
 		t.Fatalf("cursor = %d, want 1", s.Cursor())
 	}
@@ -67,12 +73,6 @@ func TestSessionTickBeforeStartDoesNotFinish(t *testing.T) {
 
 	if got := s.Remaining(); got != 15*time.Second {
 		t.Fatalf("Remaining() = %v, want 15s", got)
-	}
-}
-
-func typeString(s *engine.Session, text string) {
-	for _, r := range text {
-		s.InputRune(r)
 	}
 }
 
@@ -142,7 +142,7 @@ func TestSessionRestartResetsAndReloads(t *testing.T) {
 		t.Fatalf("NewSession: %v", err)
 	}
 
-	s.InputRune('r')
+	typeString(s, "r")
 	clock.Advance(2 * time.Second)
 
 	if err := s.Restart(); err != nil {
@@ -167,7 +167,7 @@ func TestSessionTimerExpiry(t *testing.T) {
 	t.Parallel()
 
 	s, clock := newTestSession(t, strings.Repeat("a", 200), 15*time.Second)
-	s.InputRune('a')
+	typeString(s, "a")
 	clock.Advance(16 * time.Second)
 
 	if !s.Tick() {
@@ -190,17 +190,30 @@ func TestSessionWPMResult(t *testing.T) {
 	duration := 60 * time.Second
 	s, clock := newTestSession(t, target, duration)
 
-	s.InputRune('a')
+	typeString(s, "a")
 	clock.Advance(2 * time.Second)
 	s.Backspace()
-	s.InputRune('a')
+	typeString(s, "a")
 	clock.Advance(2 * time.Second)
-	s.InputRune('l')
+	typeString(s, "l")
 	clock.Advance(2 * time.Second)
-	s.InputRune('i')
+	typeString(s, "i")
 
 	wpm := s.WPM()
 	if wpm != 6 {
 		t.Fatalf("WPM = %v, want 6", wpm)
+	}
+}
+
+func TestSessionCompletingTargetDoesNotFinish(t *testing.T) {
+	t.Parallel()
+
+	target := strings.Repeat("a", 200)
+	s, _ := newTestSession(t, target, 15*time.Second)
+
+	typeString(s, target)
+
+	if s.Finished() {
+		t.Fatalf("Finished() = %t, want false", s.Finished())
 	}
 }
