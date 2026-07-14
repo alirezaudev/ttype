@@ -182,3 +182,25 @@ func TestSessionTimerExpiry(t *testing.T) {
 		t.Fatalf("duration = %v", s.Remaining())
 	}
 }
+
+func TestSessionWPMResult(t *testing.T) {
+	t.Parallel()
+
+	target := "ali"
+	duration := 60 * time.Second
+	s, clock := newTestSession(t, target, duration)
+
+	s.InputRune('a')
+	clock.Advance(2 * time.Second)
+	s.Backspace()
+	s.InputRune('a')
+	clock.Advance(2 * time.Second)
+	s.InputRune('l')
+	clock.Advance(2 * time.Second)
+	s.InputRune('i')
+
+	wpm := s.WPM()
+	if wpm != 6 {
+		t.Fatalf("WPM = %v, want 6", wpm)
+	}
+}

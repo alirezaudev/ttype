@@ -1,6 +1,9 @@
 package engine
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 type Session struct {
 	newTarget   func() (string, error)
@@ -164,7 +167,8 @@ func (s *Session) WPM() float64 {
 	if minutes == 0 {
 		return 0
 	}
-	return (float64(s.correct) / 5.0) / minutes
+	wpm := (float64(s.correctChars()) / 5.0) / minutes
+	return math.Round(wpm*100) / 100
 }
 
 func (s *Session) elapsed() time.Duration {
@@ -175,4 +179,14 @@ func (s *Session) elapsed() time.Duration {
 		return s.clock.Now().Sub(s.startedAt)
 	}
 	return s.endedAt.Sub(s.startedAt)
+}
+
+func (s *Session) correctChars() int {
+	n := 0
+	for i, r := range s.input {
+		if r == s.targetRunes[i] {
+			n++
+		}
+	}
+	return n
 }
