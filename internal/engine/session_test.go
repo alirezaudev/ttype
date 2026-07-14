@@ -70,6 +70,64 @@ func TestSessionTickBeforeStartDoesNotFinish(t *testing.T) {
 	}
 }
 
+func typeString(s *engine.Session, text string) {
+	for _, r := range text {
+		s.InputRune(r)
+	}
+}
+
+func TestDeleteWordMidWordDeletesToWordStart(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "the cat sat", 60*time.Second)
+	typeString(s, "the cat")
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord() = false, want true")
+	}
+	if got := string(s.Input()); got != "the " {
+		t.Fatalf("input = %q, want %q", got, "the ")
+	}
+}
+
+func TestDeleteWordCorrectPrevRemovesOnlySpace(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "the cat sat", 60*time.Second)
+	typeString(s, "the ")
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord() = false, want true")
+	}
+	if got := string(s.Input()); got != "the" {
+		t.Fatalf("input = %q, want %q", got, "the")
+	}
+}
+
+func TestDeleteWordIncorrectPrevRemovesSpaceAndWord(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "the cat sat", 60*time.Second)
+	typeString(s, "thX ")
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord() = false, want true")
+	}
+	if got := s.Input(); got != nil {
+		t.Fatalf("input = %q, want empty", string(got))
+	}
+}
+
+func TestDeleteWordAtStartReturnsFalse(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "the cat sat", 60*time.Second)
+
+	if s.DeleteWord() {
+		t.Fatal("DeleteWord() = true, want false")
+	}
+}
+
 func TestSessionRestartResetsAndReloads(t *testing.T) {
 	t.Parallel()
 

@@ -50,6 +50,8 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "backspace":
 			m.session.Backspace()
+		case "ctrl+w", "ctrl+h", "alt+ctrl+h", "alt+backspace":
+			m.session.DeleteWord()
 		default:
 			if len(msg.Runes) == 0 || m.session.Finished() {
 				return m, nil

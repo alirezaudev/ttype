@@ -95,6 +95,53 @@ func (s *Session) Backspace() bool {
 	return true
 }
 
+func (s *Session) DeleteWord() bool {
+	if s.Finished() || len(s.input) == 0 {
+		return false
+	}
+
+	pos := len(s.input)
+	start := wordStart(pos, s.input)
+	if start != pos {
+		s.input = s.input[:start]
+		return true
+	}
+
+	if s.input[pos-1] != ' ' {
+		return false
+	}
+
+	prevStart := wordStart(pos-1, s.input)
+	if s.typedCorrectly(prevStart, pos) {
+		s.input = s.input[:pos-1]
+		return true
+	}
+
+	s.input = s.input[:prevStart]
+	return true
+}
+
+func wordStart(pos int, input []rune) int {
+	for i := pos - 1; i >= 0; i-- {
+		if input[i] == ' ' {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func (s *Session) typedCorrectly(start, end int) bool {
+	if end > len(s.targetRunes) {
+		return false
+	}
+	for i := start; i < end; i++ {
+		if s.input[i] != s.targetRunes[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *Session) Tick() bool {
 	if s.Finished() {
 		return true
