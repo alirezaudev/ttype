@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alirezaudev/ttype/assets"
+	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -17,15 +18,20 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	sampled := make([]string, 100)
-	for i := range sampled {
-		sampled[i] = words[rand.IntN(len(words))]
+	newTarget := func() (string, error) {
+		sampled := make([]string, 100)
+		for i := range sampled {
+			sampled[i] = words[rand.IntN(len(words))]
+		}
+		return strings.Join(sampled, " "), nil
 	}
 
-	p := tea.NewProgram(tui.NewTestModel(
-		strings.Join(sampled, " "),
-		10*time.Second,
-	), tea.WithAltScreen())
+	session, err := engine.NewSession(newTarget, 10*time.Second, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	p := tea.NewProgram(tui.NewTestModel(session), tea.WithAltScreen())
 
 	_, err = p.Run()
 	if err != nil {

@@ -22,10 +22,8 @@ type TestModel struct {
 	height  int
 }
 
-func NewTestModel(text string, duration time.Duration) TestModel {
-	return TestModel{
-		session: engine.NewSession(text, duration, nil),
-	}
+func NewTestModel(session *engine.Session) TestModel {
+	return TestModel{session: session}
 }
 
 func (m TestModel) Init() tea.Cmd {
@@ -45,6 +43,9 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tick()
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "enter":
+			_ = m.session.Restart()
+			return m, tick()
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 		case "backspace":

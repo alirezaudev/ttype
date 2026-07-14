@@ -3,6 +3,7 @@ package engine
 import "time"
 
 type Session struct {
+	newTarget   func() (string, error)
 	target      string
 	targetRunes []rune
 	input       []rune
@@ -15,6 +16,7 @@ type Session struct {
 	endedAt     time.Time
 }
 
+func (s *Session) Target() string      { return s.target }
 func (s *Session) TargetRunes() []rune { return s.targetRunes }
 func (s *Session) Input() []rune       { return append([]rune(nil), s.input...) }
 func (s *Session) Cursor() int         { return len(s.input) }
@@ -26,16 +28,39 @@ func (s *Session) Remaining() time.Duration {
 	return left
 }
 
-func NewSession(text string, duration time.Duration, clock Clock) *Session {
+func NewSession(newTarget func() (string, error), duration time.Duration, clock Clock) (*Session, error) {
 	if clock == nil {
 		clock = RealClock{}
 	}
-	return &Session{
-		target:      text,
-		targetRunes: []rune(text),
-		duration:    duration,
-		clock:       clock,
+	s := &Session{
+		newTarget: newTarget,
+		duration:  duration,
+		clock:     clock,
 	}
+	if err := s.loadTarget(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func (s *Session) Restart() error {
+	s.input = s.input[:0]
+	s.keystrokes = 0
+	s.correct = 0
+	s.incorrect = 0
+	s.startedAt = time.Time{}
+	s.endedAt = time.Time{}
+	return s.loadTarget()
+}
+
+func (s *Session) loadTarget() error {
+	text, err := s.newTarget()
+	if err != nil {
+		return err
+	}
+	s.target = text
+	s.targetRunes = []rune(text)
+	return nil
 }
 
 func (s *Session) InputRune(r rune) {
