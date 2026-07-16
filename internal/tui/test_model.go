@@ -37,15 +37,13 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 	case tickMsg:
-		if m.session.Tick() {
-			return m, nil
-		}
+		m.session.Tick()
 		return m, tick()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
 			_ = m.session.Restart()
-			return m, tick()
+			return m, nil
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 		case "backspace":
