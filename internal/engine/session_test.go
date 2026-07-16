@@ -13,7 +13,20 @@ func newTestSession(t *testing.T, target string, duration time.Duration) (*engin
 	t.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	s, err := engine.NewSession(func() (string, error) { return target, nil }, duration, clock)
+	cfg := engine.Config{Kind: engine.TestKindTimed, Duration: duration}
+	s, err := engine.NewSession(func() (string, error) { return target, nil }, cfg, clock)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	return s, clock
+}
+
+func newWordsSession(t *testing.T, target string) (*engine.Session, *engine.FakeClock) {
+	t.Helper()
+
+	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	cfg := engine.Config{Kind: engine.TestKindWords}
+	s, err := engine.NewSession(func() (string, error) { return target, nil }, cfg, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
@@ -137,7 +150,7 @@ func TestSessionRestartResetsAndReloads(t *testing.T) {
 		return fmt.Sprintf("run%d", calls), nil
 	}
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	s, err := engine.NewSession(newTarget, 15*time.Second, clock)
+	s, err := engine.NewSession(newTarget, engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second}, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
@@ -215,5 +228,103 @@ func TestSessionCompletingTargetDoesNotFinish(t *testing.T) {
 
 	if s.Finished() {
 		t.Fatalf("Finished() = %t, want false", s.Finished())
+	}
+}
+
+func TestWordsSessionFinishesOnCompletingTarget(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newWordsSession(t, "one two three")
+
+	typeString(s, "one twX")
+	s.Backspace()
+	typeString(s, "o three")
+
+	if !s.Finished() {
+		t.Fatal("session should finish when the buffer covers the target")
+	}
+}
+
+func TestWordsSessionFinishesEvenWithIncorrectChars(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newWordsSession(t, "one two")
+
+	typeString(s, "one twX")
+
+	if !s.Finished() {
+		t.Fatal("completion is positional; a wrong final char should still finish")
+	}
+}
+
+func TestWordsSessionNeverTimesOut(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newWordsSession(t, "one two three")
+
+	typeString(s, "o")
+	clock.Advance(time.Hour)
+
+	if s.Tick() {
+		t.Fatal("Tick should never finish a words session")
+	}
+	if s.Finished() {
+		t.Fatal("words session should not time out")
+	}
+	if got := s.Remaining(); got != 0 {
+		t.Fatalf("Remaining() = %v, want 0 (words mode has no countdown)", got)
+	}
+}
+
+func TestFinishFreezesTimedSession(t *testing.T) {
+	t.Parallel()
+
+	target := strings.Repeat("a", 300)
+	s, clock := newTestSession(t, target, 120*time.Second)
+
+	typeString(s, target)
+	clock.Advance(60 * time.Second)
+	s.Finish()
+
+	if !s.Finished() {
+		t.Fatal("Finish should end the session")
+	}
+	if got := s.WPM(); got != 60 {
+		t.Fatalf("WPM = %v, want 60", got)
+	}
+
+	clock.Advance(30 * time.Second)
+	if got := s.WPM(); got != 60 {
+		t.Fatalf("WPM = %v after Finish, want 60 (elapsed must freeze)", got)
+	}
+}
+
+func TestEmptyKindDefaultsToTimed(t *testing.T) {
+	t.Parallel()
+
+	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	s, err := engine.NewSession(func() (string, error) { return "abc", nil }, engine.Config{Duration: 15 * time.Second}, clock)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+
+	if got := s.Kind(); got != engine.TestKindTimed {
+		t.Fatalf("Kind() = %q, want %q", got, engine.TestKindTimed)
+	}
+
+	typeString(s, "a")
+	clock.Advance(16 * time.Second)
+
+	if !s.Tick() {
+		t.Fatal("empty kind should behave as a timed session")
+	}
+}
+
+func TestTimedSessionRequiresDuration(t *testing.T) {
+	t.Parallel()
+
+	_, err := engine.NewSession(func() (string, error) { return "abc", nil }, engine.Config{Kind: engine.TestKindTimed}, nil)
+	if err == nil {
+		t.Fatal("timed session without a duration should error")
 	}
 }

@@ -72,8 +72,10 @@ func (m TestModel) View() string {
 		return m.center(out.String())
 	}
 
-	remaining := (m.session.Remaining() + time.Second - 1) / time.Second
-	out.WriteString(fmt.Sprintf("%d\n", int(remaining)))
+	if m.session.Kind() != engine.TestKindWords {
+		remaining := (m.session.Remaining() + time.Second - 1) / time.Second
+		out.WriteString(fmt.Sprintf("%d\n", int(remaining)))
+	}
 
 	cursor := m.session.Cursor()
 	input := m.session.Input()

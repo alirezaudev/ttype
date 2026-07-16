@@ -1,19 +1,32 @@
 package engine
 
 import (
+	"errors"
 	"math"
 	"time"
 )
 
+type TestKind string
+
+const (
+	TestKindTimed TestKind = "timed"
+	TestKindWords TestKind = "words"
+)
+
+type Config struct {
+	Kind     TestKind
+	Duration time.Duration
+}
+
 type Session struct {
 	newTarget   func() (string, error)
+	config      Config
 	target      string
 	targetRunes []rune
 	input       []rune
 	keystrokes  int
 	correct     int
 	incorrect   int
-	duration    time.Duration
 	clock       Clock
 	startedAt   time.Time
 	endedAt     time.Time
@@ -23,21 +36,32 @@ func (s *Session) Target() string      { return s.target }
 func (s *Session) TargetRunes() []rune { return s.targetRunes }
 func (s *Session) Input() []rune       { return append([]rune(nil), s.input...) }
 func (s *Session) Cursor() int         { return len(s.input) }
+func (s *Session) Kind() TestKind      { return s.config.Kind }
 func (s *Session) Remaining() time.Duration {
-	left := s.duration - s.elapsed()
+	if s.config.Kind == TestKindWords {
+		return 0
+	}
+
+	left := s.config.Duration - s.elapsed()
 	if left < 0 {
 		return 0
 	}
 	return left
 }
 
-func NewSession(newTarget func() (string, error), duration time.Duration, clock Clock) (*Session, error) {
+func NewSession(newTarget func() (string, error), config Config, clock Clock) (*Session, error) {
 	if clock == nil {
 		clock = RealClock{}
 	}
+	if config.Kind == "" {
+		config.Kind = TestKindTimed
+	}
+	if config.Kind == TestKindTimed && config.Duration <= 0 {
+		return nil, errors.New("timed session requires a positive duration")
+	}
 	s := &Session{
 		newTarget: newTarget,
-		duration:  duration,
+		config:    config,
 		clock:     clock,
 	}
 	if err := s.loadTarget(); err != nil {
@@ -84,6 +108,10 @@ func (s *Session) InputRune(r rune) {
 		s.incorrect++
 	}
 	s.input = append(s.input, r)
+
+	if s.config.Kind == TestKindWords && len(s.input) >= len(s.targetRunes) {
+		s.endedAt = s.clock.Now()
+	}
 }
 
 func (s *Session) Backspace() bool {
@@ -147,12 +175,24 @@ func (s *Session) Tick() bool {
 		return true
 	}
 
-	if s.elapsed() >= s.duration {
+	if s.config.Kind == TestKindWords {
+		return false
+	}
+
+	if s.elapsed() >= s.config.Duration {
 		s.endedAt = s.clock.Now()
 		return true
 	}
 
 	return false
+}
+
+func (s *Session) Finish() {
+	if s.Finished() {
+		return
+	}
+
+	s.endedAt = s.clock.Now()
 }
 
 func (s *Session) Finished() bool {
