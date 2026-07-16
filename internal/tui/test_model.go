@@ -73,8 +73,7 @@ func (m TestModel) View() string {
 	}
 
 	if m.session.Kind() != engine.TestKindWords {
-		remaining := (m.session.Remaining() + time.Second - 1) / time.Second
-		out.WriteString(fmt.Sprintf("%d\n", int(remaining)))
+		out.WriteString(formatClock(m.session.Remaining()) + "\n")
 	}
 
 	cursor := m.session.Cursor()
@@ -119,6 +118,14 @@ func tick() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return tickMsg{}
 	})
+}
+
+func formatClock(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+	secs := int(d.Round(time.Second).Seconds())
+	return fmt.Sprintf("%d:%02d", secs/60, secs%60)
 }
 
 func (m TestModel) typingWidth() int {
