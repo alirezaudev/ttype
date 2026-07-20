@@ -1,0 +1,128 @@
+package engine_test
+
+import (
+	"testing"
+	"time"
+)
+
+func TestSpaceMidWordSkipsToNextWord(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abc def", 60*time.Second)
+	typeString(s, "a ")
+
+	if got := s.Cursor(); got != 4 {
+		t.Fatalf("cursor = %d, want 4", got)
+	}
+	if got := string(s.Input()); got != "a\x00\x00\x00" {
+		t.Fatalf("input = %q, want %q", got, "a\x00\x00\x00")
+	}
+}
+
+func TestSpaceOnUntouchedWordIsBlocked(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newTestSession(t, "abc def", 60*time.Second)
+
+	s.InputRune(' ')
+	if got := s.Cursor(); got != 0 {
+		t.Fatalf("cursor = %d, want 0", got)
+	}
+
+	clock.Advance(61 * time.Second)
+	if s.Tick() || s.Finished() {
+		t.Fatal("a blocked space must not start the session")
+	}
+
+	typeString(s, "abc ")
+	s.InputRune(' ')
+	if got := s.Cursor(); got != 4 {
+		t.Fatalf("cursor = %d, want 4", got)
+	}
+}
+
+func TestSpaceAtSeparatorIsPlainInput(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abc def", 60*time.Second)
+	typeString(s, "abc ")
+
+	if got := string(s.Input()); got != "abc " {
+		t.Fatalf("input = %q, want %q", got, "abc ")
+	}
+}
+
+func TestSpaceSkipOnLastWordFinishesWordsSession(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newWordsSession(t, "abc def")
+	typeString(s, "abc d ")
+
+	if !s.Finished() {
+		t.Fatal("skipping the last word should finish the test")
+	}
+	if got := s.Cursor(); got != 7 {
+		t.Fatalf("cursor = %d, want 7", got)
+	}
+}
+
+func TestBackspaceUndoesSkip(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abc def", 60*time.Second)
+	typeString(s, "a ")
+
+	if !s.Backspace() {
+		t.Fatal("Backspace() = false, want true")
+	}
+	if got := string(s.Input()); got != "a" {
+		t.Fatalf("input = %q, want %q", got, "a")
+	}
+
+	typeString(s, "bc def")
+	if got := string(s.Input()); got != "abc def" {
+		t.Fatalf("input = %q, want %q", got, "abc def")
+	}
+}
+
+func TestDeleteWordClearsSkippedWord(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abc def", 60*time.Second)
+	typeString(s, "a ")
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord() = false, want true")
+	}
+	if got := s.Input(); got != nil {
+		t.Fatalf("input = %q, want empty", string(got))
+	}
+}
+
+func TestDeleteWordAfterConsecutiveSkips(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "ab cd ef", 60*time.Second)
+	typeString(s, "a c ")
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord() = false, want true")
+	}
+	if got := s.Input(); got != nil {
+		t.Fatalf("input = %q, want empty", string(got))
+	}
+}
+
+func TestRestartClearsSkip(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abc def", 60*time.Second)
+	typeString(s, "a ")
+
+	if err := s.Restart(); err != nil {
+		t.Fatalf("Restart: %v", err)
+	}
+	if s.Cursor() != 0 || s.Input() != nil {
+		t.Fatalf("cursor=%d input=%q", s.Cursor(), string(s.Input()))
+	}
+}

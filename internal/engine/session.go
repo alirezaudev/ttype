@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"time"
+	"unicode"
 )
 
 type TestKind string
@@ -12,6 +13,9 @@ const (
 	TestKindTimed TestKind = "timed"
 	TestKindWords TestKind = "words"
 )
+
+// skipRune marks input positions abandoned by a space commit.
+const skipRune = '\x00'
 
 type Config struct {
 	Kind     TestKind
@@ -94,20 +98,35 @@ func (s *Session) InputRune(r rune) {
 	if s.Finished() || len(s.input) >= len(s.targetRunes) {
 		return
 	}
+	if unicode.IsControl(r) {
+		return
+	}
 
 	pos := len(s.input)
+	skipping := false
+	if r == ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] != ' ' {
+		if pos == wordStartAt(s.targetRunes, pos) {
+			return
+		}
+		skipping = true
+	}
+
 	if s.startedAt.IsZero() {
 		s.startedAt = s.clock.Now()
 	}
 
-	s.keystrokes++
-	switch {
-	case r == s.targetRunes[pos]:
-		s.correct++
-	default:
-		s.incorrect++
+	if skipping {
+		s.skipCurrentWord(pos)
+	} else {
+		s.keystrokes++
+		switch {
+		case r == s.targetRunes[pos]:
+			s.correct++
+		default:
+			s.incorrect++
+		}
+		s.input = append(s.input, r)
 	}
-	s.input = append(s.input, r)
 
 	if s.config.Kind == TestKindWords && len(s.input) >= len(s.targetRunes) {
 		s.endedAt = s.clock.Now()
@@ -119,7 +138,17 @@ func (s *Session) Backspace() bool {
 		return false
 	}
 
-	s.input = s.input[:len(s.input)-1]
+	pos := len(s.input)
+	if s.input[pos-1] == skipRune {
+		start := pos
+		for start > 0 && s.input[start-1] == skipRune {
+			start--
+		}
+		s.input = s.input[:start]
+		return true
+	}
+
+	s.input = s.input[:pos-1]
 	return true
 }
 
@@ -156,6 +185,17 @@ func wordStart(pos int, input []rune) int {
 		}
 	}
 	return 0
+}
+
+func wordStartAt(target []rune, pos int) int {
+	if pos > len(target) {
+		pos = len(target)
+	}
+	start := pos
+	for start > 0 && target[start-1] != ' ' {
+		start--
+	}
+	return start
 }
 
 func (s *Session) typedCorrectly(start, end int) bool {
@@ -226,4 +266,25 @@ func (s *Session) correctChars() int {
 		}
 	}
 	return n
+}
+
+func (s *Session) skipCurrentWord(pos int) {
+	s.incorrect++
+	s.keystrokes++
+
+	end := wordEndAt(s.targetRunes, pos)
+	for i := pos; i < end; i++ {
+		s.input = append(s.input, skipRune)
+	}
+	if end < len(s.targetRunes) && s.targetRunes[end] == ' ' {
+		s.input = append(s.input, skipRune)
+	}
+}
+
+func wordEndAt(target []rune, start int) int {
+	end := start
+	for end < len(target) && target[end] != ' ' {
+		end++
+	}
+	return end
 }
