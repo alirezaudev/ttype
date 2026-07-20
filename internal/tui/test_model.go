@@ -78,7 +78,8 @@ func (m TestModel) View() string {
 	input := m.session.Input()
 	target := m.session.TargetRunes()
 	lines := wordWrapIndices(target, m.typingWidth())
-	for li, line := range lines {
+	from, to := visibleLineWindow(lines, cursor, 3)
+	for li, line := range lines[from:to] {
 		for i := line.start; i < line.end; i++ {
 			r := target[i]
 			switch {
