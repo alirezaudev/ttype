@@ -41,6 +41,10 @@ func (s *Session) TargetRunes() []rune { return s.targetRunes }
 func (s *Session) Input() []rune       { return append([]rune(nil), s.input...) }
 func (s *Session) Cursor() int         { return len(s.input) }
 func (s *Session) Kind() TestKind      { return s.config.Kind }
+func (s *Session) Keystrokes() int     { return s.keystrokes }
+func (s *Session) Correct() int        { return s.correct }
+func (s *Session) Incorrect() int      { return s.incorrect }
+
 func (s *Session) Remaining() time.Duration {
 	if s.config.Kind == TestKindWords {
 		return 0
@@ -109,6 +113,12 @@ func (s *Session) InputRune(r rune) {
 			return
 		}
 		skipping = true
+	}
+
+	if r != ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] == ' ' {
+		s.incorrect++
+		s.keystrokes++
+		return
 	}
 
 	if s.startedAt.IsZero() {

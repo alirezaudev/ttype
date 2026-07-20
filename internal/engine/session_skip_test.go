@@ -113,6 +113,34 @@ func TestDeleteWordAfterConsecutiveSkips(t *testing.T) {
 	}
 }
 
+func TestExtraCharsAtWordEndDontSpill(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "cat dog", 60*time.Second)
+	typeString(s, "catxx")
+
+	if got := s.Cursor(); got != 3 {
+		t.Fatalf("cursor = %d, want 3", got)
+	}
+	if got := string(s.Input()); got != "cat" {
+		t.Fatalf("input = %q, want %q", got, "cat")
+	}
+	if got := s.Keystrokes(); got != 5 {
+		t.Fatalf("keystrokes = %d, want 5", got)
+	}
+	if got := s.Correct(); got != 3 {
+		t.Fatalf("correct = %d, want 3", got)
+	}
+	if got := s.Incorrect(); got != 2 {
+		t.Fatalf("incorrect = %d, want 2", got)
+	}
+
+	typeString(s, " dog")
+	if got := string(s.Input()); got != "cat dog" {
+		t.Fatalf("input = %q, want %q", got, "cat dog")
+	}
+}
+
 func TestRestartClearsSkip(t *testing.T) {
 	t.Parallel()
 
