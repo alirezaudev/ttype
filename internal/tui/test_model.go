@@ -131,7 +131,21 @@ func (m TestModel) typingWidth() int {
 		return len(m.session.TargetRunes())
 	}
 
-	return min(m.width-4, 80)
+	w := min(m.width, 100)
+
+	if w < 20 {
+		w = 20
+	}
+
+	if w > m.width-4 {
+		w = m.width - 4
+	}
+
+	if w < 10 {
+		w = 10
+	}
+
+	return w
 }
 
 type lineSpan struct {

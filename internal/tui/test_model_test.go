@@ -23,20 +23,22 @@ func newModelSession(t *testing.T) (*engine.Session, *engine.FakeClock) {
 func TestFormatClock(t *testing.T) {
 	t.Parallel()
 
-	if got := formatClock(10 * time.Second); got != "0:10" {
-		t.Fatalf("formatClock(10s) = %q, want 0:10", got)
+	tests := []struct {
+		in       time.Duration
+		expected string
+	}{
+		{in: 10 * time.Second, expected: "0:10"},
+		{in: 9900 * time.Millisecond, expected: "0:10"},
+		{in: 9400 * time.Millisecond, expected: "0:09"},
+		{in: 90 * time.Second, expected: "1:30"},
+		{in: -time.Second, expected: "0:00"},
 	}
-	if got := formatClock(9900 * time.Millisecond); got != "0:10" {
-		t.Fatalf("formatClock(9.9s) = %q, want 0:10", got)
-	}
-	if got := formatClock(9400 * time.Millisecond); got != "0:09" {
-		t.Fatalf("formatClock(9.4s) = %q, want 0:09", got)
-	}
-	if got := formatClock(90 * time.Second); got != "1:30" {
-		t.Fatalf("formatClock(90s) = %q, want 1:30", got)
-	}
-	if got := formatClock(-time.Second); got != "0:00" {
-		t.Fatalf("formatClock(-1s) = %q, want 0:00", got)
+
+	for _, test := range tests {
+		if got := formatClock(test.in); got != test.expected {
+			t.Fatalf("formatClock(%s) = %q, want %s", test.in.String(), got, test.expected)
+		}
+
 	}
 }
 
@@ -88,5 +90,28 @@ func TestTickAlwaysReschedules(t *testing.T) {
 	}
 	if !session.Finished() {
 		t.Fatal("session should finish when time is up")
+	}
+}
+
+func TestTypingWidth(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		width int
+		want  int
+	}{
+		{name: "typical terminal clamps to width-4", width: 80, want: 76},
+		{name: "capped at 100", width: 120, want: 100},
+		{name: "at the cap boundary", width: 104, want: 100},
+		{name: "narrow clamps to width-4", width: 22, want: 18},
+		{name: "tiny hits the floor", width: 13, want: 10},
+	}
+
+	for _, test := range tests {
+		m := TestModel{width: test.width}
+		if got := m.typingWidth(); got != test.want {
+			t.Errorf("%s: width=%d -> %d, want %d", test.name, test.width, got, test.want)
+		}
 	}
 }
