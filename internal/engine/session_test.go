@@ -216,6 +216,12 @@ func TestSessionWPMResult(t *testing.T) {
 	if wpm != 6 {
 		t.Fatalf("WPM = %v, want 6", wpm)
 	}
+	if got := s.RawWPM(); got != 6 {
+		t.Fatalf("RawWPM = %v, want 6", got)
+	}
+	if got := s.Accuracy(); got != 100 {
+		t.Fatalf("Accuracy = %v, want 100", got)
+	}
 }
 
 func TestSessionCompletingTargetDoesNotFinish(t *testing.T) {

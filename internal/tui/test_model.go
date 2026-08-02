@@ -66,7 +66,13 @@ func (m TestModel) View() string {
 	var out strings.Builder
 
 	if m.session.Finished() {
-		out.WriteString(fmt.Sprintf("WPM: %d", int(m.session.WPM())))
+		out.WriteString(fmt.Sprintf(
+			"WPM: %d Raw: %d Acc: %d%% Errors: %d",
+			int(m.session.WPM()),
+			int(m.session.RawWPM()),
+			int(m.session.Accuracy()),
+			int(m.session.Incorrect()),
+		))
 		return m.center(out.String())
 	}
 

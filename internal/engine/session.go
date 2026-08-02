@@ -254,8 +254,47 @@ func (s *Session) WPM() float64 {
 	if minutes == 0 {
 		return 0
 	}
-	wpm := (float64(s.correctChars()) / 5.0) / minutes
-	return math.Round(wpm*100) / 100
+	return round2((float64(s.correctChars()) / 5.0) / minutes)
+}
+
+func (s *Session) Accuracy() float64 {
+	total := s.correct + s.incorrect
+	if total == 0 {
+		return 100
+	}
+
+	return round2(float64(s.correct) / float64(total) * 100)
+}
+
+func (s *Session) RawWPM() float64 {
+	minutes := s.elapsed().Minutes()
+	if minutes == 0 {
+		return 0
+	}
+
+	correct, incorrect, extra := s.rawBufferCounts()
+	typed := float64(correct + incorrect + extra)
+	return round2((typed / 5.0) / minutes)
+}
+
+func round2(v float64) float64 {
+	return math.Round(v*100) / 100
+}
+
+func (s *Session) rawBufferCounts() (correct, incorrect, extra int) {
+	for i, r := range s.input {
+		switch {
+		case r == skipRune:
+		case i >= len(s.targetRunes):
+			extra++
+		case r == s.targetRunes[i]:
+			correct++
+		default:
+			incorrect++
+		}
+	}
+
+	return
 }
 
 func (s *Session) elapsed() time.Duration {

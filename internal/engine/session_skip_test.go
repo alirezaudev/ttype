@@ -17,6 +17,15 @@ func TestSpaceMidWordSkipsToNextWord(t *testing.T) {
 	if got := string(s.Input()); got != "a\x00\x00\x00" {
 		t.Fatalf("input = %q, want %q", got, "a\x00\x00\x00")
 	}
+	if got := s.Correct(); got != 1 {
+		t.Fatalf("correct = %d, want 1", got)
+	}
+	if got := s.Incorrect(); got != 1 {
+		t.Fatalf("incorrect = %d, want 1", got)
+	}
+	if got := s.Keystrokes(); got != 2 {
+		t.Fatalf("keystrokes = %d, want 2", got)
+	}
 }
 
 func TestSpaceOnUntouchedWordIsBlocked(t *testing.T) {
@@ -133,6 +142,9 @@ func TestExtraCharsAtWordEndDontSpill(t *testing.T) {
 	}
 	if got := s.Incorrect(); got != 2 {
 		t.Fatalf("incorrect = %d, want 2", got)
+	}
+	if got := s.Accuracy(); got != 60 {
+		t.Fatalf("accuracy = %v, want 60", got)
 	}
 
 	typeString(s, " dog")
