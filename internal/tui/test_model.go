@@ -76,11 +76,6 @@ func (m TestModel) View() string {
 		m.session.Incorrect(),
 	)
 
-	if m.session.Finished() {
-		out.WriteString(status)
-		return m.center(out.String())
-	}
-
 	if m.session.Kind() == engine.TestKindTimed {
 		out.WriteString(fmt.Sprintf("%s · %s\n\n", formatClock(m.session.Remaining()), status))
 	} else {

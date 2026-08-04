@@ -22,6 +22,7 @@ type AppModel struct {
 	newTarget func() (string, error)
 	phase     appPhase
 	test      TestModel
+	result    resultSnapshot
 	settings  SettingsPanel
 	width     int
 	height    int
@@ -88,6 +89,7 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	next, cmd := m.test.Update(msg)
 	m.test = next.(TestModel)
 	if m.test.session.Finished() {
+		m.result = snapshotResult(m.test.session, m.cfg)
 		m.phase = phaseResults
 		return m, tea.Batch(cmd, tea.ClearScreen)
 	}
@@ -120,8 +122,12 @@ func (m AppModel) restart() (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) View() string {
-	if m.phase == phaseSettings {
+	switch m.phase {
+	case phaseSettings:
 		return m.settings.View()
+	case phaseResults:
+		return renderResult(m.result, m.width, m.height)
+	default:
+		return m.test.View()
 	}
-	return m.test.View()
 }

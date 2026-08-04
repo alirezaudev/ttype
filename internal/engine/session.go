@@ -54,7 +54,7 @@ func (s *Session) Remaining() time.Duration {
 		return 0
 	}
 
-	left := s.config.Duration - s.elapsed()
+	left := s.config.Duration - s.Elapsed()
 	if left < 0 {
 		return 0
 	}
@@ -278,7 +278,7 @@ func (s *Session) Tick() bool {
 		return false
 	}
 
-	if s.elapsed() >= s.config.Duration {
+	if s.Elapsed() >= s.config.Duration {
 		s.endedAt = s.clock.Now()
 		return true
 	}
@@ -299,7 +299,7 @@ func (s *Session) Finished() bool {
 }
 
 func (s *Session) WPM() float64 {
-	return stats.WPM(s.correctChars(), s.elapsed())
+	return stats.WPM(s.correctChars(), s.Elapsed())
 }
 
 func (s *Session) Accuracy() float64 {
@@ -307,7 +307,7 @@ func (s *Session) Accuracy() float64 {
 }
 
 func (s *Session) RawWPM() float64 {
-	return stats.RawWPM(s.rawBufferCounts(), s.elapsed())
+	return stats.RawWPM(s.rawBufferCounts(), s.Elapsed())
 }
 
 func (s *Session) rawBufferCounts() domain.CharCounts {
@@ -327,7 +327,7 @@ func (s *Session) rawBufferCounts() domain.CharCounts {
 	return counts
 }
 
-func (s *Session) elapsed() time.Duration {
+func (s *Session) Elapsed() time.Duration {
 	if s.startedAt.IsZero() {
 		return 0
 	}
