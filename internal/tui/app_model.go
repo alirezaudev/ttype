@@ -9,7 +9,7 @@ type appPhase int
 
 const (
 	phaseTest appPhase = iota
-	phaseResults
+	phaseResult
 	phaseSettings
 )
 
@@ -65,7 +65,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 		case "enter", "tab":
-			if m.phase == phaseResults {
+			if m.phase == phaseResult {
 				return m.restart()
 			}
 		case "ctrl+s":
@@ -79,7 +79,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.phase {
 	case phaseTest:
 		return m.updateTest(msg)
-	case phaseResults:
+	case phaseResult:
 		return m, nil
 	case phaseSettings:
 		return m.updateSettings(msg)
@@ -93,7 +93,7 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.test = next.(TestModel)
 	if m.test.session.Finished() {
 		m.result = snapshotResult(m.test.session, m.cfg)
-		m.phase = phaseResults
+		m.phase = phaseResult
 		return m, tea.Batch(cmd, tea.ClearScreen)
 	}
 	return m, cmd
@@ -106,7 +106,7 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	if !apply {
-		m.phase = phaseResults
+		m.phase = phaseResult
 		return m, cmd
 	}
 	m.cfg = next.cfg
@@ -129,7 +129,7 @@ func (m AppModel) View() string {
 	switch m.phase {
 	case phaseSettings:
 		return m.settings.View()
-	case phaseResults:
+	case phaseResult:
 		return renderResult(m.result, m.theme, m.width, m.height)
 	default:
 		return m.test.View()

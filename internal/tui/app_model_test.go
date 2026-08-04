@@ -32,7 +32,7 @@ func TestWindowSizeFansOutToTestModel(t *testing.T) {
 	}
 }
 
-func TestOpenSettingsFromResults(t *testing.T) {
+func TestOpenSettingsFromResult(t *testing.T) {
 	t.Parallel()
 
 	m, clock := newAppModel(t)
@@ -41,8 +41,8 @@ func TestOpenSettingsFromResults(t *testing.T) {
 	next, _ := m.Update(tickMsg(time.Now()))
 	m = next.(AppModel)
 
-	if m.phase != phaseResults {
-		t.Fatalf("phase = %v, want phaseResults", m.phase)
+	if m.phase != phaseResult {
+		t.Fatalf("phase = %v, want phaseResult", m.phase)
 	}
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
@@ -76,7 +76,7 @@ func TestSettingsApplyRestarts(t *testing.T) {
 	}
 }
 
-func TestSettingsCancelReturnsToResults(t *testing.T) {
+func TestSettingsCancelReturnsToResult(t *testing.T) {
 	t.Parallel()
 
 	m, clock := newAppModel(t)
@@ -91,8 +91,8 @@ func TestSettingsCancelReturnsToResults(t *testing.T) {
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	m = next.(AppModel)
 
-	if m.phase != phaseResults {
-		t.Fatalf("phase = %v after esc, want phaseResults", m.phase)
+	if m.phase != phaseResult {
+		t.Fatalf("phase = %v after esc, want phaseResult", m.phase)
 	}
 }
 
@@ -106,8 +106,8 @@ func TestRestartAfterFinishTransitionsToTest(t *testing.T) {
 	next, _ := m.Update(tickMsg(time.Now()))
 	m = next.(AppModel)
 
-	if m.phase != phaseResults {
-		t.Fatalf("phase = %v after finish, want phaseResults", m.phase)
+	if m.phase != phaseResult {
+		t.Fatalf("phase = %v after finish, want phaseResult", m.phase)
 	}
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
