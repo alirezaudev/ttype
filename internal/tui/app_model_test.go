@@ -76,6 +76,25 @@ func TestSettingsApplyRestarts(t *testing.T) {
 	}
 }
 
+func TestSettingsCancelReturnsToTest(t *testing.T) {
+	t.Parallel()
+
+	m, _ := newAppModel(t)
+	m.test.session.InputRune('a')
+	next, _ := m.Update(tickMsg(time.Now().Add(1 * time.Second)))
+	m = next.(AppModel)
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS}) // settings
+	m = next.(AppModel)
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc}) // return back to test
+	m = next.(AppModel)
+
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v after esc, want phaseTest (%v)", m.phase, phaseTest)
+	}
+}
+
 func TestSettingsCancelReturnsToResult(t *testing.T) {
 	t.Parallel()
 
@@ -92,7 +111,7 @@ func TestSettingsCancelReturnsToResult(t *testing.T) {
 	m = next.(AppModel)
 
 	if m.phase != phaseResult {
-		t.Fatalf("phase = %v after esc, want phaseResult", m.phase)
+		t.Fatalf("phase = %v after esc, want phaseResult (%v)", m.phase, phaseResult)
 	}
 }
 

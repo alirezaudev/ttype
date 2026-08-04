@@ -21,6 +21,7 @@ type AppModel struct {
 	cfg       engine.Config
 	newTarget func() (string, error)
 	phase     appPhase
+	navStack  []appPhase
 	test      TestModel
 	result    resultSnapshot
 	settings  SettingsPanel
@@ -43,6 +44,27 @@ func (m *AppModel) sizables() []sizable {
 	return []sizable{&m.test, &m.settings}
 }
 
+func (m *AppModel) pushPhase(next appPhase) {
+	m.navStack = append(m.navStack, m.phase)
+	m.phase = next
+}
+
+func (m *AppModel) popPhase() tea.Cmd {
+	if len(m.navStack) == 0 {
+		return tea.Quit
+	}
+
+	end := len(m.navStack) - 1
+	prev := m.navStack[end]
+	m.navStack = m.navStack[:end]
+	if prev == phaseTest && m.test.session.Finished() {
+		return m.restartTest()
+	}
+
+	m.phase = prev
+	return nil
+}
+
 func (m AppModel) Init() tea.Cmd {
 	return m.test.Init()
 }
@@ -61,17 +83,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "esc":
-			if m.phase != phaseSettings {
-				return m, tea.Quit
-			}
+			return m, m.popPhase()
 		case "enter", "tab":
 			if m.phase == phaseResult {
-				return m.restart()
+				newMsg := m.restartTest()
+				return m, newMsg
 			}
 		case "ctrl+s":
 			m.settings = NewSettingsPanel(m.cfg, m.theme)
 			m.settings.setSize(m.width, m.height)
-			m.phase = phaseSettings
+			m.pushPhase(phaseSettings)
 			return m, nil
 		}
 	}
@@ -106,23 +127,24 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	if !apply {
-		m.phase = phaseResult
-		return m, cmd
+		return m, tea.Batch(cmd, m.popPhase())
 	}
-	m.cfg = next.cfg
+	m.cfg = m.settings.cfg
 	m.theme = ResolveTheme(m.cfg.Theme)
-	return m.restart()
+	return m, m.restartTest()
 }
 
-func (m AppModel) restart() (tea.Model, tea.Cmd) {
+func (m *AppModel) restartTest() tea.Cmd {
 	session, err := engine.NewSession(m.newTarget, m.cfg, nil)
 	if err != nil {
-		return m, nil
+		return nil
 	}
 	m.test = NewTestModel(session, m.cfg, m.theme)
 	m.test.setSize(m.width, m.height)
 	m.phase = phaseTest
-	return m, tea.Batch(tea.ClearScreen, m.test.Init())
+	m.navStack = nil
+	return tea.Batch(tea.ClearScreen, m.test.Init())
+
 }
 
 func (m AppModel) View() string {
