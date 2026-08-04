@@ -9,27 +9,12 @@ import (
 	"github.com/alirezaudev/ttype/internal/stats"
 )
 
-type TestKind string
-
-const (
-	TestKindTimed TestKind = "timed"
-	TestKindWords TestKind = "words"
-)
-
 // skipRune marks input positions abandoned by a space commit.
 const skipRune = '\x00'
 
-type Config struct {
-	Kind      TestKind
-	Duration  time.Duration
-	WordCount int
-	Width     int
-	Theme     string
-}
-
 type Session struct {
 	newTarget      func() (string, error)
-	config         Config
+	config         domain.TestConfig
 	target         string
 	targetRunes    []rune
 	input          []rune
@@ -42,14 +27,14 @@ type Session struct {
 	capsInversions int
 }
 
-func NewSession(newTarget func() (string, error), config Config, clock Clock) (*Session, error) {
+func NewSession(newTarget func() (string, error), config domain.TestConfig, clock Clock) (*Session, error) {
 	if clock == nil {
 		clock = RealClock{}
 	}
 	if config.Kind == "" {
-		config.Kind = TestKindTimed
+		config.Kind = domain.TestKindTimed
 	}
-	if config.Kind == TestKindTimed && config.Duration <= 0 {
+	if config.Kind == domain.TestKindTimed && config.Duration <= 0 {
 		return nil, errors.New("timed session requires a positive duration")
 	}
 	s := &Session{
@@ -63,22 +48,23 @@ func NewSession(newTarget func() (string, error), config Config, clock Clock) (*
 	return s, nil
 }
 
-func (s *Session) Target() string      { return s.target }
-func (s *Session) TargetRunes() []rune { return s.targetRunes }
-func (s *Session) Input() []rune       { return append([]rune(nil), s.input...) }
-func (s *Session) Cursor() int         { return len(s.input) }
-func (s *Session) Kind() TestKind      { return s.config.Kind }
-func (s *Session) Keystrokes() int     { return s.keystrokes }
-func (s *Session) Correct() int        { return s.correct }
-func (s *Session) Incorrect() int      { return s.incorrect }
-func (s *Session) Started() bool       { return !s.startedAt.IsZero() }
+func (s *Session) Target() string            { return s.target }
+func (s *Session) TargetRunes() []rune       { return s.targetRunes }
+func (s *Session) Input() []rune             { return append([]rune(nil), s.input...) }
+func (s *Session) Cursor() int               { return len(s.input) }
+func (s *Session) Kind() domain.TestKind     { return s.config.Kind }
+func (s *Session) Config() domain.TestConfig { return s.config }
+func (s *Session) Keystrokes() int           { return s.keystrokes }
+func (s *Session) Correct() int              { return s.correct }
+func (s *Session) Incorrect() int            { return s.incorrect }
+func (s *Session) Started() bool             { return !s.startedAt.IsZero() }
 
 func (s *Session) Remaining() time.Duration {
-	if s.config.Kind == TestKindWords {
+	if s.config.Kind == domain.TestKindWords {
 		return 0
 	}
 
-	left := s.config.Duration - s.Elapsed()
+	left := time.Duration(s.config.Duration)*time.Second - s.Elapsed()
 	if left < 0 {
 		return 0
 	}
@@ -86,7 +72,7 @@ func (s *Session) Remaining() time.Duration {
 }
 
 func (s *Session) WordsProgress() (completed, total int) {
-	if s.config.Kind != TestKindWords {
+	if s.config.Kind != domain.TestKindWords {
 		return 0, 0
 	}
 
@@ -211,7 +197,7 @@ func (s *Session) InputRune(r rune) {
 		s.input = append(s.input, r)
 	}
 
-	if s.config.Kind == TestKindWords && len(s.input) >= len(s.targetRunes) {
+	if s.config.Kind == domain.TestKindWords && len(s.input) >= len(s.targetRunes) {
 		s.endedAt = s.clock.Now()
 	}
 }
@@ -298,11 +284,11 @@ func (s *Session) Tick() bool {
 		return true
 	}
 
-	if s.config.Kind == TestKindWords {
+	if s.config.Kind == domain.TestKindWords {
 		return false
 	}
 
-	if s.Elapsed() >= s.config.Duration {
+	if s.Elapsed() >= time.Duration(s.config.Duration)*time.Second {
 		s.endedAt = s.clock.Now()
 		return true
 	}

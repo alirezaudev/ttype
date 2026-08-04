@@ -2,14 +2,13 @@ package tui
 
 import (
 	"testing"
-	"time"
 
-	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/alirezaudev/ttype/internal/domain"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func timedCfg() engine.Config {
-	return engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second}
+func timedCfg() domain.TestConfig {
+	return domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60}
 }
 
 func TestSettingsPanelApplyReturnsConfig(t *testing.T) {
@@ -40,7 +39,7 @@ func TestSettingsPanelKindToggle(t *testing.T) {
 	p := NewSettingsPanel(timedCfg(), defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	if p.cfg.Kind != engine.TestKindWords {
+	if p.cfg.Kind != domain.TestKindWords {
 		t.Fatalf("kind = %v after right, want words", p.cfg.Kind)
 	}
 	if p.cfg.WordCount <= 0 {
@@ -48,7 +47,7 @@ func TestSettingsPanelKindToggle(t *testing.T) {
 	}
 
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRight})
-	if p.cfg.Kind != engine.TestKindTimed {
+	if p.cfg.Kind != domain.TestKindTimed {
 		t.Fatalf("kind = %v after second right, want timed", p.cfg.Kind)
 	}
 }
@@ -60,12 +59,12 @@ func TestSettingsPanelDurationStep(t *testing.T) {
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	if p.cfg.Duration != 75*time.Second {
+	if p.cfg.Duration != domain.Duration(75) {
 		t.Fatalf("duration = %v, want 75s", p.cfg.Duration)
 	}
 
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyLeft})
-	if p.cfg.Duration != 60*time.Second {
+	if p.cfg.Duration != domain.Duration(60) {
 		t.Fatalf("duration = %v after left, want 60s", p.cfg.Duration)
 	}
 }
@@ -73,11 +72,11 @@ func TestSettingsPanelDurationStep(t *testing.T) {
 func TestSettingsPanelDurationFloor(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second}, defaultTheme())
+	p := NewSettingsPanel(domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}, defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyLeft})
 
-	if p.cfg.Duration < 15*time.Second {
+	if p.cfg.Duration < domain.Duration(15) {
 		t.Fatalf("duration %v should not go below 15s", p.cfg.Duration)
 	}
 }
@@ -98,7 +97,7 @@ func TestSettingsPanelWidthFromAuto(t *testing.T) {
 func TestSettingsPanelWidthLeftToAutoAtZero(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second, Width: 60}, defaultTheme())
+	p := NewSettingsPanel(domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60, Width: 60}, defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	for i := 0; i < 7; i++ {

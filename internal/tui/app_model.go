@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"time"
-
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
@@ -22,7 +20,7 @@ type sizable interface {
 }
 
 type AppModel struct {
-	cfg       engine.Config
+	cfg       domain.TestConfig
 	newTarget func() (string, error)
 	store     storage.Store
 	phase     appPhase
@@ -35,7 +33,7 @@ type AppModel struct {
 	height    int
 }
 
-func NewAppModel(cfg engine.Config, newTarget func() (string, error), session *engine.Session, store storage.Store) AppModel {
+func NewAppModel(cfg domain.TestConfig, newTarget func() (string, error), session *engine.Session, store storage.Store) AppModel {
 	theme := ResolveTheme(cfg.Theme)
 	return AppModel{
 		cfg:       cfg,
@@ -150,15 +148,15 @@ func (m *AppModel) persistConfigDefaults() {
 	}
 	settings.Theme = m.cfg.Theme
 	settings.DefaultWidth = m.cfg.Width
-	if m.cfg.Kind == engine.TestKindWords {
+	if m.cfg.IsWordsMode() {
 		settings.DefaultWordCount = m.cfg.WordCount
 	} else {
 		settings.DefaultWordCount = 0
-		secs := int(m.cfg.Duration / time.Second)
-		if secs <= 0 {
-			secs = 60
+		if m.cfg.Duration <= 0 {
+			settings.DefaultDuration = domain.Duration60
+		} else {
+			settings.DefaultDuration = m.cfg.Duration
 		}
-		settings.DefaultDuration = domain.Duration(secs)
 	}
 	_ = m.store.SaveSettings(settings)
 }

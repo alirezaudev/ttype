@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/alirezaudev/ttype/internal/domain"
 )
 
 func TestRenderResultContainsStats(t *testing.T) {
@@ -15,7 +15,7 @@ func TestRenderResultContainsStats(t *testing.T) {
 		accuracy: 94.50,
 		errors:   7,
 		elapsed:  32 * time.Second,
-		cfg:      engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second},
+		cfg:      domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},
 	}
 
 	out := renderResult(snap, defaultTheme(), 0, 0)
@@ -29,7 +29,7 @@ func TestRenderResultContainsStats(t *testing.T) {
 
 func TestRenderResultWordsSubtitle(t *testing.T) {
 	snap := resultSnapshot{
-		cfg: engine.Config{Kind: engine.TestKindWords, WordCount: 25},
+		cfg: domain.TestConfig{Kind: domain.TestKindWords, WordCount: 25},
 	}
 
 	out := renderResult(snap, defaultTheme(), 0, 0)
@@ -43,7 +43,7 @@ func TestRenderResultWordsSubtitle(t *testing.T) {
 
 func TestRenderResultCentered(t *testing.T) {
 	snap := resultSnapshot{
-		cfg: engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second},
+		cfg: domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},
 	}
 
 	out := renderResult(snap, defaultTheme(), 120, 40)

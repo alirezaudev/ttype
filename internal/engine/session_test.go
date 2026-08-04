@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 )
 
@@ -13,7 +14,7 @@ func newTestSession(t *testing.T, target string, duration time.Duration) (*engin
 	t.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	cfg := engine.Config{Kind: engine.TestKindTimed, Duration: duration}
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration(duration / time.Second)}
 	s, err := engine.NewSession(func() (string, error) { return target, nil }, cfg, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
@@ -25,7 +26,7 @@ func newWordsSession(t *testing.T, target string) (*engine.Session, *engine.Fake
 	t.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	cfg := engine.Config{Kind: engine.TestKindWords, WordCount: countWordsInText([]rune(target))}
+	cfg := domain.TestConfig{Kind: domain.TestKindWords, WordCount: countWordsInText([]rune(target))}
 	s, err := engine.NewSession(func() (string, error) { return target, nil }, cfg, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
@@ -164,7 +165,7 @@ func TestSessionRestartResetsAndReloads(t *testing.T) {
 		return fmt.Sprintf("run%d", calls), nil
 	}
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	s, err := engine.NewSession(newTarget, engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second}, clock)
+	s, err := engine.NewSession(newTarget, domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
@@ -323,13 +324,13 @@ func TestEmptyKindDefaultsToTimed(t *testing.T) {
 	t.Parallel()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	s, err := engine.NewSession(func() (string, error) { return "abc", nil }, engine.Config{Duration: 15 * time.Second}, clock)
+	s, err := engine.NewSession(func() (string, error) { return "abc", nil }, domain.TestConfig{Duration: 15}, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
 
-	if got := s.Kind(); got != engine.TestKindTimed {
-		t.Fatalf("Kind() = %q, want %q", got, engine.TestKindTimed)
+	if got := s.Kind(); got != domain.TestKindTimed {
+		t.Fatalf("Kind() = %q, want %q", got, domain.TestKindTimed)
 	}
 
 	typeString(s, "a")
@@ -343,7 +344,7 @@ func TestEmptyKindDefaultsToTimed(t *testing.T) {
 func TestTimedSessionRequiresDuration(t *testing.T) {
 	t.Parallel()
 
-	_, err := engine.NewSession(func() (string, error) { return "abc", nil }, engine.Config{Kind: engine.TestKindTimed}, nil)
+	_, err := engine.NewSession(func() (string, error) { return "abc", nil }, domain.TestConfig{Kind: domain.TestKindTimed}, nil)
 	if err == nil {
 		t.Fatal("timed session without a duration should error")
 	}

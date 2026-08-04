@@ -5,9 +5,9 @@ import (
 	"log"
 	"math/rand/v2"
 	"strings"
-	"time"
 
 	"github.com/alirezaudev/ttype/assets"
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/alirezaudev/ttype/internal/tui"
@@ -28,20 +28,20 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	cfg := engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second}
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
 	count := 100
 	if settings, err := store.LoadSettings(); err == nil {
 		cfg.Theme = settings.Theme
 		cfg.Width = settings.DefaultWidth
 		if settings.DefaultWordCount > 0 {
-			cfg.Kind = engine.TestKindWords
+			cfg.Kind = domain.TestKindWords
 			count = settings.DefaultWordCount
 		} else if settings.DefaultDuration > 0 {
-			cfg.Duration = time.Duration(settings.DefaultDuration) * time.Second
+			cfg.Duration = settings.DefaultDuration
 		}
 	}
 	if *wordCount > 0 {
-		cfg.Kind = engine.TestKindWords
+		cfg.Kind = domain.TestKindWords
 		count = *wordCount
 	}
 	cfg.WordCount = count

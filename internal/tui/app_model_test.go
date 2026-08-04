@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -11,7 +12,7 @@ import (
 func newAppModel(t *testing.T) (AppModel, *engine.FakeClock) {
 	t.Helper()
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	cfg := engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second}
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}
 	newTarget := func() (string, error) { return "abc def", nil }
 	session, err := engine.NewSession(newTarget, cfg, clock)
 	if err != nil {

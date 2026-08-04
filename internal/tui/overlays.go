@@ -3,9 +3,8 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/alirezaudev/ttype/internal/domain"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -26,14 +25,14 @@ const (
 )
 
 type SettingsPanel struct {
-	cfg    engine.Config
+	cfg    domain.TestConfig
 	theme  Theme
 	field  settingsField
 	width  int
 	height int
 }
 
-func NewSettingsPanel(cfg engine.Config, theme Theme) SettingsPanel {
+func NewSettingsPanel(cfg domain.TestConfig, theme Theme) SettingsPanel {
 	return SettingsPanel{cfg: cfg, theme: theme}
 }
 
@@ -70,19 +69,19 @@ func (m SettingsPanel) Update(msg tea.Msg) (SettingsPanel, tea.Cmd, bool, bool) 
 func (m *SettingsPanel) adjust(dir int) {
 	switch m.field {
 	case settingsTestKind:
-		if m.cfg.Kind == engine.TestKindWords {
-			m.cfg.Kind = engine.TestKindTimed
+		if m.cfg.Kind == domain.TestKindWords {
+			m.cfg.Kind = domain.TestKindTimed
 			if m.cfg.Duration <= 0 {
-				m.cfg.Duration = 60 * time.Second
+				m.cfg.Duration = domain.Duration60
 			}
 		} else {
-			m.cfg.Kind = engine.TestKindWords
+			m.cfg.Kind = domain.TestKindWords
 			if m.cfg.WordCount <= 0 {
 				m.cfg.WordCount = 25
 			}
 		}
 	case settingsLength:
-		if m.cfg.Kind == engine.TestKindWords {
+		if m.cfg.Kind == domain.TestKindWords {
 			m.cfg.WordCount += dir * 5
 			if m.cfg.WordCount < 10 {
 				m.cfg.WordCount = 10
@@ -91,11 +90,11 @@ func (m *SettingsPanel) adjust(dir int) {
 				m.cfg.WordCount = 1000
 			}
 		} else {
-			next := int(m.cfg.Duration/time.Second) + dir*15
+			next := int(m.cfg.Duration) + dir*15
 			if next < 15 {
 				next = 15
 			}
-			m.cfg.Duration = time.Duration(next) * time.Second
+			m.cfg.Duration = domain.Duration(next)
 		}
 	case settingsWidth:
 		if m.cfg.Width <= 0 && dir > 0 {
@@ -127,24 +126,24 @@ func (m *SettingsPanel) adjust(dir int) {
 }
 
 func (m SettingsPanel) kindLabel() string {
-	if m.cfg.Kind == engine.TestKindWords {
+	if m.cfg.Kind == domain.TestKindWords {
 		return "words"
 	}
 	return "timed"
 }
 
 func (m SettingsPanel) lengthFieldLabel() string {
-	if m.cfg.Kind == engine.TestKindWords {
+	if m.cfg.Kind == domain.TestKindWords {
 		return "length"
 	}
 	return "duration"
 }
 
 func (m SettingsPanel) lengthLabel() string {
-	if m.cfg.Kind == engine.TestKindWords {
+	if m.cfg.Kind == domain.TestKindWords {
 		return fmt.Sprintf("%d words", m.cfg.WordCount)
 	}
-	return fmt.Sprintf("%ds", int(m.cfg.Duration/time.Second))
+	return fmt.Sprintf("%ds", m.cfg.Duration.Seconds())
 }
 
 func (m SettingsPanel) widthLabel() string {

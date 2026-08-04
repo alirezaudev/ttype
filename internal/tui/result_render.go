@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -15,10 +16,10 @@ type resultSnapshot struct {
 	accuracy float64
 	errors   int
 	elapsed  time.Duration
-	cfg      engine.Config
+	cfg      domain.TestConfig
 }
 
-func snapshotResult(s *engine.Session, cfg engine.Config) resultSnapshot {
+func snapshotResult(s *engine.Session, cfg domain.TestConfig) resultSnapshot {
 	return resultSnapshot{
 		wpm:      s.WPM(),
 		rawWpm:   s.RawWPM(),
@@ -30,10 +31,10 @@ func snapshotResult(s *engine.Session, cfg engine.Config) resultSnapshot {
 }
 
 func (s resultSnapshot) subtitle() string {
-	if s.cfg.Kind == engine.TestKindWords {
+	if s.cfg.Kind == domain.TestKindWords {
 		return fmt.Sprintf("%d words · words", s.cfg.WordCount)
 	}
-	return fmt.Sprintf("%ds · timed", int(s.cfg.Duration/time.Second))
+	return fmt.Sprintf("%ds · timed", s.cfg.Duration.Seconds())
 }
 
 const resultColWidth = 9

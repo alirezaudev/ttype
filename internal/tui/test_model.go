@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -12,14 +13,14 @@ import (
 
 type TestModel struct {
 	session   *engine.Session
-	cfg       engine.Config
+	cfg       domain.TestConfig
 	theme     Theme
 	capsProbe func() bool
 	width     int
 	height    int
 }
 
-func NewTestModel(session *engine.Session, cfg engine.Config, theme Theme) TestModel {
+func NewTestModel(session *engine.Session, cfg domain.TestConfig, theme Theme) TestModel {
 	return TestModel{
 		session:   session,
 		cfg:       cfg,
@@ -77,7 +78,7 @@ func (m TestModel) View() string {
 		m.session.Incorrect(),
 	))
 
-	if m.session.Kind() == engine.TestKindTimed {
+	if m.session.Kind() == domain.TestKindTimed {
 		out.WriteString(m.theme.HUDTime.Render(formatClock(m.session.Remaining())) + " · " + status + "\n\n")
 	} else {
 		done, total := m.session.WordsProgress()

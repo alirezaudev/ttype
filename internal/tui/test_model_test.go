@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -12,7 +13,7 @@ func newModelSession(t *testing.T) (*engine.Session, *engine.FakeClock) {
 	t.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	cfg := engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second}
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}
 	s, err := engine.NewSession(func() (string, error) { return "abc", nil }, cfg, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
@@ -46,7 +47,7 @@ func TestEnterMidTestDoesNotScheduleTick(t *testing.T) {
 	t.Parallel()
 
 	session, _ := newModelSession(t)
-	m := NewTestModel(session, engine.Config{}, defaultTheme())
+	m := NewTestModel(session, domain.TestConfig{}, defaultTheme())
 	session.InputRune('a')
 
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -62,7 +63,7 @@ func TestEnterAfterFinishDoesNotScheduleTick(t *testing.T) {
 	t.Parallel()
 
 	session, clock := newModelSession(t)
-	m := NewTestModel(session, engine.Config{}, defaultTheme())
+	m := NewTestModel(session, domain.TestConfig{}, defaultTheme())
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 	session.Tick()
@@ -80,7 +81,7 @@ func TestTickAlwaysReschedules(t *testing.T) {
 	t.Parallel()
 
 	session, clock := newModelSession(t)
-	m := NewTestModel(session, engine.Config{}, defaultTheme())
+	m := NewTestModel(session, domain.TestConfig{}, defaultTheme())
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 
