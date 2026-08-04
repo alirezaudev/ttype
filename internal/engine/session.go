@@ -28,17 +28,18 @@ type Config struct {
 }
 
 type Session struct {
-	newTarget   func() (string, error)
-	config      Config
-	target      string
-	targetRunes []rune
-	input       []rune
-	keystrokes  int
-	correct     int
-	incorrect   int
-	clock       Clock
-	startedAt   time.Time
-	endedAt     time.Time
+	newTarget      func() (string, error)
+	config         Config
+	target         string
+	targetRunes    []rune
+	input          []rune
+	keystrokes     int
+	correct        int
+	incorrect      int
+	clock          Clock
+	startedAt      time.Time
+	endedAt        time.Time
+	capsInversions int
 }
 
 func (s *Session) Target() string      { return s.target }
@@ -49,6 +50,7 @@ func (s *Session) Kind() TestKind      { return s.config.Kind }
 func (s *Session) Keystrokes() int     { return s.keystrokes }
 func (s *Session) Correct() int        { return s.correct }
 func (s *Session) Incorrect() int      { return s.incorrect }
+func (s *Session) Started() bool       { return !s.startedAt.IsZero() }
 
 func (s *Session) Remaining() time.Duration {
 	if s.config.Kind == TestKindWords {
@@ -128,6 +130,25 @@ func countWordsInText(text []rune) int {
 	return n
 }
 
+func (s *Session) CapsLockSuspected() bool {
+	return s.capsInversions >= 2
+}
+
+func (s *Session) updateCapsStreak(typed, expected rune) {
+	if !hasCase(typed) || !hasCase(expected) {
+		return
+	}
+	if unicode.IsUpper(typed) != unicode.IsUpper(expected) {
+		s.capsInversions++
+	} else {
+		s.capsInversions = 0
+	}
+}
+
+func hasCase(r rune) bool {
+	return unicode.IsUpper(r) || unicode.IsLower(r)
+}
+
 func (s *Session) Restart() error {
 	s.input = s.input[:0]
 	s.keystrokes = 0
@@ -135,6 +156,7 @@ func (s *Session) Restart() error {
 	s.incorrect = 0
 	s.startedAt = time.Time{}
 	s.endedAt = time.Time{}
+	s.capsInversions = 0
 	return s.loadTarget()
 }
 
@@ -178,6 +200,7 @@ func (s *Session) InputRune(r rune) {
 	if skipping {
 		s.skipCurrentWord(pos)
 	} else {
+		s.updateCapsStreak(r, s.targetRunes[pos])
 		s.keystrokes++
 		switch {
 		case r == s.targetRunes[pos]:

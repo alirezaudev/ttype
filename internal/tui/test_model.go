@@ -11,15 +11,21 @@ import (
 )
 
 type TestModel struct {
-	session *engine.Session
-	cfg     engine.Config
-	theme   Theme
-	width   int
-	height  int
+	session   *engine.Session
+	cfg       engine.Config
+	theme     Theme
+	capsProbe func() bool
+	width     int
+	height    int
 }
 
 func NewTestModel(session *engine.Session, cfg engine.Config, theme Theme) TestModel {
-	return TestModel{session: session, cfg: cfg, theme: theme}
+	return TestModel{
+		session:   session,
+		cfg:       cfg,
+		theme:     theme,
+		capsProbe: newCapsLockMonitor().on,
+	}
 }
 
 func (m *TestModel) setSize(width, height int) {
@@ -106,6 +112,8 @@ func (m TestModel) View() string {
 	if m.width == 0 {
 		return out.String()
 	}
+	out.WriteByte('\n')
+	out.WriteString(m.hintLine())
 	block := lipgloss.NewStyle().Width(m.typingWidth()).Render(out.String())
 	return m.center(block)
 }
@@ -131,6 +139,23 @@ func formatClock(d time.Duration) string {
 	}
 	secs := int(d.Round(time.Second).Seconds())
 	return fmt.Sprintf("%d:%02d", secs/60, secs%60)
+}
+
+func (m TestModel) capsWarnActive() bool {
+	if m.capsProbe != nil && m.capsProbe() {
+		return true
+	}
+	return m.session.CapsLockSuspected()
+}
+
+func (m TestModel) hintLine() string {
+	if m.capsWarnActive() {
+		return m.theme.CapsWarn.Render(" ⚠ Caps Lock? ")
+	}
+	if !m.session.Started() {
+		return m.theme.Help.Render("start typing to begin")
+	}
+	return ""
 }
 
 func (m TestModel) typingWidth() int {

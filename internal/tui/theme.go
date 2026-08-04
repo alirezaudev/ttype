@@ -36,6 +36,7 @@ type Theme struct {
 	Border       lipgloss.Style
 	FlashBg      lipgloss.Style
 	SelectedItem lipgloss.Style
+	CapsWarn     lipgloss.Style
 }
 
 func ParseThemeName(name string) (string, error) {
@@ -99,6 +100,10 @@ func defaultTheme() Theme {
 		SelectedItem: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("229")).
 			Background(lipgloss.Color("57")),
+		CapsWarn: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(lipgloss.Color("3")),
 	}
 }
 
@@ -126,6 +131,10 @@ func monokaiTheme() Theme {
 		SelectedItem: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#F8F8F2")).
 			Background(lipgloss.Color("#49483E")),
+		CapsWarn: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#272822")).
+			Background(lipgloss.Color("#E6DB74")),
 	}
 }
 
@@ -153,6 +162,10 @@ func draculaTheme() Theme {
 		SelectedItem: lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#F8F8F2")).
 			Background(lipgloss.Color("#BD93F9")),
+		CapsWarn: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#282A36")).
+			Background(lipgloss.Color("#F1FA8C")),
 	}
 }
 
