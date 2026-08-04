@@ -24,6 +24,7 @@ type Config struct {
 	Duration  time.Duration
 	WordCount int
 	Width     int
+	Theme     string
 }
 
 type Session struct {

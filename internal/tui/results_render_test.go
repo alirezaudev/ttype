@@ -18,7 +18,7 @@ func TestRenderResultContainsStats(t *testing.T) {
 		cfg:      engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second},
 	}
 
-	out := renderResult(snap, 0, 0)
+	out := renderResult(snap, defaultTheme(), 0, 0)
 
 	for _, want := range []string{"120.50", "135.00", "94.50%", "7", "0:32", "60s", "timed", "Test Complete"} {
 		if !strings.Contains(out, want) {
@@ -32,7 +32,7 @@ func TestRenderResultWordsSubtitle(t *testing.T) {
 		cfg: engine.Config{Kind: engine.TestKindWords, WordCount: 25},
 	}
 
-	out := renderResult(snap, 0, 0)
+	out := renderResult(snap, defaultTheme(), 0, 0)
 
 	for _, want := range []string{"25 words", "words"} {
 		if !strings.Contains(out, want) {
@@ -46,7 +46,7 @@ func TestRenderResultCentered(t *testing.T) {
 		cfg: engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second},
 	}
 
-	out := renderResult(snap, 120, 40)
+	out := renderResult(snap, defaultTheme(), 120, 40)
 
 	lines := strings.Split(out, "\n")
 	if len(lines) != 40 {

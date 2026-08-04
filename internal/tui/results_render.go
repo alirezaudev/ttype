@@ -9,12 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	resultTitleStyle = lipgloss.NewStyle().Bold(true)
-	resultLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	resultHelpStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-)
-
 type resultSnapshot struct {
 	wpm      float64
 	rawWpm   float64
@@ -44,11 +38,11 @@ func (s resultSnapshot) subtitle() string {
 
 const resultColWidth = 9
 
-func renderResult(snap resultSnapshot, width, height int) string {
-	title := resultTitleStyle.Render("Test Complete")
-	subtitle := resultLabelStyle.Render(snap.subtitle())
+func renderResult(snap resultSnapshot, theme Theme, width, height int) string {
+	title := theme.Finished.Render("Test Complete")
+	subtitle := theme.Help.Render(snap.subtitle())
 
-	headers := resultLabelStyle.Render(fmt.Sprintf("%-*s %-*s %-*s %-*s",
+	headers := theme.Help.Render(fmt.Sprintf("%-*s %-*s %-*s %-*s",
 		resultColWidth, "wpm",
 		resultColWidth, "raw",
 		resultColWidth, "acc",
@@ -61,8 +55,8 @@ func renderResult(snap resultSnapshot, width, height int) string {
 		resultColWidth, snap.errors,
 	)
 
-	elapsed := resultLabelStyle.Render(formatClock(snap.elapsed) + " elapsed")
-	help := resultHelpStyle.Render("tab/enter restart  ctrl+s settings")
+	elapsed := theme.Help.Render(formatClock(snap.elapsed) + " elapsed")
+	help := theme.Help.Render("tab/enter restart  ctrl+s settings")
 
 	content := strings.Join([]string{
 		title,

@@ -15,7 +15,7 @@ func timedCfg() engine.Config {
 func TestSettingsPanelApplyReturnsConfig(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(timedCfg())
+	p := NewSettingsPanel(timedCfg(), defaultTheme())
 	_, _, done, apply := p.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	if !done || !apply {
@@ -26,7 +26,7 @@ func TestSettingsPanelApplyReturnsConfig(t *testing.T) {
 func TestSettingsPanelCancelDoesNotApply(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(timedCfg())
+	p := NewSettingsPanel(timedCfg(), defaultTheme())
 	_, _, done, apply := p.Update(tea.KeyMsg{Type: tea.KeyEsc})
 
 	if !done || apply {
@@ -37,7 +37,7 @@ func TestSettingsPanelCancelDoesNotApply(t *testing.T) {
 func TestSettingsPanelKindToggle(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(timedCfg())
+	p := NewSettingsPanel(timedCfg(), defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRight})
 
 	if p.cfg.Kind != engine.TestKindWords {
@@ -56,7 +56,7 @@ func TestSettingsPanelKindToggle(t *testing.T) {
 func TestSettingsPanelDurationStep(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(timedCfg())
+	p := NewSettingsPanel(timedCfg(), defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRight})
 
@@ -73,7 +73,7 @@ func TestSettingsPanelDurationStep(t *testing.T) {
 func TestSettingsPanelDurationFloor(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second})
+	p := NewSettingsPanel(engine.Config{Kind: engine.TestKindTimed, Duration: 15 * time.Second}, defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyLeft})
 
@@ -85,7 +85,7 @@ func TestSettingsPanelDurationFloor(t *testing.T) {
 func TestSettingsPanelWidthFromAuto(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(timedCfg())
+	p := NewSettingsPanel(timedCfg(), defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRight})
@@ -98,7 +98,7 @@ func TestSettingsPanelWidthFromAuto(t *testing.T) {
 func TestSettingsPanelWidthLeftToAutoAtZero(t *testing.T) {
 	t.Parallel()
 
-	p := NewSettingsPanel(engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second, Width: 60})
+	p := NewSettingsPanel(engine.Config{Kind: engine.TestKindTimed, Duration: 60 * time.Second, Width: 60}, defaultTheme())
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
 	for i := 0; i < 7; i++ {

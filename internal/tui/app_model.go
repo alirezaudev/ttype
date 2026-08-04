@@ -24,15 +24,18 @@ type AppModel struct {
 	test      TestModel
 	result    resultSnapshot
 	settings  SettingsPanel
+	theme     Theme
 	width     int
 	height    int
 }
 
 func NewAppModel(cfg engine.Config, newTarget func() (string, error), session *engine.Session) AppModel {
+	theme := ResolveTheme(cfg.Theme)
 	return AppModel{
 		cfg:       cfg,
 		newTarget: newTarget,
-		test:      NewTestModel(session, cfg),
+		theme:     theme,
+		test:      NewTestModel(session, cfg, theme),
 	}
 }
 
@@ -66,7 +69,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.restart()
 			}
 		case "ctrl+s":
-			m.settings = NewSettingsPanel(m.cfg)
+			m.settings = NewSettingsPanel(m.cfg, m.theme)
 			m.settings.setSize(m.width, m.height)
 			m.phase = phaseSettings
 			return m, nil
@@ -107,6 +110,7 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	m.cfg = next.cfg
+	m.theme = ResolveTheme(m.cfg.Theme)
 	return m.restart()
 }
 
@@ -115,7 +119,7 @@ func (m AppModel) restart() (tea.Model, tea.Cmd) {
 	if err != nil {
 		return m, nil
 	}
-	m.test = NewTestModel(session, m.cfg)
+	m.test = NewTestModel(session, m.cfg, m.theme)
 	m.test.setSize(m.width, m.height)
 	m.phase = phaseTest
 	return m, tea.Batch(tea.ClearScreen, m.test.Init())
@@ -126,7 +130,7 @@ func (m AppModel) View() string {
 	case phaseSettings:
 		return m.settings.View()
 	case phaseResults:
-		return renderResult(m.result, m.width, m.height)
+		return renderResult(m.result, m.theme, m.width, m.height)
 	default:
 		return m.test.View()
 	}

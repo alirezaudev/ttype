@@ -10,21 +10,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	correctStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
-	incorrectStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	cursorStyle    = lipgloss.NewStyle().Reverse(true)
-)
-
 type TestModel struct {
 	session *engine.Session
 	cfg     engine.Config
+	theme   Theme
 	width   int
 	height  int
 }
 
-func NewTestModel(session *engine.Session, cfg engine.Config) TestModel {
-	return TestModel{session: session, cfg: cfg}
+func NewTestModel(session *engine.Session, cfg engine.Config, theme Theme) TestModel {
+	return TestModel{session: session, cfg: cfg, theme: theme}
 }
 
 func (m *TestModel) setSize(width, height int) {
@@ -68,20 +63,21 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TestModel) View() string {
 	var out strings.Builder
 
-	status := fmt.Sprintf(
+	status := m.theme.Help.Render(fmt.Sprintf(
 		"wpm %-3d · raw %-3d · acc %-3d%% · err %-3d",
 		int(m.session.WPM()),
 		int(m.session.RawWPM()),
 		int(m.session.Accuracy()),
 		m.session.Incorrect(),
-	)
+	))
 
 	if m.session.Kind() == engine.TestKindTimed {
-		out.WriteString(fmt.Sprintf("%s · %s\n\n", formatClock(m.session.Remaining()), status))
+		out.WriteString(m.theme.HUDTime.Render(formatClock(m.session.Remaining())) + " · " + status + "\n\n")
 	} else {
 		done, total := m.session.WordsProgress()
 		totalStr := fmt.Sprintf("%d", total)
-		out.WriteString(fmt.Sprintf("%*d/%s · %s\n\n", len(totalStr), done, totalStr, status))
+		progress := m.theme.HUD.Render(fmt.Sprintf("%*d/%s", len(totalStr), done, totalStr))
+		out.WriteString(progress + " · " + status + "\n\n")
 	}
 
 	cursor := m.session.Cursor()
@@ -94,13 +90,13 @@ func (m TestModel) View() string {
 			r := target[i]
 			switch {
 			case i == cursor:
-				out.WriteString(cursorStyle.Render(string(r)))
+				out.WriteString(m.theme.Cursor.Render(string(r)))
 			case i < cursor && input[i] == r:
-				out.WriteString(correctStyle.Render(string(r)))
+				out.WriteString(m.theme.Correct.Render(string(r)))
 			case i < cursor:
-				out.WriteString(incorrectStyle.Render(string(r)))
+				out.WriteString(m.theme.Incorrect.Render(string(r)))
 			default:
-				out.WriteRune(r)
+				out.WriteString(m.theme.Pending.Render(string(r)))
 			}
 		}
 		if li < len(lines)-1 {

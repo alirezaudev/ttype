@@ -16,29 +16,25 @@ const (
 	settingsTestKind settingsField = iota
 	settingsLength
 	settingsWidth
+	settingsTheme
 )
 
 const (
-	settingsLastField  = settingsWidth
+	settingsLastField  = settingsTheme
 	settingsLabelWidth = 10
 	settingsValueWidth = 10
 )
 
-var (
-	settingsTitleStyle = lipgloss.NewStyle().Bold(true)
-	settingsLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	settingsHelpStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-)
-
 type SettingsPanel struct {
 	cfg    engine.Config
+	theme  Theme
 	field  settingsField
 	width  int
 	height int
 }
 
-func NewSettingsPanel(cfg engine.Config) SettingsPanel {
-	return SettingsPanel{cfg: cfg}
+func NewSettingsPanel(cfg engine.Config, theme Theme) SettingsPanel {
+	return SettingsPanel{cfg: cfg, theme: theme}
 }
 
 func (m *SettingsPanel) setSize(width, height int) { m.width, m.height = width, height }
@@ -113,6 +109,20 @@ func (m *SettingsPanel) adjust(dir int) {
 				m.cfg.Width = 100
 			}
 		}
+	case settingsTheme:
+		names := ThemeNames()
+		current := m.cfg.Theme
+		if current == "" {
+			current = ThemeDefault
+		}
+		idx := 0
+		for i, n := range names {
+			if n == current {
+				idx = i
+				break
+			}
+		}
+		m.cfg.Theme = names[(idx+len(names)+dir)%len(names)]
 	}
 }
 
@@ -144,25 +154,33 @@ func (m SettingsPanel) widthLabel() string {
 	return fmt.Sprintf("%d", m.cfg.Width)
 }
 
+func (m SettingsPanel) themeLabel() string {
+	if m.cfg.Theme == "" {
+		return ThemeDefault
+	}
+	return m.cfg.Theme
+}
+
 func (m SettingsPanel) row(label, value string, active bool) string {
 	prefix := "  "
 	if active {
 		prefix = "> "
 	}
-	lbl := settingsLabelStyle.Render(fmt.Sprintf("%-*s", settingsLabelWidth, label+":"))
+	lbl := m.theme.Help.Render(fmt.Sprintf("%-*s", settingsLabelWidth, label+":"))
 	val := fmt.Sprintf("%-*s", settingsValueWidth, value)
 	return prefix + lbl + " " + val
 }
 
 func (m SettingsPanel) View() string {
 	lines := []string{
-		settingsTitleStyle.Render("Settings"),
+		m.theme.Finished.Render("Settings"),
 		"",
 		m.row("test", m.kindLabel(), m.field == settingsTestKind),
 		m.row(m.lengthFieldLabel(), m.lengthLabel(), m.field == settingsLength),
 		m.row("width", m.widthLabel(), m.field == settingsWidth),
+		m.row("theme", m.themeLabel(), m.field == settingsTheme),
 		"",
-		settingsHelpStyle.Render("↑/↓ field  ←/→ value  enter apply  esc back"),
+		m.theme.Help.Render("↑/↓ field  ←/→ value  enter apply  esc back"),
 	}
 	content := strings.Join(lines, "\n")
 	if m.width == 0 || m.height == 0 {
