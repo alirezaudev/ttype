@@ -65,19 +65,25 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TestModel) View() string {
 	var out strings.Builder
 
+	status := fmt.Sprintf(
+		"wpm %-3d · raw %-3d · acc %-3d%% · err %-3d",
+		int(m.session.WPM()),
+		int(m.session.RawWPM()),
+		int(m.session.Accuracy()),
+		m.session.Incorrect(),
+	)
+
 	if m.session.Finished() {
-		out.WriteString(fmt.Sprintf(
-			"WPM: %d Raw: %d Acc: %d%% Errors: %d",
-			int(m.session.WPM()),
-			int(m.session.RawWPM()),
-			int(m.session.Accuracy()),
-			int(m.session.Incorrect()),
-		))
+		out.WriteString(status)
 		return m.center(out.String())
 	}
 
-	if m.session.Kind() != engine.TestKindWords {
-		out.WriteString(formatClock(m.session.Remaining()) + "\n")
+	if m.session.Kind() == engine.TestKindTimed {
+		out.WriteString(fmt.Sprintf("%s · %s\n\n", formatClock(m.session.Remaining()), status))
+	} else {
+		done, total := m.session.WordsProgress()
+		totalStr := fmt.Sprintf("%d", total)
+		out.WriteString(fmt.Sprintf("%*d/%s · %s\n\n", len(totalStr), done, totalStr, status))
 	}
 
 	cursor := m.session.Cursor()

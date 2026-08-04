@@ -20,8 +20,9 @@ const (
 const skipRune = '\x00'
 
 type Config struct {
-	Kind     TestKind
-	Duration time.Duration
+	Kind      TestKind
+	Duration  time.Duration
+	WordCount int
 }
 
 type Session struct {
@@ -78,6 +79,51 @@ func NewSession(newTarget func() (string, error), config Config, clock Clock) (*
 		return nil, err
 	}
 	return s, nil
+}
+
+func (s *Session) WordsProgress() (completed, total int) {
+	if s.config.Kind != TestKindWords {
+		return 0, 0
+	}
+
+	total = s.config.WordCount
+	completed = countCompletedWords(s.input, s.targetRunes)
+	if completed > total {
+		completed = total
+	}
+	return completed, total
+}
+
+func countCompletedWords(input []rune, target []rune) int {
+	if len(target) == 0 {
+		return 0
+	}
+	if len(input) >= len(target) {
+		return countWordsInText(target)
+	}
+
+	specs := 0
+	for i := range input {
+		if target[i] == ' ' {
+			specs++
+		}
+	}
+
+	return specs
+}
+
+func countWordsInText(text []rune) int {
+	if len(text) == 0 {
+		return 0
+	}
+
+	n := 1
+	for _, r := range text {
+		if r == ' ' {
+			n++
+		}
+	}
+	return n
 }
 
 func (s *Session) Restart() error {

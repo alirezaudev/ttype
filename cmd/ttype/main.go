@@ -28,6 +28,7 @@ func main() {
 		cfg = engine.Config{Kind: engine.TestKindWords}
 		count = *wordCount
 	}
+	cfg.WordCount = count
 
 	newTarget := func() (string, error) {
 		sampled := make([]string, count)

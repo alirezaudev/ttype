@@ -166,3 +166,14 @@ func TestRestartClearsSkip(t *testing.T) {
 		t.Fatalf("cursor=%d input=%q", s.Cursor(), string(s.Input()))
 	}
 }
+
+func TestWordsProgressAdvancesPastSkippedWord(t *testing.T) {
+	t.Parallel()
+	s, _ := newWordsSession(t, "abc def")
+
+	typeString(s, "a ")
+	done, total := s.WordsProgress()
+	if done != 1 || total != 2 {
+		t.Fatalf("progress = %d/%d, want 1/2", done, total)
+	}
+}

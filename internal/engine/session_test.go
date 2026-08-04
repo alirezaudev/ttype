@@ -25,12 +25,26 @@ func newWordsSession(t *testing.T, target string) (*engine.Session, *engine.Fake
 	t.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
-	cfg := engine.Config{Kind: engine.TestKindWords}
+	cfg := engine.Config{Kind: engine.TestKindWords, WordCount: countWordsInText([]rune(target))}
 	s, err := engine.NewSession(func() (string, error) { return target, nil }, cfg, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
 	return s, clock
+}
+
+func countWordsInText(text []rune) int {
+	if len(text) == 0 {
+		return 0
+	}
+
+	n := 1
+	for _, r := range text {
+		if r == ' ' {
+			n++
+		}
+	}
+	return n
 }
 
 func typeString(s *engine.Session, text string) {
