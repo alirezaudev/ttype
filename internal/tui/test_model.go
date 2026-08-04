@@ -26,6 +26,10 @@ func NewTestModel(session *engine.Session) TestModel {
 	return TestModel{session: session}
 }
 
+func (m *TestModel) setSize(width, height int) {
+	m.width, m.height = width, height
+}
+
 func (m TestModel) Init() tea.Cmd {
 	return tick()
 }
@@ -44,8 +48,6 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			_ = m.session.Restart()
 			return m, nil
-		case "ctrl+c", "esc":
-			return m, tea.Quit
 		case "backspace":
 			m.session.Backspace()
 		case "ctrl+w", "ctrl+h", "alt+ctrl+h", "alt+backspace":

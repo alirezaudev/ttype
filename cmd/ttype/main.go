@@ -43,7 +43,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	p := tea.NewProgram(tui.NewTestModel(session), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewAppModel(cfg, newTarget, session), tea.WithAltScreen())
 
 	_, err = p.Run()
 	if err != nil {
