@@ -32,6 +32,70 @@ func TestWindowSizeFansOutToTestModel(t *testing.T) {
 	}
 }
 
+func TestOpenSettingsFromResults(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m.test.session.InputRune('a')
+	clock.Advance(16 * time.Second)
+	next, _ := m.Update(tickMsg(time.Now()))
+	m = next.(AppModel)
+
+	if m.phase != phaseResults {
+		t.Fatalf("phase = %v, want phaseResults", m.phase)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+
+	if m.phase != phaseSettings {
+		t.Fatalf("phase = %v after s, want phaseSettings", m.phase)
+	}
+}
+
+func TestSettingsApplyRestarts(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m.test.session.InputRune('a')
+	clock.Advance(16 * time.Second)
+	next, _ := m.Update(tickMsg(time.Now()))
+	m = next.(AppModel)
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v after apply, want phaseTest", m.phase)
+	}
+	if m.test.session.Finished() {
+		t.Fatal("restarted session should not be finished")
+	}
+}
+
+func TestSettingsCancelReturnsToResults(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m.test.session.InputRune('a')
+	clock.Advance(16 * time.Second)
+	next, _ := m.Update(tickMsg(time.Now()))
+	m = next.(AppModel)
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(AppModel)
+
+	if m.phase != phaseResults {
+		t.Fatalf("phase = %v after esc, want phaseResults", m.phase)
+	}
+}
+
 func TestRestartAfterFinishTransitionsToTest(t *testing.T) {
 	t.Parallel()
 

@@ -46,7 +46,7 @@ func TestEnterMidTestDoesNotScheduleTick(t *testing.T) {
 	t.Parallel()
 
 	session, _ := newModelSession(t)
-	m := NewTestModel(session)
+	m := NewTestModel(session, engine.Config{})
 	session.InputRune('a')
 
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -62,7 +62,7 @@ func TestEnterAfterFinishDoesNotScheduleTick(t *testing.T) {
 	t.Parallel()
 
 	session, clock := newModelSession(t)
-	m := NewTestModel(session)
+	m := NewTestModel(session, engine.Config{})
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 	session.Tick()
@@ -80,7 +80,7 @@ func TestTickAlwaysReschedules(t *testing.T) {
 	t.Parallel()
 
 	session, clock := newModelSession(t)
-	m := NewTestModel(session)
+	m := NewTestModel(session, engine.Config{})
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 

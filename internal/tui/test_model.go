@@ -18,12 +18,13 @@ var (
 
 type TestModel struct {
 	session *engine.Session
+	cfg     engine.Config
 	width   int
 	height  int
 }
 
-func NewTestModel(session *engine.Session) TestModel {
-	return TestModel{session: session}
+func NewTestModel(session *engine.Session, cfg engine.Config) TestModel {
+	return TestModel{session: session, cfg: cfg}
 }
 
 func (m *TestModel) setSize(width, height int) {
@@ -146,7 +147,11 @@ func (m TestModel) typingWidth() int {
 		return len(m.session.TargetRunes())
 	}
 
-	w := min(m.width, 100)
+	cap := 100
+	if m.cfg.Width > 0 {
+		cap = m.cfg.Width
+	}
+	w := min(m.width, cap)
 
 	if w < 20 {
 		w = 20

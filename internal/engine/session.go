@@ -23,6 +23,7 @@ type Config struct {
 	Kind      TestKind
 	Duration  time.Duration
 	WordCount int
+	Width     int
 }
 
 type Session struct {
