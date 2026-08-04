@@ -1,7 +1,11 @@
 package tui
 
 import (
+	"time"
+
+	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/alirezaudev/ttype/internal/storage"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -20,6 +24,7 @@ type sizable interface {
 type AppModel struct {
 	cfg       engine.Config
 	newTarget func() (string, error)
+	store     storage.Store
 	phase     appPhase
 	navStack  []appPhase
 	test      TestModel
@@ -30,11 +35,12 @@ type AppModel struct {
 	height    int
 }
 
-func NewAppModel(cfg engine.Config, newTarget func() (string, error), session *engine.Session) AppModel {
+func NewAppModel(cfg engine.Config, newTarget func() (string, error), session *engine.Session, store storage.Store) AppModel {
 	theme := ResolveTheme(cfg.Theme)
 	return AppModel{
 		cfg:       cfg,
 		newTarget: newTarget,
+		store:     store,
 		theme:     theme,
 		test:      NewTestModel(session, cfg, theme),
 	}
@@ -86,8 +92,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.popPhase()
 		case "enter", "tab":
 			if m.phase == phaseResult {
-				newMsg := m.restartTest()
-				return m, newMsg
+				return m, m.restartTest()
 			}
 		case "ctrl+s":
 			m.settings = NewSettingsPanel(m.cfg, m.theme)
@@ -131,7 +136,31 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.cfg = m.settings.cfg
 	m.theme = ResolveTheme(m.cfg.Theme)
+	m.persistConfigDefaults()
 	return m, m.restartTest()
+}
+
+func (m *AppModel) persistConfigDefaults() {
+	if m.store == nil {
+		return
+	}
+	settings, err := m.store.LoadSettings()
+	if err != nil {
+		return
+	}
+	settings.Theme = m.cfg.Theme
+	settings.DefaultWidth = m.cfg.Width
+	if m.cfg.Kind == engine.TestKindWords {
+		settings.DefaultWordCount = m.cfg.WordCount
+	} else {
+		settings.DefaultWordCount = 0
+		secs := int(m.cfg.Duration / time.Second)
+		if secs <= 0 {
+			secs = 60
+		}
+		settings.DefaultDuration = domain.Duration(secs)
+	}
+	_ = m.store.SaveSettings(settings)
 }
 
 func (m *AppModel) restartTest() tea.Cmd {
@@ -144,7 +173,6 @@ func (m *AppModel) restartTest() tea.Cmd {
 	m.phase = phaseTest
 	m.navStack = nil
 	return tea.Batch(tea.ClearScreen, m.test.Init())
-
 }
 
 func (m AppModel) View() string {

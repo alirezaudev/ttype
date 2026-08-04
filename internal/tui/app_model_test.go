@@ -17,7 +17,7 @@ func newAppModel(t *testing.T) (AppModel, *engine.FakeClock) {
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
-	return NewAppModel(cfg, newTarget, session), clock
+	return NewAppModel(cfg, newTarget, session, nil), clock
 }
 
 func TestWindowSizeFansOutToTestModel(t *testing.T) {
