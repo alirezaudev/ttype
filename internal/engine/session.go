@@ -42,6 +42,27 @@ type Session struct {
 	capsInversions int
 }
 
+func NewSession(newTarget func() (string, error), config Config, clock Clock) (*Session, error) {
+	if clock == nil {
+		clock = RealClock{}
+	}
+	if config.Kind == "" {
+		config.Kind = TestKindTimed
+	}
+	if config.Kind == TestKindTimed && config.Duration <= 0 {
+		return nil, errors.New("timed session requires a positive duration")
+	}
+	s := &Session{
+		newTarget: newTarget,
+		config:    config,
+		clock:     clock,
+	}
+	if err := s.loadTarget(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
 func (s *Session) Target() string      { return s.target }
 func (s *Session) TargetRunes() []rune { return s.targetRunes }
 func (s *Session) Input() []rune       { return append([]rune(nil), s.input...) }
@@ -62,27 +83,6 @@ func (s *Session) Remaining() time.Duration {
 		return 0
 	}
 	return left
-}
-
-func NewSession(newTarget func() (string, error), config Config, clock Clock) (*Session, error) {
-	if clock == nil {
-		clock = RealClock{}
-	}
-	if config.Kind == "" {
-		config.Kind = TestKindTimed
-	}
-	if config.Kind == TestKindTimed && config.Duration <= 0 {
-		return nil, errors.New("timed session requires a positive duration")
-	}
-	s := &Session{
-		newTarget: newTarget,
-		config:    config,
-		clock:     clock,
-	}
-	if err := s.loadTarget(); err != nil {
-		return nil, err
-	}
-	return s, nil
 }
 
 func (s *Session) WordsProgress() (completed, total int) {

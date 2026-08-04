@@ -118,38 +118,6 @@ func (m TestModel) View() string {
 	return m.center(block)
 }
 
-func (m TestModel) center(content string) string {
-	if m.width == 0 || m.height == 0 {
-		return content
-	}
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
-}
-
-type tickMsg time.Time
-
-func tick() tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
-		return tickMsg{}
-	})
-}
-
-func (m TestModel) capsWarnActive() bool {
-	if m.capsProbe != nil && m.capsProbe() {
-		return true
-	}
-	return m.session.CapsLockSuspected()
-}
-
-func (m TestModel) hintLine() string {
-	if m.capsWarnActive() {
-		return m.theme.CapsWarn.Render(" ⚠ Caps Lock? ")
-	}
-	if !m.session.Started() {
-		return m.theme.Help.Render("start typing to begin")
-	}
-	return ""
-}
-
 func (m TestModel) typingWidth() int {
 	if m.width == 0 {
 		return len(m.session.TargetRunes())
@@ -174,4 +142,36 @@ func (m TestModel) typingWidth() int {
 	}
 
 	return w
+}
+
+func (m TestModel) hintLine() string {
+	if m.capsWarnActive() {
+		return m.theme.CapsWarn.Render(" ⚠ Caps Lock? ")
+	}
+	if !m.session.Started() {
+		return m.theme.Help.Render("start typing to begin")
+	}
+	return ""
+}
+
+func (m TestModel) capsWarnActive() bool {
+	if m.capsProbe != nil && m.capsProbe() {
+		return true
+	}
+	return m.session.CapsLockSuspected()
+}
+
+func (m TestModel) center(content string) string {
+	if m.width == 0 || m.height == 0 {
+		return content
+	}
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+}
+
+type tickMsg time.Time
+
+func tick() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
+		return tickMsg{}
+	})
 }
