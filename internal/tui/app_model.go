@@ -4,6 +4,7 @@ import (
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
+	"github.com/alirezaudev/ttype/internal/text"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -22,6 +23,7 @@ type sizable interface {
 type AppModel struct {
 	cfg      domain.TestConfig
 	provider engine.TextSource
+	langs    *text.Provider
 	store    storage.Store
 	phase    appPhase
 	navStack []appPhase
@@ -33,11 +35,12 @@ type AppModel struct {
 	height   int
 }
 
-func NewAppModel(cfg domain.TestConfig, provider engine.TextSource, session *engine.Session, store storage.Store) AppModel {
+func NewAppModel(cfg domain.TestConfig, provider engine.TextSource, langs *text.Provider, session *engine.Session, store storage.Store) AppModel {
 	theme := ResolveTheme(cfg.Theme)
 	return AppModel{
 		cfg:      cfg,
 		provider: provider,
+		langs:    langs,
 		store:    store,
 		theme:    theme,
 		test:     NewTestModel(session, cfg, theme),
@@ -93,7 +96,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.restartTest()
 			}
 		case "ctrl+s":
-			m.settings = NewSettingsPanel(m.cfg, m.theme)
+			m.settings = NewSettingsPanel(m.cfg, m.langs, m.theme)
 			m.settings.setSize(m.width, m.height)
 			m.pushPhase(phaseSettings)
 			return m, nil

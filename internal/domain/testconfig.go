@@ -13,6 +13,7 @@ type TestConfig struct {
 	WordCount int
 	Width     int
 	Theme     string
+	Language  string
 }
 
 func (c TestConfig) IsWordsMode() bool {
