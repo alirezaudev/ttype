@@ -9,12 +9,24 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type fakeSource struct {
+	gen func() (string, error)
+}
+
+func (f fakeSource) Generate(int) (string, error) {
+	return f.gen()
+}
+
+func fixedSource(target string) fakeSource {
+	return fakeSource{gen: func() (string, error) { return target, nil }}
+}
+
 func newModelSession(t *testing.T) (*engine.Session, *engine.FakeClock) {
 	t.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
 	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}
-	s, err := engine.NewSession(func() (string, error) { return "abc", nil }, cfg, clock)
+	s, err := engine.NewSession(cfg, fixedSource("abc"), clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}

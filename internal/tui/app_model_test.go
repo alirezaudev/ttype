@@ -13,12 +13,12 @@ func newAppModel(t *testing.T) (AppModel, *engine.FakeClock) {
 	t.Helper()
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
 	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}
-	newTarget := func() (string, error) { return "abc def", nil }
-	session, err := engine.NewSession(newTarget, cfg, clock)
+	source := fixedSource("abc def")
+	session, err := engine.NewSession(cfg, source, clock)
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
-	return NewAppModel(cfg, newTarget, session, nil), clock
+	return NewAppModel(cfg, source, session, nil), clock
 }
 
 func TestWindowSizeFansOutToTestModel(t *testing.T) {

@@ -3,13 +3,11 @@ package main
 import (
 	"flag"
 	"log"
-	"math/rand/v2"
-	"strings"
 
-	"github.com/alirezaudev/ttype/assets"
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
+	"github.com/alirezaudev/ttype/internal/text"
 	"github.com/alirezaudev/ttype/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -23,7 +21,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	words, err := assets.LoadWords()
+	provider, err := text.NewProvider()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -46,20 +44,12 @@ func main() {
 	}
 	cfg.WordCount = count
 
-	newTarget := func() (string, error) {
-		sampled := make([]string, count)
-		for i := range sampled {
-			sampled[i] = words[rand.IntN(len(words))]
-		}
-		return strings.Join(sampled, " "), nil
-	}
-
-	session, err := engine.NewSession(newTarget, cfg, nil)
+	session, err := engine.NewSession(cfg, provider, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	p := tea.NewProgram(tui.NewAppModel(cfg, newTarget, session, store), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewAppModel(cfg, provider, session, store), tea.WithAltScreen())
 
 	_, err = p.Run()
 	if err != nil {

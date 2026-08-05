@@ -12,8 +12,11 @@ import (
 // skipRune marks input positions abandoned by a space commit.
 const skipRune = '\x00'
 
+type TextSource interface {
+	Generate(wordLimit int) (string, error)
+}
+
 type Session struct {
-	newTarget      func() (string, error)
 	config         domain.TestConfig
 	target         string
 	targetRunes    []rune
@@ -22,12 +25,13 @@ type Session struct {
 	correct        int
 	incorrect      int
 	clock          Clock
+	source         TextSource
 	startedAt      time.Time
 	endedAt        time.Time
 	capsInversions int
 }
 
-func NewSession(newTarget func() (string, error), config domain.TestConfig, clock Clock) (*Session, error) {
+func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Session, error) {
 	if clock == nil {
 		clock = RealClock{}
 	}
@@ -38,9 +42,9 @@ func NewSession(newTarget func() (string, error), config domain.TestConfig, cloc
 		return nil, errors.New("timed session requires a positive duration")
 	}
 	s := &Session{
-		newTarget: newTarget,
-		config:    config,
-		clock:     clock,
+		source: source,
+		config: config,
+		clock:  clock,
 	}
 	if err := s.loadTarget(); err != nil {
 		return nil, err
@@ -147,12 +151,12 @@ func (s *Session) Restart() error {
 }
 
 func (s *Session) loadTarget() error {
-	text, err := s.newTarget()
+	target, err := s.source.Generate(s.config.WordCount)
 	if err != nil {
 		return err
 	}
-	s.target = text
-	s.targetRunes = []rune(text)
+	s.target = target
+	s.targetRunes = []rune(target)
 	return nil
 }
 

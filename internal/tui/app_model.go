@@ -20,27 +20,27 @@ type sizable interface {
 }
 
 type AppModel struct {
-	cfg       domain.TestConfig
-	newTarget func() (string, error)
-	store     storage.Store
-	phase     appPhase
-	navStack  []appPhase
-	test      TestModel
-	result    resultSnapshot
-	settings  SettingsPanel
-	theme     Theme
-	width     int
-	height    int
+	cfg      domain.TestConfig
+	provider engine.TextSource
+	store    storage.Store
+	phase    appPhase
+	navStack []appPhase
+	test     TestModel
+	result   resultSnapshot
+	settings SettingsPanel
+	theme    Theme
+	width    int
+	height   int
 }
 
-func NewAppModel(cfg domain.TestConfig, newTarget func() (string, error), session *engine.Session, store storage.Store) AppModel {
+func NewAppModel(cfg domain.TestConfig, provider engine.TextSource, session *engine.Session, store storage.Store) AppModel {
 	theme := ResolveTheme(cfg.Theme)
 	return AppModel{
-		cfg:       cfg,
-		newTarget: newTarget,
-		store:     store,
-		theme:     theme,
-		test:      NewTestModel(session, cfg, theme),
+		cfg:      cfg,
+		provider: provider,
+		store:    store,
+		theme:    theme,
+		test:     NewTestModel(session, cfg, theme),
 	}
 }
 
@@ -162,7 +162,7 @@ func (m *AppModel) persistConfigDefaults() {
 }
 
 func (m *AppModel) restartTest() tea.Cmd {
-	session, err := engine.NewSession(m.newTarget, m.cfg, nil)
+	session, err := engine.NewSession(m.cfg, m.provider, nil)
 	if err != nil {
 		return nil
 	}
