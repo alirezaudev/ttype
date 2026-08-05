@@ -5,6 +5,7 @@ bin/
 
 # Go
 vendor/
+coverage.out
 
 # OS
 .DS_Store
