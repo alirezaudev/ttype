@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/domain"
-	"golang.org/x/sys/unix"
 )
 
 const settingFilename = "config.json"
@@ -110,26 +109,4 @@ func (s *JSONStore) SaveSettings(settings domain.Settings) error {
 
 func ensureDir(path string) error {
 	return os.MkdirAll(path, 0o700)
-}
-
-type fileLock struct {
-	f *os.File
-}
-
-func acquireLock(path string) (*fileLock, error) {
-	f, err := os.OpenFile(filepath.Join(path, ".lock"), os.O_CREATE|os.O_RDWR, 0600)
-	if err != nil {
-		return nil, fmt.Errorf("open lock file: %w", err)
-	}
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil {
-		_ = f.Close()
-		return nil, fmt.Errorf("acquire lock file: %w", err)
-	}
-
-	return &fileLock{f: f}, nil
-}
-
-func (l *fileLock) release() {
-	_ = unix.Flock(int(l.f.Fd()), unix.LOCK_UN)
-	_ = l.f.Close()
 }
