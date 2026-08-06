@@ -17,12 +17,17 @@ func main() {
 	language := flag.String("language", "", "use a downloadable language word list instead of the built-in one")
 	flag.Parse()
 
-	store, err := storage.NewDefaultStore()
+	dirs, err := storage.DefaultDirs()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	provider, err := text.NewProvider()
+	store, err := storage.NewJSONStore(dirs.Config)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	provider, err := text.NewProvider(dirs.Data)
 	if err != nil {
 		log.Fatalln(err)
 	}

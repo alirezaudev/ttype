@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -33,13 +32,8 @@ type Provider struct {
 	dir     string
 }
 
-func NewProvider() (*Provider, error) {
+func NewProvider(dataDir string) (*Provider, error) {
 	words, err := assets.LoadWords()
-	if err != nil {
-		return nil, err
-	}
-
-	dir, err := languageCacheDir()
 	if err != nil {
 		return nil, err
 	}
@@ -47,41 +41,8 @@ func NewProvider() (*Provider, error) {
 	return &Provider{
 		builtin: words,
 		words:   words,
-		dir:     dir,
+		dir:     filepath.Join(dataDir, "languages"),
 	}, nil
-}
-
-func languageCacheDir() (string, error) {
-	var base string
-	switch runtime.GOOS {
-	case "darwin":
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		base = filepath.Join(home, "Library", "Application Support", "ttype")
-	case "windows":
-		base = os.Getenv("LOCALAPPDATA")
-		if base == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			base = filepath.Join(home, "AppData", "Local")
-		}
-		base = filepath.Join(base, "ttype")
-	default:
-		if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
-			base = filepath.Join(xdg, "ttype")
-		} else {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return "", err
-			}
-			base = filepath.Join(home, ".local", "share", "ttype")
-		}
-	}
-	return filepath.Join(base, "languages"), nil
 }
 
 func DisplayName(id string) string {

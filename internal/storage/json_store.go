@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -35,38 +34,12 @@ func (s *JSONStore) Path() string {
 }
 
 func NewDefaultStore() (*JSONStore, error) {
-	var dir string
-	switch runtime.GOOS {
-	case "darwin":
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-		dir = filepath.Join(home, "Library", "Preferences", "ttype")
-	case "windows":
-		base := os.Getenv("APPDATA")
-		if base == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return nil, err
-			}
-			base = filepath.Join(home, "AppData", "Roaming")
-		}
-
-		dir = filepath.Join(base, "ttype")
-	default:
-		if base := os.Getenv("XDG_DATA_HOME"); base != "" {
-			dir = filepath.Join(base, "ttype")
-		} else {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return nil, err
-			}
-			dir = filepath.Join(home, ".config", "ttype")
-		}
+	dirs, err := DefaultDirs()
+	if err != nil {
+		return nil, err
 	}
 
-	return NewJSONStore(dir)
+	return NewJSONStore(dirs.Config)
 }
 
 func (s *JSONStore) LoadSettings() (domain.Settings, error) {
@@ -105,8 +78,4 @@ func (s *JSONStore) SaveSettings(settings domain.Settings) error {
 		return err
 	}
 	return os.Rename(tmp, path)
-}
-
-func ensureDir(path string) error {
-	return os.MkdirAll(path, 0o700)
 }
