@@ -70,8 +70,20 @@ func (p *Provider) Languages() ([]string, error) {
 	return ids, nil
 }
 
+func (p *Provider) languagePath(id string) string {
+	return filepath.Join(p.dir, id+".json")
+}
+
 func (p *Provider) manifestPath() string {
 	return filepath.Join(p.dir, manifestFile)
+}
+
+func (p *Provider) Cached(id string) bool {
+	if id == "" {
+		return true
+	}
+	_, err := os.Stat(p.languagePath(id))
+	return err == nil
 }
 
 func (p *Provider) manifestStale() bool {
@@ -154,8 +166,7 @@ func (p *Provider) UseLanguage(id string) error {
 		return nil
 	}
 
-	path := filepath.Join(p.dir, id+".json")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(p.languagePath(id))
 	if err != nil {
 		data, err = p.download(id)
 		if err != nil {
@@ -201,11 +212,11 @@ func (p *Provider) download(id string) ([]byte, error) {
 	if err := os.MkdirAll(p.dir, 0o700); err != nil {
 		return nil, err
 	}
-	tmp := filepath.Join(p.dir, id+".json.tmp")
+	tmp := p.languagePath(id) + ".tmp"
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return nil, err
 	}
-	if err := os.Rename(tmp, filepath.Join(p.dir, id+".json")); err != nil {
+	if err := os.Rename(tmp, p.languagePath(id)); err != nil {
 		return nil, err
 	}
 	return data, nil

@@ -166,7 +166,7 @@ func (m LanguagePicker) View() string {
 	}
 	lines = append(lines, m.theme.HUD.Render(filterLine), "")
 
-	lines = append(lines, languageWindow(m.filtered, m.idx, m.height, m.theme)...)
+	lines = append(lines, languageWindow(m.filtered, m.idx, m.height, m.theme, m.provider)...)
 	if len(m.filtered) == 0 {
 		lines = append(lines, m.theme.Help.Render("no matches"))
 	}
@@ -175,7 +175,7 @@ func (m LanguagePicker) View() string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, strings.Join(lines, "\n"))
 }
 
-func languageWindow(ids []string, idx, height int, theme Theme) []string {
+func languageWindow(ids []string, idx, height int, theme Theme, provider *text.Provider) []string {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -207,7 +207,11 @@ func languageWindow(ids []string, idx, height int, theme Theme) []string {
 		if i == idx {
 			prefix = "> "
 		}
-		lines = append(lines, prefix+theme.HUDValue.Render(text.DisplayName(ids[i])))
+		label := text.DisplayName(ids[i])
+		if provider != nil && ids[i] != "" && provider.Cached(ids[i]) {
+			label += " ✓"
+		}
+		lines = append(lines, prefix+theme.HUDValue.Render(label))
 	}
 	return lines
 }
