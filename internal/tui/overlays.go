@@ -27,20 +27,15 @@ const (
 )
 
 type SettingsPanel struct {
-	cfg      domain.TestConfig
-	provider *text.Provider
-	theme    Theme
-	field    settingsField
-	picking  bool
-	langs    []string
-	langIdx  int
-	langErr  error
-	width    int
-	height   int
+	cfg    domain.TestConfig
+	theme  Theme
+	field  settingsField
+	width  int
+	height int
 }
 
-func NewSettingsPanel(cfg domain.TestConfig, provider *text.Provider, theme Theme) SettingsPanel {
-	return SettingsPanel{cfg: cfg, provider: provider, theme: theme}
+func NewSettingsPanel(cfg domain.TestConfig, theme Theme) SettingsPanel {
+	return SettingsPanel{cfg: cfg, theme: theme}
 }
 
 func (m *SettingsPanel) setSize(width, height int) { m.width, m.height = width, height }
@@ -53,48 +48,12 @@ func (m SettingsPanel) Update(msg tea.Msg) (SettingsPanel, tea.Cmd, bool, bool) 
 		return m, nil, false, false
 	}
 
-	if m.picking {
-		switch key.String() {
-		case "esc", "q":
-			m.picking = false
-		case "up", "k":
-			if m.langIdx > 0 {
-				m.langIdx--
-			}
-		case "down", "j":
-			if m.langIdx < len(m.langs)-1 {
-				m.langIdx++
-			}
-		case "enter":
-			id := ""
-			if m.langIdx < len(m.langs) {
-				id = m.langs[m.langIdx]
-			}
-			m.langErr = m.provider.UseLanguage(id)
-			if m.langErr == nil {
-				m.cfg.Language = id
-				m.picking = false
-			}
-		}
-		return m, nil, false, false
-	}
-
 	switch key.String() {
 	case "esc", "q":
 		return m, nil, true, false
 	case "enter":
 		if m.field == settingsLanguage {
-			m.langs, m.langErr = m.provider.Languages()
-			m.langs = append([]string{""}, m.langs...)
-			m.langIdx = 0
-			for i, id := range m.langs {
-				if id == m.cfg.Language {
-					m.langIdx = i
-					break
-				}
-			}
-			m.picking = true
-			return m, nil, false, false
+			return m, func() tea.Msg { return OpenLanguagePickerMsg{} }, false, false
 		}
 		return m, nil, true, true
 	case "up", "k":
@@ -144,9 +103,8 @@ func (m *SettingsPanel) adjust(dir int) {
 			m.cfg.Duration = domain.Duration(next)
 		}
 	case settingsLanguage:
-		if dir < 0 && m.provider != nil {
+		if dir < 0 {
 			m.cfg.Language = ""
-			m.langErr = m.provider.UseLanguage("")
 		}
 	case settingsWidth:
 		if m.cfg.Width <= 0 && dir > 0 {
@@ -223,36 +181,6 @@ func (m SettingsPanel) row(label, value string, active bool) string {
 }
 
 func (m SettingsPanel) View() string {
-	if m.picking {
-		lines := []string{m.theme.Finished.Render("Pick a language"), ""}
-		if m.langErr != nil {
-			lines = append(lines, m.theme.Incorrect.Render(m.langErr.Error()), "")
-		}
-
-		start := m.langIdx - 5
-		if start < 0 {
-			start = 0
-		}
-		end := start + 12
-		if end > len(m.langs) {
-			end = len(m.langs)
-		}
-		for i := start; i < end; i++ {
-			prefix := "  "
-			if i == m.langIdx {
-				prefix = "> "
-			}
-			lines = append(lines, prefix+m.theme.HUDValue.Render(text.DisplayName(m.langs[i])))
-		}
-
-		lines = append(lines, "", m.theme.Help.Render("↑/↓ select  enter confirm  esc back"))
-		content := strings.Join(lines, "\n")
-		if m.width == 0 || m.height == 0 {
-			return content
-		}
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
-	}
-
 	lines := []string{
 		m.theme.Finished.Render("Settings"),
 		"",

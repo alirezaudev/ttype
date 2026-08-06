@@ -14,6 +14,7 @@ const (
 	phaseTest appPhase = iota
 	phaseResult
 	phaseSettings
+	phaseLanguagePicker
 )
 
 type sizable interface {
@@ -21,18 +22,19 @@ type sizable interface {
 }
 
 type AppModel struct {
-	cfg      domain.TestConfig
-	provider engine.TextSource
-	langs    *text.Provider
-	store    storage.Store
-	phase    appPhase
-	navStack []appPhase
-	test     TestModel
-	result   resultSnapshot
-	settings SettingsPanel
-	theme    Theme
-	width    int
-	height   int
+	cfg            domain.TestConfig
+	provider       engine.TextSource
+	langs          *text.Provider
+	store          storage.Store
+	phase          appPhase
+	navStack       []appPhase
+	test           TestModel
+	result         resultSnapshot
+	settings       SettingsPanel
+	languagePicker LanguagePicker
+	theme          Theme
+	width          int
+	height         int
 }
 
 func NewAppModel(cfg domain.TestConfig, provider engine.TextSource, langs *text.Provider, session *engine.Session, store storage.Store) AppModel {
@@ -48,7 +50,7 @@ func NewAppModel(cfg domain.TestConfig, provider engine.TextSource, langs *text.
 }
 
 func (m *AppModel) sizables() []sizable {
-	return []sizable{&m.test, &m.settings}
+	return []sizable{&m.test, &m.settings, &m.languagePicker}
 }
 
 func (m *AppModel) pushPhase(next appPhase) {
@@ -85,6 +87,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			s.setSize(msg.Width, msg.Height)
 		}
 		return m, nil
+	case OpenLanguagePickerMsg:
+		m.languagePicker = NewLanguagePicker(m.langs, m.cfg.Language, m.theme)
+		m.languagePicker.setSize(m.width, m.height)
+		m.pushPhase(phaseLanguagePicker)
+		return m, m.languagePicker.Init()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
@@ -96,7 +103,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.restartTest()
 			}
 		case "ctrl+s":
-			m.settings = NewSettingsPanel(m.cfg, m.langs, m.theme)
+			m.settings = NewSettingsPanel(m.cfg, m.theme)
 			m.settings.setSize(m.width, m.height)
 			m.pushPhase(phaseSettings)
 			return m, nil
@@ -110,9 +117,24 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case phaseSettings:
 		return m.updateSettings(msg)
+	case phaseLanguagePicker:
+		return m.updateLanguagePicker(msg)
 	}
 
 	return m, nil
+}
+
+func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd, done, apply := m.languagePicker.Update(msg)
+	m.languagePicker = next
+	if !done {
+		return m, cmd
+	}
+	if apply {
+		m.cfg.Language = m.languagePicker.Selected()
+		m.settings.cfg.Language = m.cfg.Language
+	}
+	return m, tea.Batch(cmd, m.popPhase())
 }
 
 func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -137,6 +159,9 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.cfg = m.settings.cfg
 	m.theme = ResolveTheme(m.cfg.Theme)
+	if m.langs != nil {
+		_ = m.langs.UseLanguage(m.cfg.Language)
+	}
 	m.persistConfigDefaults()
 	return m, m.restartTest()
 }
@@ -181,6 +206,8 @@ func (m AppModel) View() string {
 	switch m.phase {
 	case phaseSettings:
 		return m.settings.View()
+	case phaseLanguagePicker:
+		return m.languagePicker.View()
 	case phaseResult:
 		return renderResult(m.result, m.theme, m.width, m.height)
 	default:
