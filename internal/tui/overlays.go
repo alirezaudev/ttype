@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/domain"
-	"github.com/alirezaudev/ttype/internal/text"
+	"github.com/alirezaudev/ttype/internal/text/langcache"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -47,7 +47,6 @@ func (m SettingsPanel) Update(msg tea.Msg) (SettingsPanel, tea.Cmd, bool, bool) 
 	if !ok {
 		return m, nil, false, false
 	}
-
 	switch key.String() {
 	case "esc", "q":
 		return m, nil, true, false
@@ -186,7 +185,7 @@ func (m SettingsPanel) View() string {
 		"",
 		m.row("test", m.kindLabel(), m.field == settingsTestKind),
 		m.row(m.lengthFieldLabel(), m.lengthLabel(), m.field == settingsLength),
-		m.row("language", text.DisplayName(m.cfg.Language), m.field == settingsLanguage),
+		m.row("language", langcache.DisplayName(m.cfg.Language), m.field == settingsLanguage),
 		m.row("width", m.widthLabel(), m.field == settingsWidth),
 		m.row("theme", m.themeLabel(), m.field == settingsTheme),
 		"",

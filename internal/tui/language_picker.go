@@ -3,7 +3,7 @@ package tui
 import (
 	"strings"
 
-	"github.com/alirezaudev/ttype/internal/text"
+	"github.com/alirezaudev/ttype/internal/text/langcache"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -15,15 +15,15 @@ type LanguagesLoadedMsg struct {
 	Err error
 }
 
-func loadLanguagesCmd(provider *text.Provider) tea.Cmd {
+func loadLanguagesCmd(cache *langcache.Cache) tea.Cmd {
 	return func() tea.Msg {
-		ids, err := provider.Languages()
+		ids, err := cache.List()
 		return LanguagesLoadedMsg{IDs: ids, Err: err}
 	}
 }
 
 type LanguagePicker struct {
-	provider *text.Provider
+	cache    *langcache.Cache
 	current  string
 	ids      []string
 	filtered []string
@@ -36,12 +36,12 @@ type LanguagePicker struct {
 	height   int
 }
 
-func NewLanguagePicker(provider *text.Provider, current string, theme Theme) LanguagePicker {
+func NewLanguagePicker(cache *langcache.Cache, current string, theme Theme) LanguagePicker {
 	return LanguagePicker{
-		provider: provider,
-		current:  current,
-		theme:    theme,
-		loading:  provider != nil,
+		cache:   cache,
+		current: current,
+		theme:   theme,
+		loading: cache != nil,
 	}
 }
 
@@ -59,10 +59,10 @@ func (m *LanguagePicker) setSelection(id string) {
 }
 
 func (m LanguagePicker) Init() tea.Cmd {
-	if m.provider == nil {
+	if m.cache == nil {
 		return nil
 	}
-	return loadLanguagesCmd(m.provider)
+	return loadLanguagesCmd(m.cache)
 }
 
 func (m LanguagePicker) Update(msg tea.Msg) (LanguagePicker, tea.Cmd, bool, bool) {
@@ -126,7 +126,7 @@ func (m LanguagePicker) buildFiltered() []string {
 
 	var out []string
 	for _, id := range base {
-		if strings.Contains(strings.ToLower(text.DisplayName(id)), filter) {
+		if strings.Contains(strings.ToLower(langcache.DisplayName(id)), filter) {
 			out = append(out, id)
 		}
 	}
@@ -166,7 +166,7 @@ func (m LanguagePicker) View() string {
 	}
 	lines = append(lines, m.theme.HUD.Render(filterLine), "")
 
-	lines = append(lines, languageWindow(m.filtered, m.idx, m.height, m.theme, m.provider)...)
+	lines = append(lines, languageWindow(m.filtered, m.idx, m.height, m.theme, m.cache)...)
 	if len(m.filtered) == 0 {
 		lines = append(lines, m.theme.Help.Render("no matches"))
 	}
@@ -175,7 +175,7 @@ func (m LanguagePicker) View() string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, strings.Join(lines, "\n"))
 }
 
-func languageWindow(ids []string, idx, height int, theme Theme, provider *text.Provider) []string {
+func languageWindow(ids []string, idx, height int, theme Theme, cache *langcache.Cache) []string {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -207,8 +207,8 @@ func languageWindow(ids []string, idx, height int, theme Theme, provider *text.P
 		if i == idx {
 			prefix = "> "
 		}
-		label := text.DisplayName(ids[i])
-		if provider != nil && ids[i] != "" && provider.Cached(ids[i]) {
+		label := langcache.DisplayName(ids[i])
+		if cache != nil && ids[i] != "" && cache.Cached(ids[i]) {
 			label += " ✓"
 		}
 		lines = append(lines, prefix+theme.HUDValue.Render(label))
