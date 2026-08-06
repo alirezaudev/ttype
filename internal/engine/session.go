@@ -13,7 +13,7 @@ import (
 const skipRune = '\x00'
 
 type TextSource interface {
-	Generate(wordLimit int) (string, error)
+	Generate(opts domain.GenerateOptions) (string, error)
 }
 
 type Session struct {
@@ -151,7 +151,7 @@ func (s *Session) Restart() error {
 }
 
 func (s *Session) loadTarget() error {
-	target, err := s.source.Generate(s.config.WordCount)
+	target, err := s.source.Generate(s.config.GenerateOptions())
 	if err != nil {
 		return err
 	}

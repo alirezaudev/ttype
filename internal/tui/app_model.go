@@ -159,9 +159,6 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.cfg = m.settings.cfg
 	m.theme = ResolveTheme(m.cfg.Theme)
-	if m.langs != nil {
-		_ = m.langs.UseLanguage(m.cfg.Language)
-	}
 	m.persistConfigDefaults()
 	return m, m.restartTest()
 }

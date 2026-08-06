@@ -13,7 +13,7 @@ type fakeSource struct {
 	gen func() (string, error)
 }
 
-func (f fakeSource) Generate(int) (string, error) {
+func (f fakeSource) Generate(domain.GenerateOptions) (string, error) {
 	return f.gen()
 }
 

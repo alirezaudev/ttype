@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/alirezaudev/ttype/assets"
+	"github.com/alirezaudev/ttype/internal/domain"
 )
 
 const (
@@ -22,14 +23,14 @@ const (
 	languagesDir    = "frontend/static/languages"
 	manifestFile    = "_manifest.json"
 	manifestMaxAge  = 7 * 24 * time.Hour
+	fetchTimeout    = 15 * time.Second
 )
 
-var client = &http.Client{Timeout: 15 * time.Second}
+var client = &http.Client{Timeout: fetchTimeout}
 
 type Provider struct {
-	builtin []string
-	words   []string
-	dir     string
+	words []string
+	dir   string
 }
 
 func NewProvider(dataDir string) (*Provider, error) {
@@ -39,9 +40,8 @@ func NewProvider(dataDir string) (*Provider, error) {
 	}
 
 	return &Provider{
-		builtin: words,
-		words:   words,
-		dir:     filepath.Join(dataDir, "languages"),
+		words: words,
+		dir:   filepath.Join(dataDir, "languages"),
 	}, nil
 }
 
@@ -50,24 +50,6 @@ func DisplayName(id string) string {
 		return "english (built-in)"
 	}
 	return strings.ReplaceAll(id, "_", " ")
-}
-
-func (p *Provider) Languages() ([]string, error) {
-	cached := p.readManifest()
-	if len(cached) > 0 && !p.manifestStale() {
-		return cached, nil
-	}
-
-	ids, err := p.fetchLanguages()
-	if err != nil {
-		if len(cached) > 0 {
-			return cached, nil
-		}
-		return nil, err
-	}
-
-	p.writeManifest(ids)
-	return ids, nil
 }
 
 func (p *Provider) languagePath(id string) string {
@@ -86,6 +68,48 @@ func (p *Provider) Cached(id string) bool {
 	return err == nil
 }
 
+func (p *Provider) Words(id string) ([]string, error) {
+	if id == "" {
+		return nil, fmt.Errorf("built-in language has no cache entry")
+	}
+	if err := p.Ensure(id); err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(p.languagePath(id))
+	if err != nil {
+		return nil, err
+	}
+	return parseWords(data)
+}
+
+func (p *Provider) Ensure(id string) error {
+	if id == "" || p.Cached(id) {
+		return nil
+	}
+	return p.download(id)
+}
+
+func (p *Provider) Languages() ([]string, error) {
+	cached, err := p.loadManifest()
+	if err == nil && len(cached) > 0 && !p.manifestStale() {
+		return cached, nil
+	}
+
+	fresh, fetchErr := p.fetchManifest()
+	if fetchErr != nil {
+		if len(cached) > 0 {
+			return cached, nil
+		}
+		return nil, fetchErr
+	}
+
+	if err := p.saveManifest(fresh); err != nil {
+		return fresh, err
+	}
+	return fresh, nil
+}
+
 func (p *Provider) manifestStale() bool {
 	info, err := os.Stat(p.manifestPath())
 	if err != nil {
@@ -94,32 +118,32 @@ func (p *Provider) manifestStale() bool {
 	return time.Since(info.ModTime()) > manifestMaxAge
 }
 
-func (p *Provider) readManifest() []string {
+func (p *Provider) loadManifest() ([]string, error) {
 	data, err := os.ReadFile(p.manifestPath())
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	var ids []string
 	if err := json.Unmarshal(data, &ids); err != nil {
-		return nil
+		return nil, err
 	}
-	return ids
+	return ids, nil
 }
 
-func (p *Provider) writeManifest(ids []string) {
+func (p *Provider) saveManifest(ids []string) error {
 	if err := os.MkdirAll(p.dir, 0o700); err != nil {
-		return
+		return err
 	}
 
 	data, err := json.Marshal(ids)
 	if err != nil {
-		return
+		return err
 	}
-	_ = os.WriteFile(p.manifestPath(), data, 0o600)
+	return os.WriteFile(p.manifestPath(), data, 0o600)
 }
 
-func (p *Provider) fetchLanguages() ([]string, error) {
+func (p *Provider) fetchManifest() ([]string, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/contents/%s?ref=%s&per_page=1000", languagesRepo, languagesDir, languagesBranch)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -135,7 +159,7 @@ func (p *Provider) fetchLanguages() ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("list languages failed: %s", resp.Status)
+		return nil, fmt.Errorf("list languages failed: %s: %s", resp.Status, snippet(resp.Body))
 	}
 
 	var items []struct {
@@ -160,66 +184,46 @@ func (p *Provider) fetchLanguages() ([]string, error) {
 	return ids, nil
 }
 
-func (p *Provider) UseLanguage(id string) error {
-	if id == "" {
-		p.words = p.builtin
-		return nil
+func (p *Provider) download(id string) error {
+	if err := os.MkdirAll(p.dir, 0o700); err != nil {
+		return err
 	}
 
-	data, err := os.ReadFile(p.languagePath(id))
-	if err != nil {
-		data, err = p.download(id)
-		if err != nil {
-			return err
-		}
-	}
-
-	words, err := parseWords(data)
-	if err != nil {
-		return fmt.Errorf("language %q: %w", id, err)
-	}
-
-	p.words = words
-	return nil
-}
-
-func (p *Provider) download(id string) ([]byte, error) {
 	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s.json", languagesRepo, languagesBranch, languagesDir, id)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	req.Header.Set("User-Agent", "ttype")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("download %q failed: %s", id, resp.Status)
+		return fmt.Errorf("download %q failed: %s: %s", id, resp.Status, snippet(resp.Body))
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if _, err := parseWords(data); err != nil {
-		return nil, fmt.Errorf("download %q: %w", id, err)
+		return fmt.Errorf("download %q: %w", id, err)
 	}
 
-	if err := os.MkdirAll(p.dir, 0o700); err != nil {
-		return nil, err
-	}
 	tmp := p.languagePath(id) + ".tmp"
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return nil, err
+		return err
 	}
-	if err := os.Rename(tmp, p.languagePath(id)); err != nil {
-		return nil, err
-	}
-	return data, nil
+	return os.Rename(tmp, p.languagePath(id))
+}
+
+func snippet(r io.Reader) string {
+	body, _ := io.ReadAll(io.LimitReader(r, 512))
+	return strings.TrimSpace(string(body))
 }
 
 type languageFile struct {
@@ -237,14 +241,23 @@ func parseWords(data []byte) ([]string, error) {
 	return lf.Words, nil
 }
 
-func (p *Provider) Generate(wordLimit int) (string, error) {
-	if wordLimit > len(p.words) || wordLimit < 0 {
+func (p *Provider) Generate(opts domain.GenerateOptions) (string, error) {
+	words := p.words
+	if opts.Language != "" {
+		remote, err := p.Words(opts.Language)
+		if err != nil {
+			return "", fmt.Errorf("language %q: %w", opts.Language, err)
+		}
+		words = remote
+	}
+
+	if opts.WordLimit > len(words) || opts.WordLimit < 0 {
 		return "", errors.New("words limit out of range")
 	}
 
-	sampled := make([]string, wordLimit)
+	sampled := make([]string, opts.WordLimit)
 	for i := range sampled {
-		sampled[i] = p.words[rand.IntN(len(p.words))]
+		sampled[i] = words[rand.IntN(len(words))]
 	}
 	return strings.Join(sampled, " "), nil
 }

@@ -54,13 +54,6 @@ func main() {
 	}
 	cfg.WordCount = count
 
-	if cfg.Language != "" {
-		if err := provider.UseLanguage(cfg.Language); err != nil {
-			log.Println(err)
-			cfg.Language = ""
-		}
-	}
-
 	session, err := engine.NewSession(cfg, provider, nil)
 	if err != nil {
 		log.Fatalln(err)
