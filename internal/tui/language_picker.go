@@ -26,6 +26,8 @@ type LanguagePicker struct {
 	provider *text.Provider
 	current  string
 	ids      []string
+	filtered []string
+	filter   string
 	idx      int
 	loading  bool
 	err      error
@@ -46,8 +48,9 @@ func NewLanguagePicker(provider *text.Provider, current string, theme Theme) Lan
 func (m *LanguagePicker) setSize(width, height int) { m.width, m.height = width, height }
 
 func (m *LanguagePicker) setSelection(id string) {
+	m.filtered = m.buildFiltered()
 	m.idx = 0
-	for i, candidate := range m.ids {
+	for i, candidate := range m.filtered {
 		if candidate == id {
 			m.idx = i
 			return
@@ -87,8 +90,19 @@ func (m LanguagePicker) Update(msg tea.Msg) (LanguagePicker, tea.Cmd, bool, bool
 				m.idx--
 			}
 		case "down":
-			if m.idx < len(m.ids)-1 {
+			if m.idx < len(m.filtered)-1 {
 				m.idx++
+			}
+		case "backspace", "ctrl+h":
+			if len(m.filter) > 0 {
+				m.filter = m.filter[:len(m.filter)-1]
+				m.setSelection(m.Selected())
+			}
+		default:
+			if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] >= ' ' {
+				m.filter += string(msg.Runes[0])
+				m.idx = 0
+				m.filtered = m.buildFiltered()
 			}
 		}
 	}
@@ -99,8 +113,28 @@ func prependBuiltIn(ids []string) []string {
 	return append([]string{""}, ids...)
 }
 
+func (m LanguagePicker) buildFiltered() []string {
+	base := m.ids
+	if len(base) == 0 {
+		base = prependBuiltIn(nil)
+	}
+
+	filter := strings.ToLower(strings.TrimSpace(m.filter))
+	if filter == "" {
+		return append([]string(nil), base...)
+	}
+
+	var out []string
+	for _, id := range base {
+		if strings.Contains(strings.ToLower(text.DisplayName(id)), filter) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 func (m LanguagePicker) Selected() string {
-	if len(m.ids) == 0 {
+	if len(m.filtered) == 0 {
 		return m.current
 	}
 
@@ -108,10 +142,10 @@ func (m LanguagePicker) Selected() string {
 	if idx < 0 {
 		idx = 0
 	}
-	if idx >= len(m.ids) {
-		idx = len(m.ids) - 1
+	if idx >= len(m.filtered) {
+		idx = len(m.filtered) - 1
 	}
-	return m.ids[idx]
+	return m.filtered[idx]
 }
 
 func (m LanguagePicker) View() string {
@@ -126,8 +160,18 @@ func (m LanguagePicker) View() string {
 		lines = append(lines, m.theme.Incorrect.Render(m.err.Error()), "")
 	}
 
-	lines = append(lines, languageWindow(m.ids, m.idx, m.height, m.theme)...)
-	lines = append(lines, "", m.theme.Help.Render("↑/↓ select  enter confirm  esc back"))
+	filterLine := "filter: " + m.filter
+	if m.filter == "" {
+		filterLine = "filter: (type to search)"
+	}
+	lines = append(lines, m.theme.HUD.Render(filterLine), "")
+
+	lines = append(lines, languageWindow(m.filtered, m.idx, m.height, m.theme)...)
+	if len(m.filtered) == 0 {
+		lines = append(lines, m.theme.Help.Render("no matches"))
+	}
+
+	lines = append(lines, "", m.theme.Help.Render("type filter  ↑/↓ select  enter confirm  esc back"))
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, strings.Join(lines, "\n"))
 }
 
