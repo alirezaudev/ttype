@@ -21,14 +21,31 @@ const (
 	fetchTimeout   = 15 * time.Second
 )
 
-var client = &http.Client{Timeout: fetchTimeout}
-
 type Cache struct {
-	dir string
+	dir        string
+	repo       string
+	branch     string
+	rawBase    string
+	apiBase    string
+	httpClient *http.Client
 }
 
 func New(dataDir string) *Cache {
-	return &Cache{dir: filepath.Join(dataDir, "languages")}
+	return &Cache{
+		dir:        filepath.Join(dataDir, "languages"),
+		repo:       defaultRepo,
+		branch:     defaultBranch,
+		rawBase:    "https://raw.githubusercontent.com",
+		apiBase:    "https://api.github.com",
+		httpClient: &http.Client{Timeout: fetchTimeout},
+	}
+}
+
+func (c *Cache) WithHTTPClient(client *http.Client) *Cache {
+	if client != nil {
+		c.httpClient = client
+	}
+	return c
 }
 
 func (c *Cache) Dir() string { return c.dir }
@@ -132,7 +149,7 @@ func (c *Cache) saveManifest(ids []string) error {
 }
 
 func (c *Cache) fetchManifest() ([]string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/contents/%s?ref=%s&per_page=1000", defaultRepo, languagesPath, defaultBranch)
+	url := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s&per_page=1000", c.apiBase, c.repo, languagesPath, c.branch)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -140,7 +157,7 @@ func (c *Cache) fetchManifest() ([]string, error) {
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "ttype")
 
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -177,14 +194,14 @@ func (c *Cache) download(id string) error {
 		return err
 	}
 
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s.json", defaultRepo, defaultBranch, languagesPath, id)
+	url := fmt.Sprintf("%s/%s/%s/%s/%s.json", c.rawBase, c.repo, c.branch, languagesPath, id)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("User-Agent", "ttype")
 
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
