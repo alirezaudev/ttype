@@ -151,6 +151,7 @@ func (m *AppModel) persistConfigDefaults() {
 	}
 	settings.Theme = m.cfg.Theme
 	settings.DefaultWidth = m.cfg.Width
+	settings.Language = m.cfg.Language
 	if m.cfg.IsWordsMode() {
 		settings.DefaultWordCount = m.cfg.WordCount
 	} else {

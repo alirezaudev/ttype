@@ -39,6 +39,7 @@ type Settings struct {
 	DefaultWordCount int      `json:"default_word_count,omitempty"`
 	DefaultWidth     int      `json:"default_width,omitempty"`
 	Theme            string   `json:"theme"`
+	Language         string   `json:"language,omitempty"`
 }
 
 func DefaultSettings() Settings {

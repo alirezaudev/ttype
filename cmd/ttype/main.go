@@ -14,6 +14,7 @@ import (
 
 func main() {
 	wordCount := flag.Int("words", 0, "run a words test of this many words instead of a timed test")
+	language := flag.String("language", "", "use a downloadable language word list instead of the built-in one")
 	flag.Parse()
 
 	store, err := storage.NewDefaultStore()
@@ -31,6 +32,7 @@ func main() {
 	if settings, err := store.LoadSettings(); err == nil {
 		cfg.Theme = settings.Theme
 		cfg.Width = settings.DefaultWidth
+		cfg.Language = settings.Language
 		if settings.DefaultWordCount > 0 {
 			cfg.Kind = domain.TestKindWords
 			count = settings.DefaultWordCount
@@ -42,7 +44,17 @@ func main() {
 		cfg.Kind = domain.TestKindWords
 		count = *wordCount
 	}
+	if *language != "" {
+		cfg.Language = *language
+	}
 	cfg.WordCount = count
+
+	if cfg.Language != "" {
+		if err := provider.UseLanguage(cfg.Language); err != nil {
+			log.Println(err)
+			cfg.Language = ""
+		}
+	}
 
 	session, err := engine.NewSession(cfg, provider, nil)
 	if err != nil {
