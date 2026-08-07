@@ -229,11 +229,11 @@ func (s *Session) Backspace() bool {
 		for start > 0 && s.input[start-1] == skipRune {
 			start--
 		}
-		s.input = s.input[:start]
+		s.truncateInput(start)
 		return true
 	}
 
-	s.input = s.input[:pos-1]
+	s.truncateInput(pos - 1)
 	return true
 }
 
@@ -245,7 +245,7 @@ func (s *Session) DeleteWord() bool {
 	pos := len(s.input)
 	start := wordStart(pos, s.input)
 	if start != pos {
-		s.input = s.input[:start]
+		s.truncateInput(start)
 		return true
 	}
 
@@ -255,12 +255,27 @@ func (s *Session) DeleteWord() bool {
 
 	prevStart := wordStart(pos-1, s.input)
 	if s.typedCorrectly(prevStart, pos) {
-		s.input = s.input[:pos-1]
+		s.truncateInput(pos - 1)
 		return true
 	}
 
-	s.input = s.input[:prevStart]
+	s.truncateInput(prevStart)
 	return true
+}
+
+func (s *Session) truncateInput(n int) {
+	for i := n; i < len(s.input); i++ {
+		switch {
+		case s.input[i] == skipRune:
+		case i >= len(s.targetRunes):
+			s.counts.Extra--
+		case s.input[i] == s.targetRunes[i]:
+			s.counts.Correct--
+		default:
+			s.counts.Incorrect--
+		}
+	}
+	s.input = s.input[:n]
 }
 
 func wordStart(pos int, input []rune) int {

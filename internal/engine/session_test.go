@@ -240,14 +240,64 @@ func TestSessionWPMResult(t *testing.T) {
 	typeString(s, "i")
 
 	live := s.LiveStats()
-	if wpm := live.WPM; wpm != 8 {
-		t.Fatalf("WPM = %v, want 8", wpm)
+	if wpm := live.WPM; wpm != 6 {
+		t.Fatalf("WPM = %v, want 6", wpm)
 	}
-	if got := live.RawWPM; got != 8 {
-		t.Fatalf("RawWPM = %v, want 8", got)
+	if got := live.RawWPM; got != 6 {
+		t.Fatalf("RawWPM = %v, want 6", got)
 	}
 	if got := live.Accuracy; got != 100 {
 		t.Fatalf("Accuracy = %v, want 100", got)
+	}
+}
+
+func TestBackspaceRewindsCounts(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newTestSession(t, "hello world", 60*time.Second)
+
+	typeString(s, "hello")
+	clock.Advance(6 * time.Second)
+	if got := s.LiveStats().WPM; got != 10 {
+		t.Fatalf("WPM = %v, want 10", got)
+	}
+
+	for i := 0; i < 5; i++ {
+		s.Backspace()
+	}
+	if got := s.Counts(); got != (domain.CharCounts{}) {
+		t.Fatalf("counts = %+v, want zero after deleting every character", got)
+	}
+	if got := s.LiveStats().WPM; got != 0 {
+		t.Fatalf("WPM = %v with an empty buffer, want 0", got)
+	}
+
+	typeString(s, "hello")
+	if got := s.LiveStats().WPM; got != 10 {
+		t.Fatalf("WPM = %v after retyping, want 10 (retyping must not double-count)", got)
+	}
+
+	correct, incorrect := s.Keystrokes()
+	if correct != 10 || incorrect != 0 {
+		t.Fatalf("keystrokes = (%d, %d), want (10, 0) — keypresses stay cumulative", correct, incorrect)
+	}
+}
+
+func TestDeleteWordRewindsCounts(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "hello world", 60*time.Second)
+
+	typeString(s, "helXo")
+	if got := (domain.CharCounts{Correct: 4, Incorrect: 1}); s.Counts() != got {
+		t.Fatalf("counts = %+v, want %+v", s.Counts(), got)
+	}
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord should delete the word in progress")
+	}
+	if got := s.Counts(); got != (domain.CharCounts{}) {
+		t.Fatalf("counts = %+v, want zero after deleting the whole word", got)
 	}
 }
 
