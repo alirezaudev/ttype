@@ -23,7 +23,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	store, err := storage.NewJSONStore(dirs.Config)
+	store, err := app.OpenStore()
 	if err != nil {
 		log.Fatalln(err)
 	}
