@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 
+	"github.com/alirezaudev/ttype/internal/app"
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
@@ -32,27 +33,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
-	count := 100
-	if settings, err := store.LoadSettings(); err == nil {
-		cfg.Theme = settings.Theme
-		cfg.Width = settings.DefaultWidth
-		cfg.Language = settings.Language
-		if settings.DefaultWordCount > 0 {
-			cfg.Kind = domain.TestKindWords
-			count = settings.DefaultWordCount
-		} else if settings.DefaultDuration > 0 {
-			cfg.Duration = settings.DefaultDuration
-		}
+	cfg, err := resolveTestConfig(store, *wordCount, *language)
+	if err != nil {
+		log.Fatalln(err)
 	}
-	if *wordCount > 0 {
-		cfg.Kind = domain.TestKindWords
-		count = *wordCount
-	}
-	if *language != "" {
-		cfg.Language = *language
-	}
-	cfg.WordCount = count
 
 	session, err := engine.NewSession(cfg, provider, nil)
 	if err != nil {
@@ -65,4 +49,31 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func resolveTestConfig(store storage.Store, wordCount int, language string) (domain.TestConfig, error) {
+	settings, err := store.LoadSettings()
+	if err != nil {
+		return domain.TestConfig{}, err
+	}
+
+	f := app.TestFlags{
+		TimeSec:   domain.Duration60.Seconds(),
+		WordCount: wordCount,
+		Language:  language,
+		Theme:     settings.Theme,
+		Width:     settings.DefaultWidth,
+	}
+
+	if settings.DefaultDuration > 0 {
+		f.TimeSec = settings.DefaultDuration.Seconds()
+	}
+	if wordCount == 0 {
+		f.WordCount = settings.DefaultWordCount
+	}
+	if language == "" {
+		f.Language = settings.Language
+	}
+
+	return app.ConfigFromFlags(f)
 }
