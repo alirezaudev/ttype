@@ -4,30 +4,63 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/charmbracelet/lipgloss"
 )
 
-func renderHUD(session *engine.Session, theme Theme) string {
+func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestConfig) string {
 	live := session.LiveStats()
+	row := theme.HUDTime.Render(hudTimer(session, cfg, live.Elapsed))
 
-	status := theme.Help.Render(fmt.Sprintf(
-		"wpm %-3d · raw %-3d · acc %-3d%% · err %-3d",
-		int(live.WPM),
-		int(live.RawWPM),
-		int(live.Accuracy),
-		live.Incorrect,
-	))
-
-	if session.Kind() == domain.TestKindTimed {
-		return theme.HUDTime.Render(formatClock(session.Remaining())) + " · " + status + "\n\n"
+	_, incorrectKeystrokes := session.Keystrokes()
+	line := fmt.Sprintf("wpm %-3s · raw %-3s · acc %-4s · err %-3s",
+		hudNum(live.WPM), hudNum(live.RawWPM), fmt.Sprintf("%.0f%%", live.Accuracy), hudNum(float64(incorrectKeystrokes)))
+	if lipgloss.Width(row)+2+len(line) <= width {
+		row += "  " + theme.Help.Render(line)
 	}
 
-	done, total := session.WordsProgress()
-	totalStr := fmt.Sprintf("%d", total)
-	progress := theme.HUD.Render(fmt.Sprintf("%*d/%s", len(totalStr), done, totalStr))
-	return progress + " · " + status + "\n\n"
+	brand := theme.HUDTitle.Render("ttype") +
+		theme.Help.Render(" · ") +
+		theme.HUDMode.Render(string(cfg.Kind))
+
+	if gap := width - lipgloss.Width(row+brand); gap >= 2 {
+		row += strings.Repeat(" ", gap) + brand
+	}
+
+	return lipgloss.NewStyle().Width(width).Render(row)
+}
+
+func hudNum(v float64) string {
+	if v < 0 {
+		v = 0
+	}
+	if v > 999 {
+		v = 999
+	}
+	return fmt.Sprintf("%.0f", v)
+}
+
+func hudTimer(session *engine.Session, cfg domain.TestConfig, elapsed time.Duration) string {
+	if cfg.IsWordsMode() {
+		done, total := session.WordsProgress()
+		totalStr := fmt.Sprintf("%d", total)
+		return fmt.Sprintf("%*d/%s · %s", len(totalStr), done, totalStr, formatClock(elapsed))
+	}
+
+	full := formatClock(time.Duration(cfg.Duration.Seconds()) * time.Second)
+	var label string
+	switch {
+	case !session.Started():
+		label = full
+	case session.Started() && !session.Finished():
+		label = formatClock(session.Remaining())
+	default:
+		label = formatClock(elapsed)
+	}
+	return fmt.Sprintf("%-*s", len(full), label)
 }
 
 func renderCapsWarn(theme Theme) string {

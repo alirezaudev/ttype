@@ -69,7 +69,8 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TestModel) View() string {
 	var out strings.Builder
 
-	out.WriteString(renderHUD(m.session, m.theme))
+	out.WriteString(renderHUD(m.session, m.theme, m.typingWidth(), m.cfg))
+	out.WriteString("\n\n")
 
 	cursor := m.session.Cursor()
 	input := m.session.Input()
