@@ -1,18 +1,27 @@
 package storage
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 )
 
-func TestJSONStoreSettingsRoundTrip(t *testing.T) {
-	t.Parallel()
+func testStore(t *testing.T) *JSONStore {
+	t.Helper()
 
-	s, err := NewJSONStore(t.TempDir())
+	dir := t.TempDir()
+	s, err := NewJSONStore(Dirs{Data: filepath.Join(dir, "data"), Config: filepath.Join(dir, "config")})
 	if err != nil {
 		t.Fatalf("NewJSONStore: %v", err)
 	}
+	return s
+}
+
+func TestJSONStoreSettingsRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
 
 	settings := domain.Settings{
 		DefaultDuration:  domain.Duration30,
@@ -36,10 +45,7 @@ func TestJSONStoreSettingsRoundTrip(t *testing.T) {
 func TestJSONStoreMissingSettingsReturnsDefaults(t *testing.T) {
 	t.Parallel()
 
-	s, err := NewJSONStore(t.TempDir())
-	if err != nil {
-		t.Fatalf("NewJSONStore: %v", err)
-	}
+	s := testStore(t)
 
 	got, err := s.LoadSettings()
 	if err != nil {

@@ -14,23 +14,31 @@ import (
 const settingFilename = "config.json"
 
 type JSONStore struct {
-	Dir string
+	dirs       Dirs
+	historyCap int
 }
 
-func NewJSONStore(dir string) (*JSONStore, error) {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return nil, fmt.Errorf("config dir is empty")
+func NewJSONStore(dirs Dirs) (*JSONStore, error) {
+	dirs.Data = strings.TrimSpace(dirs.Data)
+	dirs.Config = strings.TrimSpace(dirs.Config)
+	if dirs.Data == "" || dirs.Config == "" {
+		return nil, fmt.Errorf("store dirs are empty")
 	}
-	dir = filepath.Clean(dir)
-	if err := ensureDir(dir); err != nil {
+
+	dirs.Data = filepath.Clean(dirs.Data)
+	dirs.Config = filepath.Clean(dirs.Config)
+	if err := ensureDir(dirs.Data); err != nil {
+		return nil, fmt.Errorf("data dir: %w", err)
+	}
+	if err := ensureDir(dirs.Config); err != nil {
 		return nil, fmt.Errorf("config dir: %w", err)
 	}
-	return &JSONStore{Dir: dir}, nil
+
+	return &JSONStore{dirs: dirs}, nil
 }
 
-func (s *JSONStore) Path() string {
-	return s.Dir
+func (s *JSONStore) Paths() Dirs {
+	return s.dirs
 }
 
 func NewDefaultStore() (*JSONStore, error) {
@@ -39,11 +47,11 @@ func NewDefaultStore() (*JSONStore, error) {
 		return nil, err
 	}
 
-	return NewJSONStore(dirs.Config)
+	return NewJSONStore(dirs)
 }
 
 func (s *JSONStore) LoadSettings() (domain.Settings, error) {
-	path := filepath.Join(s.Dir, settingFilename)
+	path := filepath.Join(s.dirs.Config, settingFilename)
 	settings := domain.DefaultSettings()
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -61,18 +69,25 @@ func (s *JSONStore) LoadSettings() (domain.Settings, error) {
 }
 
 func (s *JSONStore) SaveSettings(settings domain.Settings) error {
-	lock, err := acquireLock(s.Dir)
+	lock, err := acquireLock(s.dirs.Config)
 	if err != nil {
 		return fmt.Errorf("acquire lock: %w", err)
 	}
 	defer lock.release()
 
-	path := filepath.Join(s.Dir, settingFilename)
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal settings: %w", err)
 	}
 
+	return writeFile(filepath.Join(s.dirs.Config, settingFilename), data)
+}
+
+func (s *JSONStore) SetHistoryCap(n int) {
+	s.historyCap = n
+}
+
+func writeFile(path string, data []byte) error {
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return err

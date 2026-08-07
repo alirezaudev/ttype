@@ -11,6 +11,10 @@ type CharCounts struct {
 	Extra     int
 }
 
+func (c CharCounts) TotalTyped() int {
+	return c.Correct + c.Incorrect + c.Extra
+}
+
 type Duration int
 
 const (
@@ -44,6 +48,21 @@ type LiveStats struct {
 	Correct   int
 	Incorrect int
 	Elapsed   time.Duration
+}
+
+type Result struct {
+	ID                  string        `json:"id"`
+	Timestamp           time.Time     `json:"timestamp"`
+	Config              TestConfig    `json:"config"`
+	WPM                 float64       `json:"wpm"`
+	RawWPM              float64       `json:"raw_wpm"`
+	Accuracy            float64       `json:"accuracy"`
+	Correct             int           `json:"correct"`
+	Incorrect           int           `json:"incorrect"`
+	KeystrokesCorrect   int           `json:"keystrokes_correct,omitempty"`
+	KeystrokesIncorrect int           `json:"keystrokes_incorrect,omitempty"`
+	TotalChars          int           `json:"total_chars"`
+	Duration            time.Duration `json:"duration"`
 }
 
 type Settings struct {

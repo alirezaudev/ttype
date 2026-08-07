@@ -3,46 +3,23 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
-	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type resultSnapshot struct {
-	wpm      float64
-	rawWpm   float64
-	accuracy float64
-	errors   int
-	elapsed  time.Duration
-	cfg      domain.TestConfig
-}
-
-func snapshotResult(s *engine.Session, cfg domain.TestConfig) resultSnapshot {
-	live := s.LiveStats()
-	return resultSnapshot{
-		wpm:      live.WPM,
-		rawWpm:   live.RawWPM,
-		accuracy: live.Accuracy,
-		errors:   live.Incorrect,
-		elapsed:  s.Elapsed(),
-		cfg:      cfg,
+func resultSubtitle(cfg domain.TestConfig) string {
+	if cfg.Kind == domain.TestKindWords {
+		return fmt.Sprintf("%d words · words", cfg.WordCount)
 	}
-}
-
-func (s resultSnapshot) subtitle() string {
-	if s.cfg.Kind == domain.TestKindWords {
-		return fmt.Sprintf("%d words · words", s.cfg.WordCount)
-	}
-	return fmt.Sprintf("%ds · timed", s.cfg.Duration.Seconds())
+	return fmt.Sprintf("%ds · timed", cfg.Duration.Seconds())
 }
 
 const resultColWidth = 9
 
-func renderResult(snap resultSnapshot, theme Theme, width, height int) string {
+func renderResult(result domain.Result, theme Theme, width, height int, notice string) string {
 	title := theme.Finished.Render("Test Complete")
-	subtitle := theme.Help.Render(snap.subtitle())
+	subtitle := theme.Help.Render(resultSubtitle(result.Config))
 
 	var header strings.Builder
 	for i, label := range []string{"wpm", "raw", "acc", "err"} {
@@ -53,16 +30,16 @@ func renderResult(snap resultSnapshot, theme Theme, width, height int) string {
 	}
 	headers := header.String()
 	values := fmt.Sprintf("%-*s %-*s %-*s %-*d",
-		resultColWidth, fmt.Sprintf("%.2f", snap.wpm),
-		resultColWidth, fmt.Sprintf("%.2f", snap.rawWpm),
-		resultColWidth, fmt.Sprintf("%.2f%%", snap.accuracy),
-		resultColWidth, snap.errors,
+		resultColWidth, fmt.Sprintf("%.2f", result.WPM),
+		resultColWidth, fmt.Sprintf("%.2f", result.RawWPM),
+		resultColWidth, fmt.Sprintf("%.2f%%", result.Accuracy),
+		resultColWidth, result.Incorrect,
 	)
 
-	elapsed := theme.Help.Render(formatClock(snap.elapsed) + " elapsed")
+	elapsed := theme.Help.Render(formatClock(result.Duration) + " elapsed")
 	help := theme.Help.Render("tab/enter restart  ctrl+s settings")
 
-	content := strings.Join([]string{
+	lines := []string{
 		title,
 		"",
 		subtitle,
@@ -71,9 +48,13 @@ func renderResult(snap resultSnapshot, theme Theme, width, height int) string {
 		values,
 		"",
 		elapsed,
-		"",
-		help,
-	}, "\n")
+	}
+	if notice != "" {
+		lines = append(lines, "", theme.Incorrect.Render(notice))
+	}
+	lines = append(lines, "", help)
+
+	content := strings.Join(lines, "\n")
 
 	if width == 0 || height == 0 {
 		return content

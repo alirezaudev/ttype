@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
@@ -29,7 +31,8 @@ type AppModel struct {
 	phase          appPhase
 	navStack       []appPhase
 	test           TestModel
-	result         resultSnapshot
+	result         domain.Result
+	notice         string
 	settings       SettingsPanel
 	languagePicker LanguagePicker
 	theme          Theme
@@ -141,11 +144,25 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	next, cmd := m.test.Update(msg)
 	m.test = next.(TestModel)
 	if m.test.session.State() == domain.SessionFinished {
-		m.result = snapshotResult(m.test.session, m.cfg)
+		m.result, m.notice = m.finishResult()
 		m.phase = phaseResult
 		return m, tea.Batch(cmd, tea.ClearScreen)
 	}
 	return m, cmd
+}
+
+func (m AppModel) finishResult() (domain.Result, string) {
+	result, err := m.test.session.Result()
+	if err != nil {
+		return result, fmt.Sprintf("result not saved: %s", err)
+	}
+	if m.store == nil {
+		return result, ""
+	}
+	if err := m.store.SaveResult(result); err != nil {
+		return result, fmt.Sprintf("result not saved: %s", err)
+	}
+	return result, ""
 }
 
 func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -206,7 +223,7 @@ func (m AppModel) View() string {
 	case phaseLanguagePicker:
 		return m.languagePicker.View()
 	case phaseResult:
-		return renderResult(m.result, m.theme, m.width, m.height)
+		return renderResult(m.result, m.theme, m.width, m.height, m.notice)
 	default:
 		return m.test.View()
 	}

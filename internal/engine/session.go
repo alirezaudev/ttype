@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"time"
 	"unicode"
@@ -355,6 +357,36 @@ func (s *Session) Finish() {
 func (s *Session) finish() {
 	s.state = domain.SessionFinished
 	s.endedAt = s.clock.Now()
+}
+
+func (s *Session) Result() (domain.Result, error) {
+	if s.state != domain.SessionFinished {
+		return domain.Result{}, errors.New("session not finished")
+	}
+
+	counts := s.Counts()
+	live := s.LiveStats()
+
+	return domain.Result{
+		ID:                  newResultID(),
+		Timestamp:           s.endedAt,
+		Config:              s.config,
+		WPM:                 live.WPM,
+		RawWPM:              live.RawWPM,
+		Accuracy:            live.Accuracy,
+		Correct:             counts.Correct,
+		Incorrect:           counts.Incorrect,
+		KeystrokesCorrect:   s.keystrokesCorrect,
+		KeystrokesIncorrect: s.keystrokesIncorrect,
+		TotalChars:          counts.TotalTyped(),
+		Duration:            s.Elapsed(),
+	}, nil
+}
+
+func newResultID() string {
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
 }
 
 func (s *Session) Elapsed() time.Duration {
