@@ -44,12 +44,14 @@ func renderResult(snap resultSnapshot, theme Theme, width, height int) string {
 	title := theme.Finished.Render("Test Complete")
 	subtitle := theme.Help.Render(snap.subtitle())
 
-	headers := theme.Help.Render(fmt.Sprintf("%-*s %-*s %-*s %-*s",
-		resultColWidth, "wpm",
-		resultColWidth, "raw",
-		resultColWidth, "acc",
-		resultColWidth, "err",
-	))
+	var header strings.Builder
+	for i, label := range []string{"wpm", "raw", "acc", "err"} {
+		if i > 0 {
+			header.WriteString(" ")
+		}
+		header.WriteString(theme.HUDStatLabel(label).Render(fmt.Sprintf("%-*s", resultColWidth, label)))
+	}
+	headers := header.String()
 	values := fmt.Sprintf("%-*s %-*s %-*s %-*d",
 		resultColWidth, fmt.Sprintf("%.2f", snap.wpm),
 		resultColWidth, fmt.Sprintf("%.2f", snap.rawWpm),
