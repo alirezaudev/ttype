@@ -131,7 +131,7 @@ func (m TestModel) typingWidth() int {
 
 func (m TestModel) hintLine() string {
 	if m.capsWarnActive() {
-		return m.theme.CapsWarn.Render(" ⚠ Caps Lock? ")
+		return renderCapsWarn(m.theme)
 	}
 	if !m.session.Started() {
 		return m.theme.Help.Render("start typing to begin")
