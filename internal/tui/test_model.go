@@ -134,7 +134,7 @@ func (m TestModel) hintLine() string {
 	if m.capsWarnActive() {
 		return renderCapsWarn(m.theme)
 	}
-	if !m.session.Started() {
+	if m.session.State() == domain.SessionReady {
 		return m.theme.Help.Render("start typing to begin")
 	}
 	return ""

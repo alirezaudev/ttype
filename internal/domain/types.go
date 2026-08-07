@@ -60,3 +60,11 @@ func DefaultSettings() Settings {
 		Theme:           "default",
 	}
 }
+
+type SessionState int
+
+const (
+	SessionReady SessionState = iota
+	SessionActive
+	SessionFinished
+)

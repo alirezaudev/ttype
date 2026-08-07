@@ -52,10 +52,10 @@ func hudTimer(session *engine.Session, cfg domain.TestConfig, elapsed time.Durat
 
 	full := formatClock(time.Duration(cfg.Duration.Seconds()) * time.Second)
 	var label string
-	switch {
-	case !session.Started():
+	switch session.State() {
+	case domain.SessionReady:
 		label = full
-	case session.Started() && !session.Finished():
+	case domain.SessionActive:
 		label = formatClock(session.Remaining())
 	default:
 		label = formatClock(elapsed)

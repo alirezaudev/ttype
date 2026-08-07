@@ -22,6 +22,7 @@ type Session struct {
 	targetRunes         []rune
 	input               []rune
 	counts              domain.CharCounts
+	state               domain.SessionState
 	keystrokesCorrect   int
 	keystrokesIncorrect int
 	clock               Clock
@@ -45,6 +46,7 @@ func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Sess
 		source: source,
 		config: config,
 		clock:  clock,
+		state:  domain.SessionReady,
 	}
 	if err := s.loadTarget(); err != nil {
 		return nil, err
@@ -52,14 +54,14 @@ func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Sess
 	return s, nil
 }
 
-func (s *Session) Target() string            { return s.target }
-func (s *Session) TargetRunes() []rune       { return s.targetRunes }
-func (s *Session) Input() []rune             { return append([]rune(nil), s.input...) }
-func (s *Session) Cursor() int               { return len(s.input) }
-func (s *Session) Kind() domain.TestKind     { return s.config.Kind }
-func (s *Session) Config() domain.TestConfig { return s.config }
-func (s *Session) Started() bool             { return !s.startedAt.IsZero() }
-func (s *Session) Counts() domain.CharCounts { return s.counts }
+func (s *Session) Target() string             { return s.target }
+func (s *Session) TargetRunes() []rune        { return s.targetRunes }
+func (s *Session) Input() []rune              { return append([]rune(nil), s.input...) }
+func (s *Session) Cursor() int                { return len(s.input) }
+func (s *Session) Kind() domain.TestKind      { return s.config.Kind }
+func (s *Session) Config() domain.TestConfig  { return s.config }
+func (s *Session) Counts() domain.CharCounts  { return s.counts }
+func (s *Session) State() domain.SessionState { return s.state }
 func (s *Session) Keystrokes() (correct, incorrect int) {
 	return s.keystrokesCorrect, s.keystrokesIncorrect
 }
@@ -151,6 +153,7 @@ func (s *Session) Restart() error {
 	s.counts = domain.CharCounts{}
 	s.keystrokesCorrect = 0
 	s.keystrokesIncorrect = 0
+	s.state = domain.SessionReady
 	s.startedAt = time.Time{}
 	s.endedAt = time.Time{}
 	s.capsInversions = 0
@@ -168,7 +171,7 @@ func (s *Session) loadTarget() error {
 }
 
 func (s *Session) InputRune(r rune) {
-	if s.Finished() || len(s.input) >= len(s.targetRunes) {
+	if s.state == domain.SessionFinished || len(s.input) >= len(s.targetRunes) {
 		return
 	}
 	if unicode.IsControl(r) {
@@ -189,7 +192,8 @@ func (s *Session) InputRune(r rune) {
 		return
 	}
 
-	if s.startedAt.IsZero() {
+	if s.state == domain.SessionReady {
+		s.state = domain.SessionActive
 		s.startedAt = s.clock.Now()
 	}
 
@@ -214,12 +218,12 @@ func (s *Session) InputRune(r rune) {
 	}
 
 	if s.config.Kind == domain.TestKindWords && len(s.input) >= len(s.targetRunes) {
-		s.endedAt = s.clock.Now()
+		s.finish()
 	}
 }
 
 func (s *Session) Backspace() bool {
-	if s.Finished() || len(s.input) == 0 {
+	if s.state == domain.SessionFinished || len(s.input) == 0 {
 		return false
 	}
 
@@ -238,7 +242,7 @@ func (s *Session) Backspace() bool {
 }
 
 func (s *Session) DeleteWord() bool {
-	if s.Finished() || len(s.input) == 0 {
+	if s.state == domain.SessionFinished || len(s.input) == 0 {
 		return false
 	}
 
@@ -311,8 +315,8 @@ func (s *Session) typedCorrectly(start, end int) bool {
 }
 
 func (s *Session) Tick() bool {
-	if s.Finished() {
-		return true
+	if s.state != domain.SessionActive {
+		return false
 	}
 
 	if s.config.Kind == domain.TestKindWords {
@@ -320,7 +324,7 @@ func (s *Session) Tick() bool {
 	}
 
 	if s.Elapsed() >= time.Duration(s.config.Duration)*time.Second {
-		s.endedAt = s.clock.Now()
+		s.finish()
 		return true
 	}
 
@@ -328,15 +332,25 @@ func (s *Session) Tick() bool {
 }
 
 func (s *Session) Finish() {
-	if s.Finished() {
+	if s.state == domain.SessionFinished {
 		return
 	}
 
-	s.endedAt = s.clock.Now()
+	if s.state == domain.SessionReady {
+		s.state = domain.SessionActive
+		s.startedAt = s.clock.Now()
+	}
+
+	s.finish()
 }
 
 func (s *Session) Finished() bool {
-	return !s.endedAt.IsZero()
+	return s.state == domain.SessionFinished
+}
+
+func (s *Session) finish() {
+	s.state = domain.SessionFinished
+	s.endedAt = s.clock.Now()
 }
 
 func (s *Session) rawBufferCounts() domain.CharCounts {
@@ -360,10 +374,15 @@ func (s *Session) Elapsed() time.Duration {
 	if s.startedAt.IsZero() {
 		return 0
 	}
-	if s.endedAt.IsZero() {
+
+	switch s.state {
+	case domain.SessionActive:
 		return s.clock.Now().Sub(s.startedAt)
+	case domain.SessionFinished:
+		return s.endedAt.Sub(s.startedAt)
+	default:
+		return 0
 	}
-	return s.endedAt.Sub(s.startedAt)
 }
 
 func (s *Session) correctChars() int {

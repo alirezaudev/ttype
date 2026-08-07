@@ -382,6 +382,91 @@ func TestFinishFreezesTimedSession(t *testing.T) {
 	}
 }
 
+func TestSessionStateTransitions(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newTestSession(t, strings.Repeat("a", 200), 15*time.Second)
+
+	if got := s.State(); got != domain.SessionReady {
+		t.Fatalf("State() = %v, want SessionReady before the first keystroke", got)
+	}
+
+	typeString(s, "a")
+	if got := s.State(); got != domain.SessionActive {
+		t.Fatalf("State() = %v, want SessionActive after the first keystroke", got)
+	}
+
+	clock.Advance(16 * time.Second)
+	if !s.Tick() {
+		t.Fatal("Tick should finish an expired timed session")
+	}
+	if got := s.State(); got != domain.SessionFinished {
+		t.Fatalf("State() = %v, want SessionFinished", got)
+	}
+	if s.Tick() {
+		t.Fatal("Tick on a finished session should report no new transition")
+	}
+
+	if err := s.Restart(); err != nil {
+		t.Fatalf("Restart: %v", err)
+	}
+	if got := s.State(); got != domain.SessionReady {
+		t.Fatalf("State() = %v, want SessionReady after Restart", got)
+	}
+}
+
+func TestBlockedSpaceLeavesSessionReady(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abc def", 60*time.Second)
+
+	s.InputRune(' ')
+
+	if got := s.State(); got != domain.SessionReady {
+		t.Fatalf("State() = %v, want SessionReady (a blocked space must not start the clock)", got)
+	}
+}
+
+func TestFinishedSessionIgnoresEditing(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newWordsSession(t, "one two")
+
+	typeString(s, "one two")
+	if got := s.State(); got != domain.SessionFinished {
+		t.Fatalf("State() = %v, want SessionFinished", got)
+	}
+
+	before := string(s.Input())
+	s.InputRune('x')
+	if s.Backspace() {
+		t.Fatal("Backspace should be refused on a finished session")
+	}
+	if s.DeleteWord() {
+		t.Fatal("DeleteWord should be refused on a finished session")
+	}
+	if got := string(s.Input()); got != before {
+		t.Fatalf("input = %q, want %q unchanged", got, before)
+	}
+}
+
+func TestFinishFromReadyRecordsZeroElapsed(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newTestSession(t, "abc", 60*time.Second)
+
+	s.Finish()
+
+	if got := s.State(); got != domain.SessionFinished {
+		t.Fatalf("State() = %v, want SessionFinished", got)
+	}
+
+	clock.Advance(30 * time.Second)
+	if got := s.Elapsed(); got != 0 {
+		t.Fatalf("Elapsed() = %v, want 0 for a session finished before it started", got)
+	}
+}
+
 func TestEmptyKindDefaultsToTimed(t *testing.T) {
 	t.Parallel()
 
