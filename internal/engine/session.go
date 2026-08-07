@@ -352,10 +352,6 @@ func (s *Session) Finish() {
 	s.finish()
 }
 
-func (s *Session) Finished() bool {
-	return s.state == domain.SessionFinished
-}
-
 func (s *Session) finish() {
 	s.state = domain.SessionFinished
 	s.endedAt = s.clock.Now()

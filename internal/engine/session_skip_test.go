@@ -3,6 +3,8 @@ package engine_test
 import (
 	"testing"
 	"time"
+
+	"github.com/alirezaudev/ttype/internal/domain"
 )
 
 func TestSpaceMidWordSkipsToNextWord(t *testing.T) {
@@ -45,7 +47,7 @@ func TestSpaceOnUntouchedWordIsBlocked(t *testing.T) {
 	}
 
 	clock.Advance(61 * time.Second)
-	if s.Tick() || s.Finished() {
+	if s.Tick() || s.State() == domain.SessionFinished {
 		t.Fatal("a blocked space must not start the session")
 	}
 
@@ -73,7 +75,7 @@ func TestSpaceSkipOnLastWordFinishesWordsSession(t *testing.T) {
 	s, _ := newWordsSession(t, "abc def")
 	typeString(s, "abc d ")
 
-	if !s.Finished() {
+	if s.State() != domain.SessionFinished {
 		t.Fatal("skipping the last word should finish the test")
 	}
 	if got := s.Cursor(); got != 7 {

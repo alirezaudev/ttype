@@ -55,7 +55,7 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+w", "ctrl+h", "alt+ctrl+h", "alt+backspace":
 			m.session.DeleteWord()
 		default:
-			if len(msg.Runes) == 0 || m.session.Finished() {
+			if len(msg.Runes) == 0 || m.session.State() == domain.SessionFinished {
 				return m, nil
 			}
 

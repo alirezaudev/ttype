@@ -107,7 +107,7 @@ func TestSessionTickBeforeStartDoesNotFinish(t *testing.T) {
 		t.Fatal("Tick should not finish a session that has not started")
 	}
 
-	if s.Finished() {
+	if s.State() == domain.SessionFinished {
 		t.Fatal("session should not be finished before the first keystroke")
 	}
 
@@ -214,7 +214,7 @@ func TestSessionTimerExpiry(t *testing.T) {
 		t.Fatal("Tick should finish session")
 	}
 
-	if !s.Finished() {
+	if s.State() != domain.SessionFinished {
 		t.Fatalf("Test is not finished")
 	}
 
@@ -309,8 +309,8 @@ func TestSessionCompletingTargetDoesNotFinish(t *testing.T) {
 
 	typeString(s, target)
 
-	if s.Finished() {
-		t.Fatalf("Finished() = %t, want false", s.Finished())
+	if s.State() == domain.SessionFinished {
+		t.Fatalf("state = %v, want the session still running", s.State())
 	}
 }
 
@@ -323,7 +323,7 @@ func TestWordsSessionFinishesOnCompletingTarget(t *testing.T) {
 	s.Backspace()
 	typeString(s, "o three")
 
-	if !s.Finished() {
+	if s.State() != domain.SessionFinished {
 		t.Fatal("session should finish when the buffer covers the target")
 	}
 }
@@ -335,7 +335,7 @@ func TestWordsSessionFinishesEvenWithIncorrectChars(t *testing.T) {
 
 	typeString(s, "one twX")
 
-	if !s.Finished() {
+	if s.State() != domain.SessionFinished {
 		t.Fatal("completion is positional; a wrong final char should still finish")
 	}
 }
@@ -351,7 +351,7 @@ func TestWordsSessionNeverTimesOut(t *testing.T) {
 	if s.Tick() {
 		t.Fatal("Tick should never finish a words session")
 	}
-	if s.Finished() {
+	if s.State() == domain.SessionFinished {
 		t.Fatal("words session should not time out")
 	}
 	if got := s.Remaining(); got != 0 {
@@ -369,7 +369,7 @@ func TestFinishFreezesTimedSession(t *testing.T) {
 	clock.Advance(60 * time.Second)
 	s.Finish()
 
-	if !s.Finished() {
+	if s.State() != domain.SessionFinished {
 		t.Fatal("Finish should end the session")
 	}
 	if got := s.LiveStats().WPM; got != 60 {

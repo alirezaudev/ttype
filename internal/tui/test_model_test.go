@@ -66,7 +66,7 @@ func TestEnterMidTestDoesNotScheduleTick(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("enter should not schedule another tick")
 	}
-	if session.Finished() {
+	if session.State() == domain.SessionFinished {
 		t.Fatal("session should restart, not finish")
 	}
 }
@@ -84,7 +84,7 @@ func TestEnterAfterFinishDoesNotScheduleTick(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("enter should not schedule another tick")
 	}
-	if session.Finished() {
+	if session.State() == domain.SessionFinished {
 		t.Fatal("enter should restart the session")
 	}
 }
@@ -101,7 +101,7 @@ func TestTickAlwaysReschedules(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("tick should always schedule the next tick")
 	}
-	if !session.Finished() {
+	if session.State() != domain.SessionFinished {
 		t.Fatal("session should finish when time is up")
 	}
 }

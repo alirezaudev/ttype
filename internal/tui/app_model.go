@@ -66,7 +66,7 @@ func (m *AppModel) popPhase() tea.Cmd {
 	end := len(m.navStack) - 1
 	prev := m.navStack[end]
 	m.navStack = m.navStack[:end]
-	if prev == phaseTest && m.test.session.Finished() {
+	if prev == phaseTest && m.test.session.State() == domain.SessionFinished {
 		return m.restartTest()
 	}
 
@@ -140,7 +140,7 @@ func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	next, cmd := m.test.Update(msg)
 	m.test = next.(TestModel)
-	if m.test.session.Finished() {
+	if m.test.session.State() == domain.SessionFinished {
 		m.result = snapshotResult(m.test.session, m.cfg)
 		m.phase = phaseResult
 		return m, tea.Batch(cmd, tea.ClearScreen)

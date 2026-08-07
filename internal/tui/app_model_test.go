@@ -72,7 +72,7 @@ func TestSettingsApplyRestarts(t *testing.T) {
 	if m.phase != phaseTest {
 		t.Fatalf("phase = %v after apply, want phaseTest", m.phase)
 	}
-	if m.test.session.Finished() {
+	if m.test.session.State() == domain.SessionFinished {
 		t.Fatal("restarted session should not be finished")
 	}
 }
@@ -136,7 +136,7 @@ func TestRestartAfterFinishTransitionsToTest(t *testing.T) {
 	if m.phase != phaseTest {
 		t.Fatalf("phase = %v after restart, want phaseTest", m.phase)
 	}
-	if m.test.session.Finished() {
+	if m.test.session.State() == domain.SessionFinished {
 		t.Fatal("restarted session should not be finished")
 	}
 }
