@@ -17,14 +17,20 @@ func TestSpaceMidWordSkipsToNextWord(t *testing.T) {
 	if got := string(s.Input()); got != "a\x00\x00\x00" {
 		t.Fatalf("input = %q, want %q", got, "a\x00\x00\x00")
 	}
-	if got := s.Correct(); got != 1 {
+	if got := s.Counts().Correct; got != 1 {
 		t.Fatalf("correct = %d, want 1", got)
 	}
-	if got := s.Incorrect(); got != 1 {
-		t.Fatalf("incorrect = %d, want 1", got)
+	if got := s.Counts().Incorrect; got != 0 {
+		t.Fatalf("incorrect = %d, want 0", got)
 	}
-	if got := s.Keystrokes(); got != 2 {
-		t.Fatalf("keystrokes = %d, want 2", got)
+
+	correct, incorrect := s.Keystrokes()
+	if incorrect != 1 {
+		t.Fatalf("incorrect keystrokes = %d, want 1", incorrect)
+	}
+
+	if correct != 1 {
+		t.Fatalf("keystrokes = %d, want 1", correct)
 	}
 }
 
@@ -134,16 +140,14 @@ func TestExtraCharsAtWordEndDontSpill(t *testing.T) {
 	if got := string(s.Input()); got != "cat" {
 		t.Fatalf("input = %q, want %q", got, "cat")
 	}
-	if got := s.Keystrokes(); got != 5 {
-		t.Fatalf("keystrokes = %d, want 5", got)
+	correct, incorrect := s.Keystrokes()
+	if correct != 3 {
+		t.Fatalf("correct keystrokes = %d, want 3", correct)
 	}
-	if got := s.Correct(); got != 3 {
-		t.Fatalf("correct = %d, want 3", got)
+	if incorrect != 2 {
+		t.Fatalf("incorrect keystrokes = %d, want 2", incorrect)
 	}
-	if got := s.Incorrect(); got != 2 {
-		t.Fatalf("incorrect = %d, want 2", got)
-	}
-	if got := s.Accuracy(); got != 60 {
+	if got := s.LiveStats().Accuracy; got != 60 {
 		t.Fatalf("accuracy = %v, want 60", got)
 	}
 

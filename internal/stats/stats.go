@@ -34,6 +34,17 @@ func Accuracy(correct, incorrect int) float64 {
 	return round2(float64(correct) / float64(total) * 100)
 }
 
+func Live(counts domain.CharCounts, elapsed time.Duration) domain.LiveStats {
+	return domain.LiveStats{
+		WPM:       WPM(counts.Correct, elapsed),
+		RawWPM:    RawWPM(counts, elapsed),
+		Accuracy:  Accuracy(counts.Correct, counts.Incorrect),
+		Correct:   counts.Correct,
+		Incorrect: counts.Incorrect,
+		Elapsed:   elapsed,
+	}
+}
+
 func round2(v float64) float64 {
 	return math.Round(v*100) / 100
 }

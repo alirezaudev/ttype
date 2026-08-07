@@ -17,18 +17,18 @@ type TextSource interface {
 }
 
 type Session struct {
-	config         domain.TestConfig
-	target         string
-	targetRunes    []rune
-	input          []rune
-	keystrokes     int
-	correct        int
-	incorrect      int
-	clock          Clock
-	source         TextSource
-	startedAt      time.Time
-	endedAt        time.Time
-	capsInversions int
+	config              domain.TestConfig
+	target              string
+	targetRunes         []rune
+	input               []rune
+	counts              domain.CharCounts
+	keystrokesCorrect   int
+	keystrokesIncorrect int
+	clock               Clock
+	source              TextSource
+	startedAt           time.Time
+	endedAt             time.Time
+	capsInversions      int
 }
 
 func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Session, error) {
@@ -58,10 +58,11 @@ func (s *Session) Input() []rune             { return append([]rune(nil), s.inpu
 func (s *Session) Cursor() int               { return len(s.input) }
 func (s *Session) Kind() domain.TestKind     { return s.config.Kind }
 func (s *Session) Config() domain.TestConfig { return s.config }
-func (s *Session) Keystrokes() int           { return s.keystrokes }
-func (s *Session) Correct() int              { return s.correct }
-func (s *Session) Incorrect() int            { return s.incorrect }
 func (s *Session) Started() bool             { return !s.startedAt.IsZero() }
+func (s *Session) Counts() domain.CharCounts { return s.counts }
+func (s *Session) Keystrokes() (correct, incorrect int) {
+	return s.keystrokesCorrect, s.keystrokesIncorrect
+}
 
 func (s *Session) Remaining() time.Duration {
 	if s.config.Kind == domain.TestKindWords {
@@ -73,6 +74,12 @@ func (s *Session) Remaining() time.Duration {
 		return 0
 	}
 	return left
+}
+
+func (s *Session) LiveStats() domain.LiveStats {
+	live := stats.Live(s.Counts(), s.Elapsed())
+	live.Accuracy = stats.Accuracy(s.keystrokesCorrect, s.keystrokesIncorrect)
+	return live
 }
 
 func (s *Session) WordsProgress() (completed, total int) {
@@ -141,9 +148,9 @@ func hasCase(r rune) bool {
 
 func (s *Session) Restart() error {
 	s.input = s.input[:0]
-	s.keystrokes = 0
-	s.correct = 0
-	s.incorrect = 0
+	s.counts = domain.CharCounts{}
+	s.keystrokesCorrect = 0
+	s.keystrokesIncorrect = 0
 	s.startedAt = time.Time{}
 	s.endedAt = time.Time{}
 	s.capsInversions = 0
@@ -178,8 +185,7 @@ func (s *Session) InputRune(r rune) {
 	}
 
 	if r != ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] == ' ' {
-		s.incorrect++
-		s.keystrokes++
+		s.keystrokesIncorrect++
 		return
 	}
 
@@ -190,13 +196,19 @@ func (s *Session) InputRune(r rune) {
 	if skipping {
 		s.skipCurrentWord(pos)
 	} else {
-		s.updateCapsStreak(r, s.targetRunes[pos])
-		s.keystrokes++
+		if pos < len(s.targetRunes) {
+			s.updateCapsStreak(r, s.targetRunes[pos])
+		}
 		switch {
+		case pos >= len(s.targetRunes):
+			s.keystrokesIncorrect++
+			s.counts.Extra++
 		case r == s.targetRunes[pos]:
-			s.correct++
+			s.keystrokesCorrect++
+			s.counts.Correct++
 		default:
-			s.incorrect++
+			s.keystrokesIncorrect++
+			s.counts.Incorrect++
 		}
 		s.input = append(s.input, r)
 	}
@@ -312,18 +324,6 @@ func (s *Session) Finished() bool {
 	return !s.endedAt.IsZero()
 }
 
-func (s *Session) WPM() float64 {
-	return stats.WPM(s.correctChars(), s.Elapsed())
-}
-
-func (s *Session) Accuracy() float64 {
-	return stats.Accuracy(s.correct, s.incorrect)
-}
-
-func (s *Session) RawWPM() float64 {
-	return stats.RawWPM(s.rawBufferCounts(), s.Elapsed())
-}
-
 func (s *Session) rawBufferCounts() domain.CharCounts {
 	var counts domain.CharCounts
 	for i, r := range s.input {
@@ -362,8 +362,7 @@ func (s *Session) correctChars() int {
 }
 
 func (s *Session) skipCurrentWord(pos int) {
-	s.incorrect++
-	s.keystrokes++
+	s.keystrokesIncorrect++
 
 	end := wordEndAt(s.targetRunes, pos)
 	for i := pos; i < end; i++ {

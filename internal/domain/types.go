@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type CharCounts struct {
 	Correct   int
@@ -32,6 +35,15 @@ func ParseDuration(seconds int) (Duration, error) {
 
 func (d Duration) Seconds() int {
 	return int(d)
+}
+
+type LiveStats struct {
+	WPM       float64
+	RawWPM    float64
+	Accuracy  float64
+	Correct   int
+	Incorrect int
+	Elapsed   time.Duration
 }
 
 type Settings struct {

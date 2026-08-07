@@ -20,11 +20,12 @@ type resultSnapshot struct {
 }
 
 func snapshotResult(s *engine.Session, cfg domain.TestConfig) resultSnapshot {
+	live := s.LiveStats()
 	return resultSnapshot{
-		wpm:      s.WPM(),
-		rawWpm:   s.RawWPM(),
-		accuracy: s.Accuracy(),
-		errors:   s.Incorrect(),
+		wpm:      live.WPM,
+		rawWpm:   live.RawWPM,
+		accuracy: live.Accuracy,
+		errors:   live.Incorrect,
 		elapsed:  s.Elapsed(),
 		cfg:      cfg,
 	}

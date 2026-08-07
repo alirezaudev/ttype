@@ -239,14 +239,14 @@ func TestSessionWPMResult(t *testing.T) {
 	clock.Advance(2 * time.Second)
 	typeString(s, "i")
 
-	wpm := s.WPM()
-	if wpm != 6 {
-		t.Fatalf("WPM = %v, want 6", wpm)
+	live := s.LiveStats()
+	if wpm := live.WPM; wpm != 8 {
+		t.Fatalf("WPM = %v, want 8", wpm)
 	}
-	if got := s.RawWPM(); got != 6 {
-		t.Fatalf("RawWPM = %v, want 6", got)
+	if got := live.RawWPM; got != 8 {
+		t.Fatalf("RawWPM = %v, want 8", got)
 	}
-	if got := s.Accuracy(); got != 100 {
+	if got := live.Accuracy; got != 100 {
 		t.Fatalf("Accuracy = %v, want 100", got)
 	}
 }
@@ -322,12 +322,12 @@ func TestFinishFreezesTimedSession(t *testing.T) {
 	if !s.Finished() {
 		t.Fatal("Finish should end the session")
 	}
-	if got := s.WPM(); got != 60 {
+	if got := s.LiveStats().WPM; got != 60 {
 		t.Fatalf("WPM = %v, want 60", got)
 	}
 
 	clock.Advance(30 * time.Second)
-	if got := s.WPM(); got != 60 {
+	if got := s.LiveStats().WPM; got != 60 {
 		t.Fatalf("WPM = %v after Finish, want 60 (elapsed must freeze)", got)
 	}
 }

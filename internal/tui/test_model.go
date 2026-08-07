@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -70,22 +69,7 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TestModel) View() string {
 	var out strings.Builder
 
-	status := m.theme.Help.Render(fmt.Sprintf(
-		"wpm %-3d · raw %-3d · acc %-3d%% · err %-3d",
-		int(m.session.WPM()),
-		int(m.session.RawWPM()),
-		int(m.session.Accuracy()),
-		m.session.Incorrect(),
-	))
-
-	if m.session.Kind() == domain.TestKindTimed {
-		out.WriteString(m.theme.HUDTime.Render(formatClock(m.session.Remaining())) + " · " + status + "\n\n")
-	} else {
-		done, total := m.session.WordsProgress()
-		totalStr := fmt.Sprintf("%d", total)
-		progress := m.theme.HUD.Render(fmt.Sprintf("%*d/%s", len(totalStr), done, totalStr))
-		out.WriteString(progress + " · " + status + "\n\n")
-	}
+	out.WriteString(renderHUD(m.session, m.theme))
 
 	cursor := m.session.Cursor()
 	input := m.session.Input()
