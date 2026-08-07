@@ -11,6 +11,8 @@ import (
 	"github.com/alirezaudev/ttype/internal/text/langcache"
 )
 
+const minTargetRunes = 4096
+
 type Provider struct {
 	words []string
 	cache *langcache.Cache
@@ -46,9 +48,20 @@ func (p *Provider) Generate(opts domain.GenerateOptions) (string, error) {
 		return "", errors.New("words limit out of range")
 	}
 
-	sampled := make([]string, opts.WordLimit)
-	for i := range sampled {
-		sampled[i] = words[rand.IntN(len(words))]
+	if opts.WordLimit > 0 {
+		sampled := make([]string, opts.WordLimit)
+		for i := range sampled {
+			sampled[i] = words[rand.IntN(len(words))]
+		}
+		return strings.Join(sampled, " "), nil
 	}
-	return strings.Join(sampled, " "), nil
+
+	var b strings.Builder
+	for b.Len() < minTargetRunes {
+		if b.Len() > 0 {
+			b.WriteString(" ")
+		}
+		b.WriteString(words[rand.IntN(len(words))])
+	}
+	return b.String(), nil
 }

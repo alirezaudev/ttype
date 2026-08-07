@@ -382,6 +382,50 @@ func TestFinishFreezesTimedSession(t *testing.T) {
 	}
 }
 
+func TestTypingPastTheTargetCountsExtra(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newTestSession(t, "ab", 60*time.Second)
+
+	typeString(s, "ab")
+	clock.Advance(6 * time.Second)
+	typeString(s, "cd")
+
+	if got := string(s.Input()); got != "abcd" {
+		t.Fatalf("input = %q, want %q", got, "abcd")
+	}
+	want := domain.CharCounts{Correct: 2, Extra: 2}
+	if got := s.Counts(); got != want {
+		t.Fatalf("counts = %+v, want %+v", got, want)
+	}
+
+	correct, incorrect := s.Keystrokes()
+	if correct != 2 || incorrect != 2 {
+		t.Fatalf("keystrokes = (%d, %d), want (2, 2)", correct, incorrect)
+	}
+	if got := s.LiveStats().RawWPM; got != 8 {
+		t.Fatalf("RawWPM = %v, want 8 (extras count toward raw speed)", got)
+	}
+	if got := s.LiveStats().WPM; got != 4 {
+		t.Fatalf("WPM = %v, want 4 (extras do not count toward net speed)", got)
+	}
+}
+
+func TestBackspaceRewindsExtra(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "ab", 60*time.Second)
+
+	typeString(s, "abcd")
+	s.Backspace()
+	s.Backspace()
+
+	want := domain.CharCounts{Correct: 2}
+	if got := s.Counts(); got != want {
+		t.Fatalf("counts = %+v, want %+v", got, want)
+	}
+}
+
 func TestSessionStateTransitions(t *testing.T) {
 	t.Parallel()
 

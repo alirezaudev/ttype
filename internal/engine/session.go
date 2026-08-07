@@ -161,7 +161,15 @@ func (s *Session) Restart() error {
 }
 
 func (s *Session) loadTarget() error {
-	target, err := s.source.Generate(s.config.GenerateOptions())
+	wordLimit := 0
+	if s.config.IsWordsMode() {
+		wordLimit = s.config.WordCount
+	}
+
+	target, err := s.source.Generate(domain.GenerateOptions{
+		Language:  s.config.Language,
+		WordLimit: wordLimit,
+	})
 	if err != nil {
 		return err
 	}
@@ -171,7 +179,7 @@ func (s *Session) loadTarget() error {
 }
 
 func (s *Session) InputRune(r rune) {
-	if s.state == domain.SessionFinished || len(s.input) >= len(s.targetRunes) {
+	if s.state == domain.SessionFinished {
 		return
 	}
 	if unicode.IsControl(r) {
@@ -353,23 +361,6 @@ func (s *Session) finish() {
 	s.endedAt = s.clock.Now()
 }
 
-func (s *Session) rawBufferCounts() domain.CharCounts {
-	var counts domain.CharCounts
-	for i, r := range s.input {
-		switch {
-		case r == skipRune:
-		case i >= len(s.targetRunes):
-			counts.Extra++
-		case r == s.targetRunes[i]:
-			counts.Correct++
-		default:
-			counts.Incorrect++
-		}
-	}
-
-	return counts
-}
-
 func (s *Session) Elapsed() time.Duration {
 	if s.startedAt.IsZero() {
 		return 0
@@ -383,16 +374,6 @@ func (s *Session) Elapsed() time.Duration {
 	default:
 		return 0
 	}
-}
-
-func (s *Session) correctChars() int {
-	n := 0
-	for i, r := range s.input {
-		if r == s.targetRunes[i] {
-			n++
-		}
-	}
-	return n
 }
 
 func (s *Session) skipCurrentWord(pos int) {

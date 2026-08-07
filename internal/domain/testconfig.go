@@ -21,13 +21,6 @@ type GenerateOptions struct {
 	Language  string
 }
 
-func (c TestConfig) GenerateOptions() GenerateOptions {
-	return GenerateOptions{
-		WordLimit: c.WordCount,
-		Language:  c.Language,
-	}
-}
-
 func (c TestConfig) IsWordsMode() bool {
 	return c.Kind == TestKindWords && c.WordCount > 0
 }
