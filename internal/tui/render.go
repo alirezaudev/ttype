@@ -15,9 +15,8 @@ func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestC
 	live := session.LiveStats()
 	row := theme.HUDTime.Render(hudTimer(session, cfg, live.Elapsed))
 
-	_, incorrectKeystrokes := session.Keystrokes()
-	line := fmt.Sprintf("wpm %-3s · raw %-3s · acc %-4s · err %-3s",
-		hudNum(live.WPM), hudNum(live.RawWPM), fmt.Sprintf("%.0f%%", live.Accuracy), hudNum(float64(incorrectKeystrokes)))
+	_, errKeystrokes := session.Keystrokes()
+	line := hudLiveLine(live.WPM, live.RawWPM, live.Accuracy, errKeystrokes)
 	if lipgloss.Width(row)+2+len(line) <= width {
 		row += "  " + theme.Help.Render(line)
 	}
@@ -31,6 +30,11 @@ func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestC
 	}
 
 	return lipgloss.NewStyle().Width(width).Render(row)
+}
+
+func hudLiveLine(wpm, raw, acc float64, errs int) string {
+	return fmt.Sprintf("wpm %-3s · raw %-3s · acc %-4s · err %-3s",
+		hudNum(wpm), hudNum(raw), fmt.Sprintf("%.0f%%", acc), hudNum(float64(errs)))
 }
 
 func hudNum(v float64) string {

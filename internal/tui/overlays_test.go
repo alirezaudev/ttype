@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -91,6 +92,25 @@ func TestSettingsPanelWidthFromAuto(t *testing.T) {
 	if p.cfg.Width != 60 {
 		t.Fatalf("width = %d, want 60", p.cfg.Width)
 	}
+}
+
+func stripANSI(s string) string {
+	var b strings.Builder
+	esc := false
+	for _, r := range s {
+		if esc {
+			if r == 'm' {
+				esc = false
+			}
+			continue
+		}
+		if r == '\x1b' {
+			esc = true
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 func TestSettingsPanelWidthLeftToAutoAtZero(t *testing.T) {
