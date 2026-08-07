@@ -1,79 +1,107 @@
 package main
 
 import (
-	"flag"
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/alirezaudev/ttype/internal/app"
 	"github.com/alirezaudev/ttype/internal/domain"
-	"github.com/alirezaudev/ttype/internal/engine"
-	"github.com/alirezaudev/ttype/internal/storage"
-	"github.com/alirezaudev/ttype/internal/text"
-	"github.com/alirezaudev/ttype/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/spf13/cobra"
 )
 
+var version = "dev"
+
 func main() {
-	wordCount := flag.Int("words", 0, "run a words test of this many words instead of a timed test")
-	language := flag.String("language", "", "use a downloadable language word list instead of the built-in one")
-	flag.Parse()
-
-	dirs, err := storage.DefaultDirs()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	store, err := app.OpenStore()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	provider, err := text.NewProvider(dirs.Data)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	cfg, err := resolveTestConfig(store, *wordCount, *language)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	session, err := engine.NewSession(cfg, provider, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	p := tea.NewProgram(tui.NewAppModel(cfg, provider, provider.LanguageCache(), session, store), tea.WithAltScreen())
-
-	_, err = p.Run()
-	if err != nil {
-		log.Fatalln(err)
+	if err := newRootCmd().Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
-func resolveTestConfig(store storage.Store, wordCount int, language string) (domain.TestConfig, error) {
+func newRootCmd() *cobra.Command {
+	flags := &testCLIFlags{}
+
+	cmd := &cobra.Command{
+		Use:   "ttype",
+		Short: "Terminal typing practice",
+		Long:  "A terminal-first typing test. Use --time for timed tests or --words for word count tests.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			store, err := app.OpenStore()
+			if err != nil {
+				return err
+			}
+
+			cfg, err := resolveTestConfig(cmd, store, flags)
+			if err != nil {
+				return err
+			}
+			return app.RunTest(cfg, store)
+		},
+	}
+
+	cmd.Version = version
+	bindTestFlags(cmd, flags)
+
+	return cmd
+}
+
+type testCLIFlags struct {
+	timeSec   int
+	wordCount int
+	language  string
+	theme     string
+	width     int
+}
+
+func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
+	cmd.Flags().IntVar(&f.timeSec, "time", 0, "Timed test duration in seconds")
+	cmd.Flags().IntVar(&f.wordCount, "words", 0, "Word count test (e.g. 25)")
+	cmd.Flags().StringVar(&f.language, "language", "", "language id (e.g. spanish, english_1k); downloads once and caches locally")
+	cmd.Flags().StringVar(&f.theme, "theme", "", "Color theme")
+	cmd.Flags().IntVar(&f.width, "width", 0, "Typing area width in characters")
+}
+
+func resolveTestConfig(cmd *cobra.Command, store interface {
+	LoadSettings() (domain.Settings, error)
+}, f *testCLIFlags) (domain.TestConfig, error) {
 	settings, err := store.LoadSettings()
 	if err != nil {
 		return domain.TestConfig{}, err
 	}
 
-	f := app.TestFlags{
-		TimeSec:   domain.Duration60.Seconds(),
+	timeSec := f.timeSec
+	if !cmd.Flags().Changed("time") || timeSec == 0 {
+		timeSec = settings.DefaultDuration.Seconds()
+	}
+	if timeSec <= 0 {
+		timeSec = domain.Duration60.Seconds()
+	}
+
+	wordCount := f.wordCount
+	if !cmd.Flags().Changed("words") {
+		wordCount = settings.DefaultWordCount
+	}
+
+	language := f.language
+	if !cmd.Flags().Changed("language") {
+		language = settings.Language
+	}
+
+	theme := f.theme
+	if !cmd.Flags().Changed("theme") || theme == "" {
+		theme = settings.Theme
+	}
+
+	width := f.width
+	if !cmd.Flags().Changed("width") {
+		width = settings.DefaultWidth
+	}
+
+	return app.ConfigFromFlags(app.TestFlags{
+		TimeSec:   timeSec,
 		WordCount: wordCount,
 		Language:  language,
-		Theme:     settings.Theme,
-		Width:     settings.DefaultWidth,
-	}
-
-	if settings.DefaultDuration > 0 {
-		f.TimeSec = settings.DefaultDuration.Seconds()
-	}
-	if wordCount == 0 {
-		f.WordCount = settings.DefaultWordCount
-	}
-	if language == "" {
-		f.Language = settings.Language
-	}
-
-	return app.ConfigFromFlags(f)
+		Theme:     theme,
+		Width:     width,
+	})
 }
