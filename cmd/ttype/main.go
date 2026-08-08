@@ -42,7 +42,38 @@ func newRootCmd() *cobra.Command {
 	cmd.Version = version
 	bindTestFlags(cmd, flags)
 
+	cmd.AddCommand(newHistoryCmd())
 	cmd.AddCommand(newLanguagesCmd())
+
+	return cmd
+}
+
+func newHistoryCmd() *cobra.Command {
+	var last, limit int
+	var plain bool
+
+	cmd := &cobra.Command{
+		Use:   "history",
+		Short: "View past test results (Enter watches a replay)",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			store, err := app.OpenStore()
+			if err != nil {
+				return err
+			}
+
+			n := last
+			if cmd.Flags().Changed("limit") && !cmd.Flags().Changed("last") {
+				n = limit
+			}
+			if n <= 0 {
+				n = 10
+			}
+			return app.RunHistory(store, n, plain)
+		},
+	}
+	cmd.Flags().IntVar(&last, "last", 10, "Number of recent results to show")
+	cmd.Flags().IntVar(&limit, "limit", 0, "Alias for --last")
+	cmd.Flags().BoolVar(&plain, "plain", false, "Print a plain table instead of the interactive list")
 
 	return cmd
 }
