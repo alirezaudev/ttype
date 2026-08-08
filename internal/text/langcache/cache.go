@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,8 +20,23 @@ const (
 	languagesPath  = "frontend/static/languages"
 	manifestFile   = "_manifest.json"
 	manifestMaxAge = 7 * 24 * time.Hour
-	fetchTimeout   = 15 * time.Second
+	fetchTimeout   = 60 * time.Second
+
+	defaultDownloadWorkers = 8
 )
+
+type Entry struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Size int64  `json:"size,omitempty"`
+}
+
+type DownloadPlan struct {
+	Entries       []Entry
+	TotalBytes    int64
+	AlreadyCached int
+	TotalRemote   int
+}
 
 type Cache struct {
 	dir        string
@@ -96,6 +113,15 @@ func (c *Cache) Ensure(id string) error {
 }
 
 func (c *Cache) List() ([]string, error) {
+	entries, err := c.ListAvailable()
+	ids := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		ids = append(ids, entry.ID)
+	}
+	return ids, err
+}
+
+func (c *Cache) ListAvailable() ([]Entry, error) {
 	cached, err := c.loadManifest()
 	if err == nil && len(cached) > 0 && !c.manifestStale() {
 		return cached, nil
@@ -115,6 +141,87 @@ func (c *Cache) List() ([]string, error) {
 	return fresh, nil
 }
 
+func (c *Cache) PlanDownloadAll() (DownloadPlan, error) {
+	entries, err := c.fetchManifest()
+	if err != nil {
+		return DownloadPlan{}, err
+	}
+	if err := c.saveManifest(entries); err != nil {
+		return DownloadPlan{}, err
+	}
+
+	plan := DownloadPlan{TotalRemote: len(entries)}
+	for _, entry := range entries {
+		if c.Cached(entry.ID) {
+			plan.AlreadyCached++
+			continue
+		}
+		plan.Entries = append(plan.Entries, entry)
+		plan.TotalBytes += entry.Size
+	}
+	return plan, nil
+}
+
+func (c *Cache) DownloadAll(plan DownloadPlan, workers int, progress func(done, total int, id string, err error)) []error {
+	total := len(plan.Entries)
+	if total == 0 {
+		return nil
+	}
+	if workers <= 0 {
+		workers = defaultDownloadWorkers
+	}
+	if workers > total {
+		workers = total
+	}
+
+	jobs := make(chan Entry, total)
+	for _, entry := range plan.Entries {
+		jobs <- entry
+	}
+	close(jobs)
+
+	var (
+		mu       sync.Mutex
+		failures []error
+		done     atomic.Int32
+		wg       sync.WaitGroup
+	)
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for entry := range jobs {
+				err := c.Ensure(entry.ID)
+				if progress != nil {
+					progress(int(done.Add(1)), total, entry.ID, err)
+				}
+				if err == nil {
+					continue
+				}
+				mu.Lock()
+				failures = append(failures, fmt.Errorf("%s: %w", entry.ID, err))
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+
+	return failures
+}
+
+func FormatSize(bytes int64) string {
+	switch {
+	case bytes >= 1<<30:
+		return fmt.Sprintf("%.1f GB", float64(bytes)/(1<<30))
+	case bytes >= 1<<20:
+		return fmt.Sprintf("%.0f MB", float64(bytes)/(1<<20))
+	case bytes >= 1<<10:
+		return fmt.Sprintf("%.0f KB", float64(bytes)/(1<<10))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
+}
+
 func (c *Cache) manifestStale() bool {
 	info, err := os.Stat(c.manifestPath())
 	if err != nil {
@@ -123,32 +230,32 @@ func (c *Cache) manifestStale() bool {
 	return time.Since(info.ModTime()) > manifestMaxAge
 }
 
-func (c *Cache) loadManifest() ([]string, error) {
+func (c *Cache) loadManifest() ([]Entry, error) {
 	data, err := os.ReadFile(c.manifestPath())
 	if err != nil {
 		return nil, err
 	}
 
-	var ids []string
-	if err := json.Unmarshal(data, &ids); err != nil {
+	var entries []Entry
+	if err := json.Unmarshal(data, &entries); err != nil {
 		return nil, err
 	}
-	return ids, nil
+	return entries, nil
 }
 
-func (c *Cache) saveManifest(ids []string) error {
+func (c *Cache) saveManifest(entries []Entry) error {
 	if err := os.MkdirAll(c.dir, 0o700); err != nil {
 		return err
 	}
 
-	data, err := json.Marshal(ids)
+	data, err := json.Marshal(entries)
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(c.manifestPath(), data, 0o600)
 }
 
-func (c *Cache) fetchManifest() ([]string, error) {
+func (c *Cache) fetchManifest() ([]Entry, error) {
 	url := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s&per_page=1000", c.apiBase, c.repo, languagesPath, c.branch)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -169,24 +276,26 @@ func (c *Cache) fetchManifest() ([]string, error) {
 
 	var items []struct {
 		Name string `json:"name"`
+		Size int64  `json:"size"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
 		return nil, err
 	}
 
-	var ids []string
+	var entries []Entry
 	for _, item := range items {
 		if !strings.HasSuffix(item.Name, ".json") || item.Name == manifestFile {
 			continue
 		}
-		ids = append(ids, strings.TrimSuffix(item.Name, ".json"))
+		id := strings.TrimSuffix(item.Name, ".json")
+		entries = append(entries, Entry{ID: id, Name: DisplayName(id), Size: item.Size})
 	}
-	if len(ids) == 0 {
+	if len(entries) == 0 {
 		return nil, fmt.Errorf("list languages returned no entries")
 	}
 
-	sort.Strings(ids)
-	return ids, nil
+	sort.Slice(entries, func(i, j int) bool { return entries[i].ID < entries[j].ID })
+	return entries, nil
 }
 
 func (c *Cache) download(id string) error {

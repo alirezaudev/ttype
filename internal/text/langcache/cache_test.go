@@ -140,3 +140,62 @@ func TestDisplayName(t *testing.T) {
 		}
 	}
 }
+
+func TestDownloadAllFetchesEverythingThatIsNotCached(t *testing.T) {
+	t.Parallel()
+
+	c := newTestCache(t, func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/repos/") {
+			w.Write([]byte(`[{"name":"spanish.json","size":100},{"name":"french.json","size":200},{"name":"README.md","size":9999}]`))
+			return
+		}
+		w.Write([]byte(`{"words":["uno","dos"]}`))
+	})
+
+	plan, err := c.PlanDownloadAll()
+	if err != nil {
+		t.Fatalf("PlanDownloadAll: %v", err)
+	}
+	if plan.TotalRemote != 2 || len(plan.Entries) != 2 || plan.AlreadyCached != 0 {
+		t.Fatalf("plan = %+v, want 2 remote / 2 to download / 0 cached", plan)
+	}
+	if plan.TotalBytes != 300 {
+		t.Fatalf("TotalBytes = %d, want 300", plan.TotalBytes)
+	}
+
+	done := 0
+	if failures := c.DownloadAll(plan, 2, func(int, int, string, error) { done++ }); len(failures) != 0 {
+		t.Fatalf("DownloadAll: %v", failures)
+	}
+	if done != 2 {
+		t.Fatalf("progress calls = %d, want 2", done)
+	}
+
+	replan, err := c.PlanDownloadAll()
+	if err != nil {
+		t.Fatalf("second PlanDownloadAll: %v", err)
+	}
+	if len(replan.Entries) != 0 || replan.AlreadyCached != 2 {
+		t.Fatalf("replan = %+v, want nothing left to download", replan)
+	}
+}
+
+func TestFormatSize(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		bytes int64
+		want  string
+	}{
+		{bytes: 512, want: "512 B"},
+		{bytes: 2 * 1024, want: "2 KB"},
+		{bytes: 400 * 1024 * 1024, want: "400 MB"},
+		{bytes: 3 * 1024 * 1024 * 1024, want: "3.0 GB"},
+	}
+
+	for _, test := range tests {
+		if got := FormatSize(test.bytes); got != test.want {
+			t.Errorf("FormatSize(%d) = %q, want %q", test.bytes, got, test.want)
+		}
+	}
+}

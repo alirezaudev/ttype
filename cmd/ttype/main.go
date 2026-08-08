@@ -42,6 +42,33 @@ func newRootCmd() *cobra.Command {
 	cmd.Version = version
 	bindTestFlags(cmd, flags)
 
+	cmd.AddCommand(newLanguagesCmd())
+
+	return cmd
+}
+
+func newLanguagesCmd() *cobra.Command {
+	var yes bool
+	var jobs int
+
+	cmd := &cobra.Command{
+		Use:   "languages",
+		Short: "Manage downloadable language lists",
+	}
+
+	download := &cobra.Command{
+		Use:   "download",
+		Short: "Download all language lists to local cache",
+		Long:  "Fetches every available language list once and stores it under the ttype data directory. Shows estimated download size and asks for confirmation unless --yes is passed.",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return app.RunDownloadLanguages(os.Stdout, os.Stdin, yes, jobs)
+		},
+	}
+	download.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation prompt")
+	download.Flags().IntVarP(&jobs, "jobs", "j", 8, "Number of parallel downloads")
+
+	cmd.AddCommand(download)
+
 	return cmd
 }
 
