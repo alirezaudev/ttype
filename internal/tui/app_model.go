@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
@@ -9,6 +10,8 @@ import (
 	"github.com/alirezaudev/ttype/internal/text/langcache"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+const resultsKeyGrace = 700 * time.Millisecond
 
 type appPhase int
 
@@ -32,7 +35,8 @@ type AppModel struct {
 	navStack       []appPhase
 	test           TestModel
 	result         domain.Result
-	notice         string
+	finishedAt     time.Time
+	notice         statusNotice
 	settings       SettingsPanel
 	languagePicker LanguagePicker
 	theme          Theme
@@ -95,15 +99,48 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.languagePicker.setSize(m.width, m.height)
 		m.pushPhase(phaseLanguagePicker)
 		return m, m.languagePicker.Init()
+	case clipboardCopiedMsg:
+		if msg.err != nil {
+			m.notice = errorNotice("clipboard unavailable — run ttype doctor")
+		} else {
+			m.notice = infoNotice("Copied to clipboard")
+		}
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "esc":
 			return m, m.popPhase()
+		}
+
+		if m.phase == phaseResult && m.inResultsGrace() {
+			return m, nil
+		}
+		m.notice = statusNotice{}
+
+		switch msg.String() {
 		case "enter", "tab":
 			if m.phase == phaseResult {
 				return m, m.restartTest()
+			}
+		case "C":
+			if m.phase == phaseResult {
+				return m, copyResultCmd(m.result)
+			}
+		case "S":
+			if m.phase == phaseResult {
+				m.settings = NewSettingsPanel(m.cfg, m.theme)
+				m.settings.setSize(m.width, m.height)
+				m.pushPhase(phaseSettings)
+				return m, nil
+			}
+		case "L":
+			if m.phase == phaseResult {
+				m.languagePicker = NewLanguagePicker(m.langCache, m.cfg.Language, m.theme)
+				m.languagePicker.setSize(m.width, m.height)
+				m.pushPhase(phaseLanguagePicker)
+				return m, m.languagePicker.Init()
 			}
 		case "ctrl+s":
 			m.settings = NewSettingsPanel(m.cfg, m.theme)
@@ -146,23 +183,31 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.test.session.State() == domain.SessionFinished {
 		m.result, m.notice = m.finishResult()
 		m.phase = phaseResult
+		m.finishedAt = time.Now()
 		return m, tea.Batch(cmd, tea.ClearScreen)
 	}
 	return m, cmd
 }
 
-func (m AppModel) finishResult() (domain.Result, string) {
+func (m AppModel) inResultsGrace() bool {
+	if m.finishedAt.IsZero() {
+		return false
+	}
+	return time.Since(m.finishedAt) < resultsKeyGrace
+}
+
+func (m AppModel) finishResult() (domain.Result, statusNotice) {
 	result, err := m.test.session.Result()
 	if err != nil {
-		return result, fmt.Sprintf("result not saved: %s", err)
+		return result, errorNotice(fmt.Sprintf("result not saved: %s", err))
 	}
 	if m.store == nil {
-		return result, ""
+		return result, statusNotice{}
 	}
 	if err := m.store.SaveResult(result); err != nil {
-		return result, fmt.Sprintf("result not saved: %s", err)
+		return result, errorNotice(fmt.Sprintf("result not saved: %s", err))
 	}
-	return result, ""
+	return result, statusNotice{}
 }
 
 func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -213,6 +258,8 @@ func (m *AppModel) restartTest() tea.Cmd {
 	m.test.setSize(m.width, m.height)
 	m.phase = phaseTest
 	m.navStack = nil
+	m.finishedAt = time.Time{}
+	m.notice = statusNotice{}
 	return tea.Batch(tea.ClearScreen, m.test.Init())
 }
 

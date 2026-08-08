@@ -17,7 +17,7 @@ func resultSubtitle(cfg domain.TestConfig) string {
 
 const resultColWidth = 9
 
-func renderResult(result domain.Result, theme Theme, width, height int, notice string) string {
+func renderResult(result domain.Result, theme Theme, width, height int, notice statusNotice) string {
 	title := theme.Finished.Render("Test Complete")
 	subtitle := theme.Help.Render(resultSubtitle(result.Config))
 
@@ -37,7 +37,7 @@ func renderResult(result domain.Result, theme Theme, width, height int, notice s
 	)
 
 	elapsed := theme.Help.Render(formatClock(result.Duration) + " elapsed")
-	help := theme.Help.Render("tab/enter restart  ctrl+s settings")
+	help := theme.Help.Render("tab/enter restart  C copy  S settings  L language")
 
 	lines := []string{
 		title,
@@ -49,8 +49,8 @@ func renderResult(result domain.Result, theme Theme, width, height int, notice s
 		"",
 		elapsed,
 	}
-	if notice != "" {
-		lines = append(lines, "", theme.Incorrect.Render(notice))
+	if !notice.empty() {
+		lines = append(lines, "", notice.render(theme))
 	}
 	lines = append(lines, "", help)
 
