@@ -14,6 +14,10 @@ func AllTextModes() []TextMode {
 	return []TextMode{TextModeWords, TextModeSentences, TextModeSQL}
 }
 
+func (m TextMode) CommitsWordsOnSpace() bool {
+	return m == "" || m == TextModeWords || m == TextModeSentences
+}
+
 func ParseTextMode(s string) (TextMode, error) {
 	for _, mode := range AllTextModes() {
 		if TextMode(s) == mode {
