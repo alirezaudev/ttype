@@ -1,0 +1,71 @@
+package main
+func main() { println("hello from ttype") }
+type User struct { ID int; Name string }
+func (u User) String() string { return u.Name }
+interface Reader { Read(p []byte) (n int, err error) }
+go func() { ch <- value }()
+select { case v := <-ch: fmt.Println(v); case <-ctx.Done(): return }
+defer file.Close()
+if err != nil { return fmt.Errorf("open: %w", err) }
+for i, v := range items { _ = i; _ = v }
+switch mode { case "words": fallthrough; default: start() }
+map[string]int{"wpm": 60, "acc": 99}
+s := make([]byte, 0, 128)
+ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+var wg sync.WaitGroup
+mu.Lock(); defer mu.Unlock()
+atomic.AddInt64(&count, 1)
+json.Marshal(struct{ WPM float64 `json:"wpm"` }{60})
+strings.Builder{}.WriteString("type")
+bytes.Equal(a, b)
+io.Copy(dst, src)
+http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {})
+t.Run("wpm", func(t *testing.T) { if got != want { t.Fatal() } })
+embed.FS
+os.Getenv("HOME")
+filepath.Join(dir, "config.json")
+flag.Int("time", 60, "test duration")
+log.Printf("session finished wpm=%.1f", wpm)
+errors.Is(err, io.EOF)
+errors.As(err, &netErr)
+reflect.TypeOf(v).Kind()
+unsafe.Sizeof struct{}{}
+runtime.GOMAXPROCS(0)
+time.Since(start)
+rand.New(rand.NewPCG(seed, seed))
+sort.Slice(items, func(i, j int) bool { return items[i] < items[j] })
+slices.Contains(all, target)
+maps.Keys(m)
+cmp.Compare(a, b)
+iter.Seq[int]
+func Sum[T ~int | ~float64](vals ...T) T
+type Set[T comparable] map[T]struct{}
+close(done)
+range over ch
+panic("unreachable")
+recover()
+init() { registerModes() }
+const Version = "0.1.0"
+var DefaultDuration = 60 * time.Second
+type Option func(*Config)
+func WithTheme(name string) Option { return func(c *Config) { c.Theme = name } }
+type Handler func(ctx context.Context) error
+func Retry(ctx context.Context, fn Handler) error
+type Clock interface { Now() time.Time }
+type Session struct { input []rune; target string }
+func (s *Session) Input(r rune) error
+chan struct{}
+make(chan int, 8)
+buffered channel
+unbuffered channel
+worker pool pattern
+fan-in fan-out
+pipeline stage
+context cancellation
+graceful shutdown signal
+table driven test
+benchmark loop
+fuzz target
+go:embed assets/*
+module github.com/alirezaudev/ttype
+require github.com/charmbracelet/bubbletea v1.0.0

@@ -15,6 +15,9 @@ var sentencesFile embed.FS
 //go:embed sql/snippets.txt
 var sqlFile embed.FS
 
+//go:embed go/snippets.txt
+var goFile embed.FS
+
 func LoadWords() ([]string, error) {
 	return loadLines(wordsFile, "words/en.txt")
 }
@@ -25,6 +28,10 @@ func LoadSentences() ([]string, error) {
 
 func LoadSQL() ([]string, error) {
 	return loadLines(sqlFile, "sql/snippets.txt")
+}
+
+func LoadGo() ([]string, error) {
+	return loadLines(goFile, "go/snippets.txt")
 }
 
 func loadLines(fs embed.FS, path string) ([]string, error) {
