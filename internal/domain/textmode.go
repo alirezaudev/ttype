@@ -7,10 +7,11 @@ type TextMode string
 const (
 	TextModeWords     TextMode = "words"
 	TextModeSentences TextMode = "sentences"
+	TextModeSQL       TextMode = "sql"
 )
 
 func AllTextModes() []TextMode {
-	return []TextMode{TextModeWords, TextModeSentences}
+	return []TextMode{TextModeWords, TextModeSentences, TextModeSQL}
 }
 
 func ParseTextMode(s string) (TextMode, error) {
