@@ -1,0 +1,46 @@
+git log --oneline --graph --decorate --all -20
+git diff --stat origin/main...HEAD
+git rebase -i HEAD~5
+git stash push -u -m "wip: refactor session"
+git cherry-pick -x abc1234
+docker compose up -d --build --remove-orphans
+docker system prune -af --volumes
+kubectl get pods -n prod -l app=api -o wide
+kubectl logs deploy/api -n prod --since=10m --tail=200
+kubectl rollout status deploy/api -n prod --timeout=120s
+curl -fsSL "$URL" | jq -r '.releases[0].tag_name'
+curl -H "Authorization: Bearer $TOKEN" -X POST "$API/users" -d @payload.json
+ssh -J bastion user@10.0.0.12 'journalctl -u app -n 100 --no-pager'
+rsync -avz --delete --exclude node_modules ./dist/ user@host:/var/www/app/
+find . -type f -name '*.go' -not -path './vendor/*' | xargs -r wc -l
+grep -RIn --exclude-dir=.git 'TODO' .
+grep -Pzo '(?s)func main\(\).*?\n\}' cmd/
+awk -F, '{sum+=$3} END {print sum}' report.csv
+sed -E 's/\s+/ /g' messy.txt | sed '/^$/d' > clean.txt
+ps aux | awk '$8 ~ /Z/ {print $2}' | xargs -r kill -9
+lsof -iTCP -sTCP:LISTEN -P -n | grep ':8080'
+ss -tulpn | grep LISTEN
+systemctl --user restart ttype.service
+journalctl -xeu docker.service --since "1 hour ago"
+export PATH="$HOME/.local/bin:$PATH"
+env | sort | grep -E '^(GO|NODE|PATH)='
+tar -czf backup-$(date +%F).tar.gz --exclude=node_modules .
+sha256sum dist/* > checksums.txt
+openssl rand -hex 32
+chmod +x install.sh && ./install.sh
+make test && make build && ./bin/ttype --version
+parallel -j8 gzip ::: logs/*.log
+fzf --preview 'bat --color=always {}' < <(git ls-files)
+bat --style=numbers,changes --theme=Monokai README.md
+htop -u "$USER"
+du -sh */ | sort -h | tail
+df -hT | awk 'NR==1 || $6+0 > 80'
+nc -zv localhost 5432
+dig +short api.example.com
+ping -c 3 1.1.1.1
+traceroute -n 8.8.8.8
+watch -n2 'curl -s localhost:8080/health | jq .'
+while read -r line; do echo "$line"; done < input.txt
+history | awk '{print $2}' | sort | uniq -c | sort -nr | head
+alias ll='ls -lah --color=auto'
+source ~/.zshrc && compinit

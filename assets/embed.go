@@ -24,6 +24,9 @@ var backendFile embed.FS
 //go:embed python/snippets.txt
 var pythonFile embed.FS
 
+//go:embed shell/snippets.txt
+var shellFile embed.FS
+
 func LoadWords() ([]string, error) {
 	return loadLines(wordsFile, "words/en.txt")
 }
@@ -46,6 +49,10 @@ func LoadBackend() ([]string, error) {
 
 func LoadPython() ([]string, error) {
 	return loadLines(pythonFile, "python/snippets.txt")
+}
+
+func LoadShell() ([]string, error) {
+	return loadLines(shellFile, "shell/snippets.txt")
 }
 
 func loadLines(fs embed.FS, path string) ([]string, error) {
