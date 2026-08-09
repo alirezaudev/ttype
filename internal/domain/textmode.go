@@ -12,12 +12,13 @@ const (
 	TextModeBackend   TextMode = "backend"
 	TextModePython    TextMode = "python"
 	TextModeShell     TextMode = "shell"
+	TextModeRegex     TextMode = "regex"
 )
 
 func AllTextModes() []TextMode {
 	return []TextMode{
 		TextModeWords, TextModeSentences, TextModeSQL, TextModeGo,
-		TextModeBackend, TextModePython, TextModeShell,
+		TextModeBackend, TextModePython, TextModeShell, TextModeRegex,
 	}
 }
 

@@ -34,6 +34,7 @@ func NewProvider(dataDir string) (*Provider, error) {
 		domain.TextModeBackend:   assets.LoadBackend,
 		domain.TextModePython:    assets.LoadPython,
 		domain.TextModeShell:     assets.LoadShell,
+		domain.TextModeRegex:     assets.LoadRegex,
 	}
 
 	items := make(map[domain.TextMode][]string, len(loaders))

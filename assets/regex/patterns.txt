@@ -1,0 +1,96 @@
+# email address
+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+# HTTP/HTTPS URL
+https?://[^\s/$.?#].[^\s]*
+# ISO 8601 date
+\d{4}-\d{2}-\d{2}
+# semantic version
+v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[\w.-]+)?
+# IPv4 address
+\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d?\d)\b
+# IPv6 address (compressed)
+(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}|(?:[A-F0-9]{1,4}:){1,7}:|:(?::[A-F0-9]{1,4}){1,7}
+# UUID v4
+[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}
+# log level token
+\b(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b
+# JWT structure (three base64url segments)
+eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+
+# hex color with hash
+#(?:[0-9a-fA-F]{3}){1,2}\b
+# URL slug
+[a-z0-9]+(?:-[a-z0-9]+)+
+# US phone number (loose)
+\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b
+# markdown link
+\[[^\]]+\]\([^)]+\)
+# docker image tag
+[a-z0-9]+(?:[._-][a-z0-9]+)*:[A-Za-z0-9._-]+
+# git short SHA
+\b[0-9a-f]{7,40}\b
+# domain name
+(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}
+# credit card (groups of 4)
+\b(?:\d{4}[- ]?){3}\d{4}\b
+# ISO currency code amount
+\b[A-Z]{3}\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b
+# time HH:MM:SS
+\b(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\b
+# time HH:MM
+\b(?:[01]\d|2[0-3]):[0-5]\d\b
+# MAC address
+(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}
+# HTML tag (simple)
+<[a-zA-Z][^>]*>
+# JSON string key
+"[a-zA-Z_][\w]*"\s*:
+# YAML key-value
+^[a-zA-Z_][\w-]*:\s*.+$
+# cron five-field
+^(\S+\s+){4}\S+$
+# semver range caret
+\^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)
+# npm scope package
+@[\w-]+/[\w.-]+
+# Go module path
+github\.com/[\w.-]+/[\w.-]+
+# Python dotted import
+(?:from|import)\s+[\w.]+(?:\s+import\s+[\w,\s]+)?
+# SQL SELECT fragment
+SELECT\s+[\w.*,\s]+\s+FROM\s+[\w.]+
+# file extension
+\.(?:go|py|rs|ts|tsx|js|json|yaml|yml|toml|md)\b
+# positive integer
+\b[1-9]\d*\b
+# negative integer
+-\b[1-9]\d*\b
+# floating point
+\b-?\d+\.\d+\b
+# whitespace collapse target
+\s{2,}
+# trailing whitespace
+[ \t]+$
+# Windows path
+[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*
+# Unix absolute path
+/(?:[\w.-]+/)*[\w.-]+
+# env var reference
+\$\{?[A-Z_][A-Z0-9_]*\}?
+# hashtag
+#[\w-]+
+# mention
+@[\w]{1,15}
+# CIDR block
+\b(?:\d{1,3}\.){3}\d{1,3}/(?:[0-9]|[1-2][0-9]|3[0-2])\b
+# base64 blob (short)
+[A-Za-z0-9+/]{16,}={0,2}
+# semver pre-release
+-\d+\.\d+\.\d+-[\w.]+
+# HTTP status code
+\b[1-5]\d{2}\b
+# Content-Type header value
+Content-Type:\s*[\w/+-]+
+# E.164 phone
+\+[1-9]\d{6,14}
+# ISBN-13
+\b97[89]\d{10}\b

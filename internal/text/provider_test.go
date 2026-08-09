@@ -188,3 +188,19 @@ func TestGenerateEveryRegisteredMode(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateRegexItemsCarryTheirComment(t *testing.T) {
+	t.Parallel()
+
+	target, err := newTestProvider(t).Generate(domain.GenerateOptions{
+		Mode:      domain.TextModeRegex,
+		WordLimit: 20,
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	if !strings.Contains(target, "#") || !strings.Contains(target, "\n") {
+		t.Fatalf("regex items lost their paired comment: %q", target)
+	}
+}

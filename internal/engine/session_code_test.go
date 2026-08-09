@@ -57,6 +57,8 @@ func TestCodeModeDoesNotPinExtraCharsAtASpace(t *testing.T) {
 	}
 }
 
+// Backend reads like prose but is not a word-commit mode — a distinction easy
+// to get wrong from the asset alone.
 func TestModeSpaceCommitClassification(t *testing.T) {
 	t.Parallel()
 
@@ -64,6 +66,11 @@ func TestModeSpaceCommitClassification(t *testing.T) {
 		domain.TextModeWords:     true,
 		domain.TextModeSentences: true,
 		domain.TextModeSQL:       false,
+		domain.TextModeGo:        false,
+		domain.TextModeBackend:   false,
+		domain.TextModePython:    false,
+		domain.TextModeShell:     false,
+		domain.TextModeRegex:     false,
 		"":                       true,
 	}
 

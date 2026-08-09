@@ -27,6 +27,9 @@ var pythonFile embed.FS
 //go:embed shell/snippets.txt
 var shellFile embed.FS
 
+//go:embed regex/patterns.txt
+var regexFile embed.FS
+
 func LoadWords() ([]string, error) {
 	return loadLines(wordsFile, "words/en.txt")
 }
@@ -53,6 +56,42 @@ func LoadPython() ([]string, error) {
 
 func LoadShell() ([]string, error) {
 	return loadLines(shellFile, "shell/snippets.txt")
+}
+
+func LoadRegex() ([]string, error) {
+	return loadRegexSnippets(regexFile, "regex/patterns.txt")
+}
+
+// loadRegexSnippets pairs each leading comment with the pattern beneath it, so
+// a regex item carries its own description instead of arriving unexplained.
+func loadRegexSnippets(fs embed.FS, path string) ([]string, error) {
+	data, err := fs.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var snippets []string
+	var comment string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimRight(line, "\r")
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			comment = line
+			continue
+		}
+		if comment != "" {
+			snippets = append(snippets, comment+"\n"+line)
+			comment = ""
+			continue
+		}
+		snippets = append(snippets, line)
+	}
+	if len(snippets) == 0 {
+		return nil, fmt.Errorf("no snippets in %s", path)
+	}
+	return snippets, nil
 }
 
 func loadLines(fs embed.FS, path string) ([]string, error) {
