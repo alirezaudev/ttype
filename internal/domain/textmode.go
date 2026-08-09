@@ -9,10 +9,11 @@ const (
 	TextModeSentences TextMode = "sentences"
 	TextModeSQL       TextMode = "sql"
 	TextModeGo        TextMode = "go"
+	TextModeBackend   TextMode = "backend"
 )
 
 func AllTextModes() []TextMode {
-	return []TextMode{TextModeWords, TextModeSentences, TextModeSQL, TextModeGo}
+	return []TextMode{TextModeWords, TextModeSentences, TextModeSQL, TextModeGo, TextModeBackend}
 }
 
 func (m TextMode) CommitsWordsOnSpace() bool {

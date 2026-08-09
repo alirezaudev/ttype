@@ -1,0 +1,115 @@
+CAP theorem tradeoffs between consistency availability and partition tolerance
+eventual consistency with read repair and conflict free replicated data types
+strong consistency using quorum reads and writes in distributed databases
+leader election via raft consensus for replicated state machines
+horizontal scaling adds nodes to share load across shards or partitions
+vertical scaling increases CPU RAM or disk on a single host temporarily
+load balancer distributes requests using round robin least connections or hash
+reverse proxy terminates TLS and routes traffic to upstream application servers
+API gateway centralizes authentication rate limits and request transformation rules
+service mesh provides observability mTLS and traffic policy between microservices
+circuit breaker opens after failures to protect downstream dependencies from overload
+bulkhead isolates thread pools so one slow dependency cannot exhaust all workers
+retry with exponential backoff and jitter prevents synchronized retry storms after outages
+idempotency keys let clients safely retry POST requests without duplicate side effects
+dead letter queue stores poison messages for inspection instead of infinite redelivery loops
+at least once delivery requires consumers to deduplicate using business natural keys
+exactly once semantics are costly; dedupe tables often suffice in practice for many workloads
+message broker decouples producers and consumers with topics queues or streams
+Kafka partitions provide ordering within a key and parallel consumption across consumers
+consumer group rebalances partitions when members join or leave the cluster dynamically
+schema registry validates Avro Protobuf or JSON schema evolution for streaming pipelines
+change data capture streams database row changes into analytics or search indexes
+CQRS separates write models optimized for commands from read models optimized for queries
+event sourcing stores state as append only events rather than mutable row snapshots alone
+saga pattern coordinates long running transactions across services with compensating actions
+two phase commit blocks resources and struggles at scale across unreliable networks often
+outbox pattern writes events in same database transaction as business data for reliability
+inbox pattern deduplicates incoming events before processing side effects idempotently again
+cache aside loads data on miss and writes invalidate or update cache entries explicitly
+write through cache updates cache and database synchronously on every write operation path
+write behind cache batches writes to database improving write throughput with durability risk
+CDN caches static assets close to users reducing latency and origin load globally
+Redis used for session storage rate limiting pub sub and fast ephemeral counters
+Memcached simple key value cache without persistence suited for pure caching layers
+connection pooling reuses TCP connections to databases reducing handshake overhead significantly
+prepared statements reduce parse planning overhead and mitigate SQL injection when parameterized
+index selection impacts read speed and write amplification; monitor slow query logs regularly
+covering index includes all queried columns avoiding table lookups for index only scans
+partial index indexes subset of rows matching predicate saving space and maintenance cost
+materialized view precomputes expensive aggregations refreshed on schedule or concurrently
+database replication lag causes stale reads; applications must tolerate or route reads carefully
+read replica offload analytics queries away from primary writer during heavy reporting windows
+failover promotes standby when primary fails; automatic failover needs fencing to avoid split brain
+split brain two primaries accept writes causing divergent data unless quorum fencing enforced
+sharding splits rows by shard key requiring careful cross shard query and transaction design
+consistent hashing minimizes key movement when nodes added or removed from cluster ring
+hot shard receives disproportionate traffic; reshard or add caching to spread load evenly
+backpressure signals upstream to slow down when downstream queues fill preventing cascading failures
+autoscaling adds instances based on CPU memory queue depth or custom metrics thresholds
+HPA horizontal pod autoscaler scales Kubernetes deployments using metrics from metrics server
+VPA vertical pod autoscaler adjusts resource requests based on historical usage patterns observed
+liveness probe restarts unhealthy containers; readiness probe removes them from service endpoints
+graceful termination drains connections before SIGKILL during rolling deploys on orchestrators
+rolling update replaces pods incrementally maintaining availability with max unavailable settings
+blue green deployment switches traffic between two full environments enabling instant rollback path
+canary deployment routes small percentage of traffic to new version before full promotion decision
+feature flag toggles behavior without redeploy separating release from deployment in continuous delivery
+dark launch exercises new backend paths without exposing UI changes to all users yet publicly
+shadow traffic duplicates requests to new service comparing responses without affecting users
+synthetic monitoring probes critical journeys from outside production detecting outages early
+SLI service level indicator measures latency availability or error rate experienced by users directly
+SLO service level objective target for SLI over window such as 99.9 percent availability monthly
+SLA contractual commitment with consequences when SLO breached for external customer agreements
+error budget remaining unreliable time before SLO miss allows balancing reliability versus feature velocity
+toil manual repetitive operational work that should be automated as systems mature over time
+runbook documents incident steps including diagnostics mitigation verification and communication templates
+postmortem blameless review identifies contributing factors and action items preventing recurrence later
+on call rotation schedules engineers for incident response with fair load and recovery time protected
+MTTR mean time to recovery measures how quickly service restored after detected incident begins
+MTBF mean time between failures estimates reliability between incidents for components or systems
+RPO recovery point objective maximum acceptable data loss measured in time for backup strategies
+RTO recovery time objective maximum acceptable downtime before service must be restored operationally
+disaster recovery drills validate backups failover paths and runbooks before real emergencies occur
+multi region active active serves traffic from multiple regions with data replication complexity tradeoffs
+multi region active passive keeps standby region for failover with lower cost higher recovery time
+DNS failover routes traffic away from unhealthy region using health checks and low TTL records
+anycast IP advertises same address from multiple locations routing to nearest healthy point of presence
+DDoS mitigation scrubs traffic at edge using rate limits challenges and upstream provider scrubbing centers
+WAF web application firewall blocks common attack patterns using rule sets and behavioral analysis
+OAuth authorization code flow exchanges code for tokens using confidential client and PKCE for public clients
+JWT JSON web token carries signed claims; validate signature issuer audience and expiration strictly always
+session fixation prevented by regenerating session id after authentication succeeds successfully every time
+CSRF token validates state changing requests originate from trusted site not third party attacker pages
+XSS cross site scripting escaped by contextual encoding and content security policy headers in browsers
+SQL injection prevented by parameterized queries and least privilege database account permissions always enforced
+secrets manager stores credentials with rotation audit logs and fine grained access control policies attached
+least privilege IAM roles grant minimal permissions required for task reducing blast radius on credential leak
+zero trust assumes network perimeter insufficient; authenticate and authorize every request explicitly continuously
+mTLS mutual TLS verifies both client and server certificates for service to service communication channels
+certificate rotation automates renewal before expiry avoiding outages from expired TLS certificates silently
+PII personally identifiable information minimized collected encrypted at rest and audited on access paths
+GDPR data subject rights include export deletion and consent tracking for personal data processing activities
+audit log append only record of sensitive actions with tamper evident storage for compliance investigations later
+encryption at rest protects disks and backups; encryption in transit protects data on network hops between services
+hashing passwords uses slow adaptive algorithms like bcrypt argon2 or scrypt never plain SHA alone for passwords
+API versioning via URL header or content negotiation communicates breaking changes to downstream consumers clearly
+pagination cursor based scales better than offset for large tables avoiding expensive skip scans on deep pages
+rate limiting token bucket or leaky bucket protects APIs from abuse and accidental infinite retry loops clients
+quota enforces usage limits per tenant for billing fairness and protecting shared platform resources sustainably
+webhook delivers event notifications to subscriber URLs requiring signature verification and retry policies robustly
+polling alternative to push when subscribers cannot expose public endpoints for inbound webhook delivery easily
+GraphQL flexible queries risk N plus one problems; DataLoader batches fetches per request efficiently in resolvers
+REST resource oriented design uses nouns HTTP verbs and status codes with idempotent GET PUT DELETE semantics
+gRPC efficient binary protocol with streaming suited for internal service communication low latency requirements
+protobuf schema evolution uses field numbers; never reuse numbers when changing message definitions over time
+OpenAPI documents REST contracts enabling codegen mocks and contract tests between teams and services consistently
+contract testing verifies provider meets consumer expectations without full integrated environment for every build
+chaos engineering injects failures to validate resilience assumptions before customers discover weaknesses in production
+game days simulate major incidents cross functionally practicing communication and technical response procedures together
+capacity planning forecasts resource needs using growth trends seasonality and marketing launch traffic estimates ahead
+performance testing load stress soak spike tests reveal bottlenecks before launch under expected and peak traffic shapes
+profiling production safely using sampling avoids overwhelming observability backends while finding hot paths accurately
+golden signals latency traffic errors saturation guide monitoring for user facing services per Google SRE practices widely
+USE method utilization saturation errors for resources like CPU disk and network guides infrastructure troubleshooting systematically
+RED method rate errors duration for services complements USE for request driven workload monitoring dashboards effectively
