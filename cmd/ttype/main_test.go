@@ -33,7 +33,7 @@ func TestResolveTestConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveTestConfig: %v", err)
 	}
-	want := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration30, Width: 80, Theme: "dracula", Language: "spanish"}
+	want := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration30, Width: 80, Theme: "dracula", Language: "spanish", TextMode: domain.TextModeWords}
 	if saved != want {
 		t.Fatalf("cfg = %+v, want %+v", saved, want)
 	}

@@ -113,6 +113,7 @@ type testCLIFlags struct {
 	language    string
 	theme       string
 	width       int
+	mode        string
 	punctuation bool
 	numbers     bool
 }
@@ -121,6 +122,7 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().IntVar(&f.timeSec, "time", 0, "Timed test duration in seconds")
 	cmd.Flags().IntVar(&f.wordCount, "words", 0, "Word count test (e.g. 25)")
 	cmd.Flags().StringVar(&f.language, "language", "", "language id (e.g. spanish, english_1k); downloads once and caches locally")
+	cmd.Flags().StringVar(&f.mode, "mode", "", "Text mode")
 	cmd.Flags().StringVar(&f.theme, "theme", "", "Color theme")
 	cmd.Flags().IntVar(&f.width, "width", 0, "Typing area width in characters")
 	cmd.Flags().BoolVar(&f.punctuation, "punctuation", false, "Inject punctuation between words")
@@ -163,6 +165,11 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		width = settings.DefaultWidth
 	}
 
+	mode := f.mode
+	if !cmd.Flags().Changed("mode") {
+		mode = string(settings.DefaultMode)
+	}
+
 	punctuation := f.punctuation
 	if !cmd.Flags().Changed("punctuation") {
 		punctuation = settings.Punctuation
@@ -179,6 +186,7 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		Language:    language,
 		Theme:       theme,
 		Width:       width,
+		Mode:        mode,
 		Punctuation: punctuation,
 		Numbers:     numbers,
 	})

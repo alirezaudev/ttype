@@ -45,6 +45,7 @@ func marshalResult(r domain.Result) storedResult {
 		TestKind:            string(r.Config.Kind),
 		Duration:            durSec,
 		WordCount:           r.Config.WordCount,
+		TextMode:            string(r.Config.TextMode),
 		Language:            r.Config.Language,
 		Theme:               r.Config.Theme,
 		Width:               r.Config.Width,
@@ -69,6 +70,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		Width:     s.Width,
 		Theme:     s.Theme,
 		Language:  s.Language,
+		TextMode:  domain.TextMode(s.TextMode),
 	}
 
 	elapsed := time.Duration(s.Duration) * time.Second

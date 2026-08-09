@@ -15,6 +15,7 @@ type settingsField int
 const (
 	settingsTestKind settingsField = iota
 	settingsLength
+	settingsMode
 	settingsLanguage
 	settingsWidth
 	settingsTheme
@@ -103,6 +104,16 @@ func (m *SettingsPanel) adjust(dir int) {
 			}
 			m.cfg.Duration = domain.Duration(next)
 		}
+	case settingsMode:
+		modes := domain.AllTextModes()
+		idx := 0
+		for i, mode := range modes {
+			if mode == m.cfg.TextMode {
+				idx = i
+				break
+			}
+		}
+		m.cfg.TextMode = modes[(idx+len(modes)+dir)%len(modes)]
 	case settingsLanguage:
 		if dir < 0 {
 			m.cfg.Language = ""
@@ -168,6 +179,13 @@ func (m SettingsPanel) lengthLabel() string {
 	return fmt.Sprintf("%ds", m.cfg.Duration.Seconds())
 }
 
+func (m SettingsPanel) modeLabel() string {
+	if m.cfg.TextMode == "" {
+		return string(domain.TextModeWords)
+	}
+	return string(m.cfg.TextMode)
+}
+
 func (m SettingsPanel) widthLabel() string {
 	if m.cfg.Width <= 0 {
 		return "auto"
@@ -198,6 +216,7 @@ func (m SettingsPanel) View() string {
 		"",
 		m.row("test", m.kindLabel(), m.field == settingsTestKind),
 		m.row(m.lengthFieldLabel(), m.lengthLabel(), m.field == settingsLength),
+		m.row("mode", m.modeLabel(), m.field == settingsMode),
 		m.row("language", langcache.DisplayName(m.cfg.Language), m.field == settingsLanguage),
 		m.row("width", m.widthLabel(), m.field == settingsWidth),
 		m.row("theme", m.themeLabel(), m.field == settingsTheme),

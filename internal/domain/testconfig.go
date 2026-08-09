@@ -14,11 +14,13 @@ type TestConfig struct {
 	Width       int
 	Theme       string
 	Language    string
+	TextMode    TextMode
 	Punctuation bool
 	Numbers     bool
 }
 
 type GenerateOptions struct {
+	Mode        TextMode
 	WordLimit   int
 	Language    string
 	Punctuation bool

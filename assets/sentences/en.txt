@@ -1,0 +1,160 @@
+The quick brown fox jumps over the lazy dog.
+Practice typing every day to build muscle memory and speed.
+Terminal applications can be fast, focused, and keyboard driven.
+Good software is simple, reliable, and easy to maintain over time.
+Reading code carefully helps you write better code yourself.
+Distributed systems fail in surprising ways at scale.
+Always measure performance before optimizing your implementation.
+Clear naming makes programs easier to read and debug.
+Tests document behavior and protect against future regressions.
+Small commits are easier to review than large sweeping changes.
+A calm morning routine can improve focus for deep work sessions.
+Learning a new language expands how you think about problems.
+Consistency matters more than intensity for long term skill growth.
+Take breaks to rest your eyes and reset your attention span.
+Hydration and posture support comfortable extended typing sessions.
+The best interface is often the one you already know well.
+Keyboard shortcuts save time when they become automatic habits.
+Errors are signals, not failures, when you respond with curiosity.
+Refactoring improves design without changing outward behavior.
+Documentation should explain why decisions were made, not only what.
+Code reviews are conversations about clarity, safety, and tradeoffs.
+Security belongs in design discussions from the very first sketch.
+Backups you never test are only hopes, not actual recovery plans.
+Observability turns unknown unknowns into actionable incident clues.
+Latency budgets keep user experiences snappy under real world load.
+Caching is easy to add and hard to invalidate correctly every time.
+Idempotent handlers make retries safe in unreliable network paths.
+Strong boundaries between modules reduce accidental coupling over time.
+Prefer composition over inheritance for flexible reusable designs.
+Make invalid states unrepresentable whenever the type system allows.
+Parse, do not validate, when types can carry provenance and invariants.
+Pure functions simplify reasoning, testing, and parallel execution paths.
+Side effects belong at the edges of your application architecture.
+Configuration should have sensible defaults and explicit overrides.
+Feature flags enable gradual rollout and quick rollback when needed.
+Continuous integration catches mistakes early while context is fresh.
+Automate repetitive tasks so humans focus on judgment and creativity.
+Mentorship accelerates learning through feedback and shared experience.
+Open source thrives when contributors feel welcome and respected.
+Technical debt is manageable when tracked, prioritized, and paid down.
+Users notice reliability long before they notice clever implementation details.
+Accessibility improvements help everyone, not only specialized assistive tools.
+Privacy by design reduces harm when systems inevitably misbehave or leak.
+Ethical engineering considers downstream effects on people and communities.
+Great teams communicate clearly, especially when pressure is high.
+Deadlines are real, but quality tradeoffs should be explicit and owned.
+Celebrate progress, then return to the next most important improvement.
+Sleep is part of performance, not a reward for finishing everything first.
+Curiosity keeps engineers learning after formal education ends.
+Teaching others reinforces your own understanding in surprising depth.
+Simplicity requires courage to remove features that no longer earn keep.
+A typed interface catches mistakes before they reach production traffic.
+Logs should tell a story during incidents without drowning operators.
+Metrics without context can mislead teams into optimizing the wrong thing.
+Tracing connects scattered events into coherent request lifecycles end to end.
+Load tests reveal bottlenecks that unit tests alone cannot surface reliably.
+Chaos experiments validate resilience assumptions before customers do it for you.
+Runbooks turn tribal knowledge into repeatable incident response procedures.
+Postmortems blameless focus on systems, signals, and sustainable fixes.
+On call rotation should respect human limits and recovery time between pages.
+Versioning policies communicate compatibility expectations to downstream clients.
+Semantic versioning helps consumers plan upgrades with predictable impact ranges.
+Release notes honor user time by highlighting meaningful behavioral changes.
+Hotfixes need discipline to avoid introducing worse problems under urgency.
+Staging environments mirror production closely enough to trust release candidates.
+Infrastructure as code makes environments reproducible and reviewable like software.
+Containers package dependencies but do not replace thoughtful service design.
+Orchestrators schedule workloads yet still require observability and clear ownership.
+Cloud costs creep silently unless teams review usage with intentional cadence.
+Right sizing instances balances performance needs against budget constraints wisely.
+Multi region deployments improve availability at the price of complexity tax.
+Data replication lag can surprise readers who assume instantaneous consistency everywhere.
+Conflict resolution strategies should match product expectations, not engineer convenience alone.
+Schema migrations need backward compatible steps for zero downtime deploy patterns.
+Indexes speed reads but slow writes; choose them with query patterns in mind.
+Transactions provide atomicity yet cannot fix every distributed coordination challenge alone.
+Connection pools prevent expensive setup storms during traffic spikes and retries.
+Prepared statements reduce parsing overhead and help prevent injection class bugs.
+Query planners change behavior as statistics drift; monitor plans after major data shifts.
+Batch jobs should be idempotent because partial failures will happen at scale eventually.
+Stream processing fits event driven domains where near real time reactions add value.
+Message queues decouple producers and consumers while introducing delivery semantics nubs.
+At least once delivery requires deduplication keys or idempotent consumer logic throughout.
+Exactly once semantics are expensive; often at least once plus dedupe is enough practically.
+Dead letter queues preserve failing messages for inspection instead of silent loss forever.
+Rate limits protect shared resources from abusive or accidentally runaway client behavior.
+Circuit breakers stop hammering unhealthy dependencies while giving them time to recover.
+Bulkheads isolate failures so one noisy neighbor cannot sink an entire platform quickly.
+Timeouts must be shorter than upstream deadlines to propagate cancellation meaningfully downward.
+Retries with jitter avoid synchronized retry storms after transient regional outages occur.
+Health checks should validate critical dependencies, not only return static success responses always.
+Graceful shutdown drains in flight work before terminating processes during deploy rotations.
+Readiness differs from liveness; conflating them causes flaky routing during startup windows.
+Blue green deploys swap traffic between two full environments with quick rollback paths ready.
+Canary releases expose small traffic slices to new versions before broad promotion decisions.
+Feature toggles separate deployment from release, reducing risk for product experimentation cycles.
+Dark launches test backend paths without exposing unfinished UI flows to every user yet.
+Shadow traffic compares new implementations against production inputs without affecting responses.
+Synthetic monitoring probes user journeys continuously from outside the production boundary.
+Service level objectives translate user happiness into measurable reliability targets teams share.
+Error budgets connect reliability goals with feature velocity tradeoffs in constructive dialogue.
+Toil automation frees operators from repetitive manual work that scales linearly with growth.
+Platform teams enable product teams by providing paved roads and guardrails, not gatekeeping whims.
+Developer experience investments compound when onboarding new contributors stays fast and friendly.
+Local development environments should resemble production enough to catch integration issues early.
+Seed data helps newcomers reproduce realistic scenarios without touching sensitive production records.
+Pull request templates prompt authors to describe risk, testing, and rollout considerations clearly.
+Linting and formatting eliminate style debates so reviews focus on substance and correctness instead.
+Static analysis finds whole classes of bugs before runtime, especially in typed codebases today.
+Property based testing explores edge cases humans forget to enumerate in example driven suites.
+Fuzzing discovers crashers and security issues by feeding random inputs into parsers aggressively.
+Mutation testing evaluates whether tests actually assert meaningful behavior under code changes.
+Benchmarks belong in continuous integration when performance regressions would hurt users noticeably.
+Profiling shows where time and memory go, replacing guesses with evidence during optimization work.
+Algorithmic improvements beat micro optimizations when input sizes grow toward production scale limits.
+Memory allocations matter in hot loops; pooling helps but adds complexity and lifetime bugs risk.
+Garbage collection pauses affect tail latency; tune heap sizes and allocation rates with measurements.
+Concurrency bugs hide in races; stress tests and race detectors improve confidence before shipping.
+Locks simplify reasoning but reduce throughput; atomics and lock free structures trade differently.
+Channels coordinate goroutines with idiomatic Go style when ownership boundaries are clear upfront.
+Context cancellation propagates deadlines through call trees in networked service handlers cleanly.
+Structured logging fields enable filtering during incidents far better than unstructured printf strings.
+Correlation identifiers tie together logs, traces, and metrics for single request investigations fast.
+PII redaction in logs prevents accidental exposure when debugging production customer issues urgently.
+Secrets never belong in repositories; use environment injection and dedicated secret manager services.
+Least privilege access limits blast radius when credentials leak or insiders make honest mistakes.
+Rotate keys regularly and design systems to tolerate rotation without multi hour maintenance windows.
+Supply chain security scans dependencies for known vulnerabilities as part of standard build pipelines.
+Signed releases help users verify binaries were built from expected sources before installation proceeds.
+Reproducible builds increase trust that artifacts match audited source code revisions exactly.
+Open source licenses matter when combining code; compliance is part of engineering responsibility too.
+Technical writing clarifies thinking; if explanation is hard, design may still need simplification work.
+Rubber duck debugging works because articulating assumptions exposes gaps in mental models quickly.
+Pair programming spreads knowledge and catches mistakes through continuous lightweight review moments.
+Mob sessions help teams align on tricky migrations or ambiguous product requirements early together.
+Retrospectives turn recurring friction into actionable process tweaks instead of recurring complaints alone.
+Psychological safety enables people to raise concerns before small issues become major outages publicly.
+Inclusive teams produce better products because diverse perspectives catch blind spots others miss routinely.
+Remote collaboration thrives with written decisions, recorded context, and respectful meeting hygiene habits.
+Focus blocks protect deep work from constant interruption by chat pings and context switching costs.
+Async communication respects time zones and reduces pressure to respond instantly outside working hours.
+Career growth combines impact, learning, and sustainable pace rather than burnout fueled heroics nightly.
+Mentors ask questions that help mentees discover answers instead of prescribing every single step always.
+Feedback should be specific, timely, and oriented toward behavior rather than personal character judgments.
+Recognition reinforces values when tied to contributions that moved customers or teammates forward genuinely.
+Burnout recovery requires rest, boundary setting, and sometimes changing roles or environments entirely eventually.
+Health insurance and benefits matter, but daily respect and trust determine whether people stay long term.
+
+# Crime and Punishment, by Fyodor Dostoevsky, translated by Constance Garnett
+# (1914). The novel and this translation are both public domain -- Garnett died
+# in 1946. Source: Project Gutenberg ebook 2554. Quoted verbatim; apostrophes
+# normalised to ASCII so every character is typeable on a plain keyboard.
+To go wrong in one's own way is better than to go right in someone else's.
+Pain and suffering are always inevitable for a large intelligence and a deep heart.
+Taking a new step, uttering a new word is what they fear most.
+The really great men must, I think, have great sadness on earth.
+Man grows used to everything, the scoundrel!
+Be the sun and all will see you. The sun has before all to be the sun.
+He lives most gaily who knows best how to deceive himself.
+Suffer and expiate your sin by it, that's what you must do.

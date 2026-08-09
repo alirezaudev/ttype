@@ -21,20 +21,26 @@ const (
 )
 
 type Provider struct {
-	words []string
+	items map[domain.TextMode][]string
 	cache *langcache.Cache
 }
 
 func NewProvider(dataDir string) (*Provider, error) {
-	words, err := assets.LoadWords()
-	if err != nil {
-		return nil, err
+	loaders := map[domain.TextMode]func() ([]string, error){
+		domain.TextModeWords:     assets.LoadWords,
+		domain.TextModeSentences: assets.LoadSentences,
 	}
 
-	return &Provider{
-		words: words,
-		cache: langcache.New(dataDir),
-	}, nil
+	items := make(map[domain.TextMode][]string, len(loaders))
+	for mode, load := range loaders {
+		loaded, err := load()
+		if err != nil {
+			return nil, fmt.Errorf("load %s: %w", mode, err)
+		}
+		items[mode] = loaded
+	}
+
+	return &Provider{items: items, cache: langcache.New(dataDir)}, nil
 }
 
 func (p *Provider) LanguageCache() *langcache.Cache {
@@ -42,24 +48,43 @@ func (p *Provider) LanguageCache() *langcache.Cache {
 }
 
 func (p *Provider) Generate(opts domain.GenerateOptions) (string, error) {
-	words := p.words
-	if opts.Language != "" {
+	mode := opts.Mode
+	if mode == "" {
+		mode = domain.TextModeWords
+	}
+	wordsMode := mode == domain.TextModeWords
+
+	items, err := p.itemsForMode(mode)
+	if err != nil {
+		return "", err
+	}
+
+	if opts.Language != "" && wordsMode {
 		remote, err := p.cache.Words(opts.Language)
 		if err != nil {
 			return "", fmt.Errorf("language %q: %w", opts.Language, err)
 		}
-		words = remote
+		items = remote
 	}
 
-	if opts.WordLimit > len(words) || opts.WordLimit < 0 {
+	if opts.WordLimit < 0 {
 		return "", errors.New("words limit out of range")
 	}
 
-	sampled := sample(words, opts.WordLimit)
-	if opts.Numbers {
+	sampled := sample(items, opts.WordLimit)
+
+	if opts.Numbers && wordsMode {
 		applyNumbers(sampled)
 	}
-	return joinWords(sampled, opts.Punctuation), nil
+	return joinWords(sampled, opts.Punctuation && wordsMode), nil
+}
+
+func (p *Provider) itemsForMode(mode domain.TextMode) ([]string, error) {
+	items, ok := p.items[mode]
+	if !ok {
+		return nil, fmt.Errorf("unsupported mode %q", mode)
+	}
+	return items, nil
 }
 
 // sample draws limit words, or enough words to fill a timed test's buffer.

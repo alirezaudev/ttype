@@ -169,6 +169,7 @@ func (s *Session) loadTarget() error {
 	}
 
 	target, err := s.source.Generate(domain.GenerateOptions{
+		Mode:        s.config.TextMode,
 		Language:    s.config.Language,
 		WordLimit:   wordLimit,
 		Punctuation: s.config.Punctuation,

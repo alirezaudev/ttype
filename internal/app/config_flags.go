@@ -11,6 +11,7 @@ type TestFlags struct {
 	Language    string
 	Theme       string
 	Width       int
+	Mode        string
 	Punctuation bool
 	Numbers     bool
 }
@@ -26,10 +27,21 @@ func ConfigFromFlags(f TestFlags) (domain.TestConfig, error) {
 		return domain.TestConfig{}, err
 	}
 
+	mode := f.Mode
+	if mode == "" {
+		mode = string(domain.TextModeWords)
+	}
+
+	textMode, err := domain.ParseTextMode(mode)
+	if err != nil {
+		return domain.TestConfig{}, err
+	}
+
 	cfg := domain.TestConfig{
 		Language:    f.Language,
 		Theme:       themeName,
 		Width:       f.Width,
+		TextMode:    textMode,
 		Punctuation: f.Punctuation,
 		Numbers:     f.Numbers,
 	}

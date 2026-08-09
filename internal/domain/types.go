@@ -71,6 +71,7 @@ type Settings struct {
 	DefaultWidth     int      `json:"default_width,omitempty"`
 	Theme            string   `json:"theme"`
 	Language         string   `json:"language,omitempty"`
+	DefaultMode      TextMode `json:"default_mode,omitempty"`
 	Punctuation      bool     `json:"default_punctuation,omitempty"`
 	Numbers          bool     `json:"default_numbers,omitempty"`
 }

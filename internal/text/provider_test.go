@@ -116,7 +116,75 @@ func TestGenerateRejectsAnOutOfRangeLimit(t *testing.T) {
 	if _, err := p.Generate(domain.GenerateOptions{WordLimit: -1}); err == nil {
 		t.Fatal("a negative limit should fail")
 	}
-	if _, err := p.Generate(domain.GenerateOptions{WordLimit: 1 << 20}); err == nil {
-		t.Fatal("a limit larger than the word list should fail")
+}
+
+func TestGenerateLimitMayExceedTheItemCount(t *testing.T) {
+	t.Parallel()
+
+	target, err := newTestProvider(t).Generate(domain.GenerateOptions{
+		Mode:      domain.TextModeSentences,
+		WordLimit: 500,
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	if target == "" {
+		t.Fatal("target should repeat items rather than come back empty")
+	}
+}
+
+func TestGenerateSentencesMode(t *testing.T) {
+	t.Parallel()
+
+	p := newTestProvider(t)
+
+	target, err := p.Generate(domain.GenerateOptions{Mode: domain.TextModeSentences, WordLimit: 3})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !strings.Contains(target, " ") || len(target) < 20 {
+		t.Fatalf("sentences target looks wrong: %q", target)
+	}
+
+	injected, err := p.Generate(domain.GenerateOptions{
+		Mode:        domain.TextModeSentences,
+		WordLimit:   200,
+		Punctuation: true,
+		Numbers:     true,
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if strings.ContainsAny(injected, "0123456789") {
+		t.Fatal("--numbers must not inject into sentences mode")
+	}
+}
+
+func TestGenerateRejectsAnUnknownMode(t *testing.T) {
+	t.Parallel()
+
+	if _, err := newTestProvider(t).Generate(domain.GenerateOptions{Mode: "cobol"}); err == nil {
+		t.Fatal("a mode this build cannot generate should fail")
+	}
+}
+
+func TestGenerateEveryRegisteredMode(t *testing.T) {
+	t.Parallel()
+
+	p := newTestProvider(t)
+
+	for _, mode := range domain.AllTextModes() {
+		t.Run(string(mode), func(t *testing.T) {
+			t.Parallel()
+
+			target, err := p.Generate(domain.GenerateOptions{Mode: mode, WordLimit: 5})
+			if err != nil {
+				t.Fatalf("Generate: %v", err)
+			}
+			if strings.TrimSpace(target) == "" {
+				t.Fatal("mode produced no text")
+			}
+		})
 	}
 }

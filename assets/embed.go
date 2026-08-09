@@ -2,14 +2,26 @@ package assets
 
 import (
 	"embed"
+	"fmt"
 	"strings"
 )
 
 //go:embed words/en.txt
 var wordsFile embed.FS
 
+//go:embed sentences/en.txt
+var sentencesFile embed.FS
+
 func LoadWords() ([]string, error) {
-	data, err := wordsFile.ReadFile("words/en.txt")
+	return loadLines(wordsFile, "words/en.txt")
+}
+
+func LoadSentences() ([]string, error) {
+	return loadLines(sentencesFile, "sentences/en.txt")
+}
+
+func loadLines(fs embed.FS, path string) ([]string, error) {
+	data, err := fs.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -22,6 +34,8 @@ func LoadWords() ([]string, error) {
 		}
 		lines = append(lines, line)
 	}
-
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("no lines in %s", path)
+	}
 	return lines, nil
 }
