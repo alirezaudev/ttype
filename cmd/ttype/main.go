@@ -41,6 +41,7 @@ func newRootCmd() *cobra.Command {
 
 	cmd.Version = version
 	bindTestFlags(cmd, flags)
+	registerCompletions(cmd)
 
 	cmd.AddCommand(newHistoryCmd())
 	cmd.AddCommand(newLanguagesCmd())
@@ -53,8 +54,9 @@ func newHistoryCmd() *cobra.Command {
 	var plain bool
 
 	cmd := &cobra.Command{
-		Use:   "history",
-		Short: "View past test results (Enter watches a replay)",
+		Use:               "history",
+		Short:             "View past test results (Enter watches a replay)",
+		ValidArgsFunction: cobra.NoFileCompletions,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			store, err := app.OpenStore()
 			if err != nil {
@@ -83,14 +85,16 @@ func newLanguagesCmd() *cobra.Command {
 	var jobs int
 
 	cmd := &cobra.Command{
-		Use:   "languages",
-		Short: "Manage downloadable language lists",
+		Use:               "languages",
+		Short:             "Manage downloadable language lists",
+		ValidArgsFunction: cobra.NoFileCompletions,
 	}
 
 	download := &cobra.Command{
-		Use:   "download",
-		Short: "Download all language lists to local cache",
-		Long:  "Fetches every available language list once and stores it under the ttype data directory. Shows estimated download size and asks for confirmation unless --yes is passed.",
+		Use:               "download",
+		Short:             "Download all language lists to local cache",
+		Long:              "Fetches every available language list once and stores it under the ttype data directory. Shows estimated download size and asks for confirmation unless --yes is passed.",
+		ValidArgsFunction: cobra.NoFileCompletions,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return app.RunDownloadLanguages(os.Stdout, os.Stdin, yes, jobs)
 		},
