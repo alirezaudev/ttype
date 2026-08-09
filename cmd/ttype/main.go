@@ -108,11 +108,13 @@ func newLanguagesCmd() *cobra.Command {
 }
 
 type testCLIFlags struct {
-	timeSec   int
-	wordCount int
-	language  string
-	theme     string
-	width     int
+	timeSec     int
+	wordCount   int
+	language    string
+	theme       string
+	width       int
+	punctuation bool
+	numbers     bool
 }
 
 func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
@@ -121,6 +123,8 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().StringVar(&f.language, "language", "", "language id (e.g. spanish, english_1k); downloads once and caches locally")
 	cmd.Flags().StringVar(&f.theme, "theme", "", "Color theme")
 	cmd.Flags().IntVar(&f.width, "width", 0, "Typing area width in characters")
+	cmd.Flags().BoolVar(&f.punctuation, "punctuation", false, "Inject punctuation between words")
+	cmd.Flags().BoolVar(&f.numbers, "numbers", false, "Inject numbers into word tests")
 }
 
 func resolveTestConfig(cmd *cobra.Command, store interface {
@@ -159,11 +163,23 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		width = settings.DefaultWidth
 	}
 
+	punctuation := f.punctuation
+	if !cmd.Flags().Changed("punctuation") {
+		punctuation = settings.Punctuation
+	}
+
+	numbers := f.numbers
+	if !cmd.Flags().Changed("numbers") {
+		numbers = settings.Numbers
+	}
+
 	return app.ConfigFromFlags(app.TestFlags{
-		TimeSec:   timeSec,
-		WordCount: wordCount,
-		Language:  language,
-		Theme:     theme,
-		Width:     width,
+		TimeSec:     timeSec,
+		WordCount:   wordCount,
+		Language:    language,
+		Theme:       theme,
+		Width:       width,
+		Punctuation: punctuation,
+		Numbers:     numbers,
 	})
 }

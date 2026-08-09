@@ -18,10 +18,12 @@ const (
 	settingsLanguage
 	settingsWidth
 	settingsTheme
+	settingsPunctuation
+	settingsNumbers
 )
 
 const (
-	settingsLastField  = settingsTheme
+	settingsLastField  = settingsNumbers
 	settingsLabelWidth = 10
 	settingsValueWidth = 10
 )
@@ -131,7 +133,18 @@ func (m *SettingsPanel) adjust(dir int) {
 			}
 		}
 		m.cfg.Theme = names[(idx+len(names)+dir)%len(names)]
+	case settingsPunctuation:
+		m.cfg.Punctuation = !m.cfg.Punctuation
+	case settingsNumbers:
+		m.cfg.Numbers = !m.cfg.Numbers
 	}
+}
+
+func toggleLabel(on bool) string {
+	if on {
+		return "on"
+	}
+	return "off"
 }
 
 func (m SettingsPanel) kindLabel() string {
@@ -188,6 +201,8 @@ func (m SettingsPanel) View() string {
 		m.row("language", langcache.DisplayName(m.cfg.Language), m.field == settingsLanguage),
 		m.row("width", m.widthLabel(), m.field == settingsWidth),
 		m.row("theme", m.themeLabel(), m.field == settingsTheme),
+		m.row("punct", toggleLabel(m.cfg.Punctuation), m.field == settingsPunctuation),
+		m.row("numbers", toggleLabel(m.cfg.Numbers), m.field == settingsNumbers),
 		"",
 		m.theme.Help.Render("↑/↓ field  ←/→ value  enter apply  language: enter picks  esc back"),
 	}

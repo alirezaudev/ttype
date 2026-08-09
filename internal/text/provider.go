@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"strconv"
 	"strings"
 
 	"github.com/alirezaudev/ttype/assets"
@@ -12,6 +13,12 @@ import (
 )
 
 const minTargetRunes = 4096
+
+const (
+	numberChance = 0.1
+	punctChance  = 0.14
+	commaShare   = 0.55
+)
 
 type Provider struct {
 	words []string
@@ -48,20 +55,60 @@ func (p *Provider) Generate(opts domain.GenerateOptions) (string, error) {
 		return "", errors.New("words limit out of range")
 	}
 
-	if opts.WordLimit > 0 {
-		sampled := make([]string, opts.WordLimit)
-		for i := range sampled {
-			sampled[i] = words[rand.IntN(len(words))]
+	sampled := sample(words, opts.WordLimit)
+	if opts.Numbers {
+		applyNumbers(sampled)
+	}
+	return joinWords(sampled, opts.Punctuation), nil
+}
+
+// sample draws limit words, or enough words to fill a timed test's buffer.
+func sample(words []string, limit int) []string {
+	if limit > 0 {
+		out := make([]string, limit)
+		for i := range out {
+			out[i] = words[rand.IntN(len(words))]
 		}
-		return strings.Join(sampled, " "), nil
+		return out
+	}
+
+	var out []string
+	for length := 0; length < minTargetRunes; {
+		word := words[rand.IntN(len(words))]
+		if len(out) > 0 {
+			length++
+		}
+		length += len(word)
+		out = append(out, word)
+	}
+	return out
+}
+
+func applyNumbers(words []string) {
+	for i := range words {
+		if rand.Float64() < numberChance {
+			words[i] = strconv.Itoa(rand.IntN(9999) + 1)
+		}
+	}
+}
+
+func joinWords(words []string, punct bool) string {
+	if len(words) == 0 {
+		return ""
 	}
 
 	var b strings.Builder
-	for b.Len() < minTargetRunes {
-		if b.Len() > 0 {
-			b.WriteString(" ")
+	b.WriteString(words[0])
+	for _, word := range words[1:] {
+		sep := " "
+		if punct && rand.Float64() < punctChance {
+			sep = ". "
+			if rand.Float64() < commaShare {
+				sep = ", "
+			}
 		}
-		b.WriteString(words[rand.IntN(len(words))])
+		b.WriteString(sep)
+		b.WriteString(word)
 	}
-	return b.String(), nil
+	return b.String()
 }

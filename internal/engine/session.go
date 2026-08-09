@@ -169,8 +169,10 @@ func (s *Session) loadTarget() error {
 	}
 
 	target, err := s.source.Generate(domain.GenerateOptions{
-		Language:  s.config.Language,
-		WordLimit: wordLimit,
+		Language:    s.config.Language,
+		WordLimit:   wordLimit,
+		Punctuation: s.config.Punctuation,
+		Numbers:     s.config.Numbers,
 	})
 	if err != nil {
 		return err

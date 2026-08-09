@@ -8,17 +8,21 @@ const (
 )
 
 type TestConfig struct {
-	Kind      TestKind
-	Duration  Duration
-	WordCount int
-	Width     int
-	Theme     string
-	Language  string
+	Kind        TestKind
+	Duration    Duration
+	WordCount   int
+	Width       int
+	Theme       string
+	Language    string
+	Punctuation bool
+	Numbers     bool
 }
 
 type GenerateOptions struct {
-	WordLimit int
-	Language  string
+	WordLimit   int
+	Language    string
+	Punctuation bool
+	Numbers     bool
 }
 
 func (c TestConfig) IsWordsMode() bool {

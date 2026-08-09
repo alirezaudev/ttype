@@ -6,11 +6,13 @@ import (
 )
 
 type TestFlags struct {
-	TimeSec   int
-	WordCount int
-	Language  string
-	Theme     string
-	Width     int
+	TimeSec     int
+	WordCount   int
+	Language    string
+	Theme       string
+	Width       int
+	Punctuation bool
+	Numbers     bool
 }
 
 func ConfigFromFlags(f TestFlags) (domain.TestConfig, error) {
@@ -25,9 +27,11 @@ func ConfigFromFlags(f TestFlags) (domain.TestConfig, error) {
 	}
 
 	cfg := domain.TestConfig{
-		Language: f.Language,
-		Theme:    themeName,
-		Width:    f.Width,
+		Language:    f.Language,
+		Theme:       themeName,
+		Width:       f.Width,
+		Punctuation: f.Punctuation,
+		Numbers:     f.Numbers,
 	}
 
 	if f.WordCount > 0 {
