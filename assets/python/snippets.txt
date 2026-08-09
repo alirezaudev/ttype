@@ -1,0 +1,64 @@
+items = [x * 2 for x in range(10) if x % 2 == 0]
+lookup = {k: v for k, v in zip(keys, values) if v is not None}
+unique = {x.lower() for x in names if x.strip()}
+msg = f"{user.name} logged in from {ip} at {ts:%H:%M}"
+path = Path.home() / ".config" / app / "settings.json"
+@dataclass(frozen=True, slots=True)
+class Result: ok: bool; latency_ms: float
+def retry(fn, *, attempts=3): ...
+async with aiohttp.ClientSession() as session:
+    async with session.get(url) as resp:
+        data = await resp.json()
+match status:
+    case 200: return body
+    case 404: raise NotFound(url)
+    case _: raise APIError(status, body)
+def chunks(it: Iterable[T], size: int) -> Iterator[list[T]]:
+    buf: list[T] = []
+with open(path, encoding="utf-8") as f:
+    for line in f:
+        yield line.rstrip("\n")
+total = sum(w * x for w, x in zip(weights, values))
+sorted_rows = sorted(rows, key=lambda r: (r.score, r.name), reverse=True)
+payload: dict[str, Any] = {"id": uid, "meta": meta or {}}
+def parse_env(name: str, default: str | None = None) -> str:
+    return os.environ.get(name, default) if default else os.environ[name]
+records = list(dict.fromkeys(records))
+ctx = contextlib.suppress(FileNotFoundError)
+with ctx: os.remove(tmp_path)
+gen = (line.strip() for line in fh if line.strip() and not line.startswith("#"))
+@lru_cache(maxsize=256)
+def normalize(token: str) -> str:
+    return token.casefold().strip()
+async def gather_all(*coros): return await asyncio.gather(*coros, return_exceptions=True)
+ThreadPoolExecutor(max_workers=workers).submit(worker, item)
+json.loads(raw.decode("utf-8", errors="replace"))
+schema = TypeAdapter(list[UserModel]).validate_json(raw)
+for attempt in range(1, max_retries + 1):
+    try: return call()
+    except TransientError: time.sleep(backoff ** attempt)
+rows = cur.execute(query, params).fetchall()
+df.groupby("region")["revenue"].agg(["sum", "mean", "count"])
+np.where(mask, arr_a, arr_b)
+pd.read_csv(path, dtype={"id": "string"}, parse_dates=["created_at"])
+logger.exception("failed to flush batch size=%d", len(batch))
+subprocess.run(cmd, check=True, capture_output=True, text=True)
+shutil.copy2(src, dst, follow_symlinks=False)
+tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
+itertools.islice(iterable, offset, offset + limit)
+functools.partial(handler, retries=retries, timeout=timeout)
+typing.cast(Mapping[str, int], payload.get("counts", {}))
+Enum.auto(); class Status(StrEnum): pending = "pending"
+attrs.define(slots=True); @attrs.field(converter=int)
+pydantic.Field(default_factory=list, min_length=1)
+HTTPException(status_code=422, detail={"field": "email"})
+@app.get("/health", response_model=HealthResponse)
+uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+redis.setex(key, ttl, value, nx=True)
+session.query(User).filter(User.id.in_(ids)).options(joinedload(User.roles))
+alembic upgrade head
+pytest.raises(ValueError, match="invalid token")
+assert approx(wpm, rel=1e-2) == expected_wpm
+hypothesis.given(st.text(min_size=1, max_size=32))
+rich.print(table, justify="left")
+click.command()(cli); @click.option("--verbose", is_flag=True)
