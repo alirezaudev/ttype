@@ -17,6 +17,7 @@ type TestConfig struct {
 	TextMode    TextMode
 	Punctuation bool
 	Numbers     bool
+	Seed        int64
 }
 
 type GenerateOptions struct {
@@ -25,6 +26,7 @@ type GenerateOptions struct {
 	Language    string
 	Punctuation bool
 	Numbers     bool
+	Seed        int64
 }
 
 func (c TestConfig) IsWordsMode() bool {

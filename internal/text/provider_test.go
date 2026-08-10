@@ -108,6 +108,39 @@ func TestGeneratePunctuationKeepsTheWordCount(t *testing.T) {
 	}
 }
 
+func TestGenerateIsDeterministicForASeed(t *testing.T) {
+	t.Parallel()
+
+	p := newTestProvider(t)
+	opts := domain.GenerateOptions{
+		WordLimit:   120,
+		Punctuation: true,
+		Numbers:     true,
+		Seed:        42,
+	}
+
+	first, err := p.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	second, err := p.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if first != second {
+		t.Fatalf("same seed produced different targets:\n%q\n%q", first, second)
+	}
+
+	opts.Seed = 43
+	other, err := p.Generate(opts)
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if other == first {
+		t.Fatal("a different seed should produce a different target")
+	}
+}
+
 func TestGenerateRejectsAnOutOfRangeLimit(t *testing.T) {
 	t.Parallel()
 

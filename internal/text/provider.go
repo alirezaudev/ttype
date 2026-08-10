@@ -6,7 +6,6 @@ import (
 	"math/rand/v2"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/alirezaudev/ttype/assets"
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -78,7 +77,7 @@ func (p *Provider) Generate(opts domain.GenerateOptions) (string, error) {
 		return "", errors.New("words limit out of range")
 	}
 
-	rng := newRNG(time.Now().UnixNano())
+	rng := newRNG(opts.Seed)
 
 	sampled := sample(items, opts.WordLimit, rng)
 

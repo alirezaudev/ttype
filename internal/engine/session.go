@@ -32,6 +32,14 @@ type Session struct {
 	startedAt           time.Time
 	endedAt             time.Time
 	capsInversions      int
+	seed                int64
+}
+
+func resolveSeed(config domain.TestConfig) int64 {
+	if config.Seed != 0 {
+		return config.Seed
+	}
+	return time.Now().UnixNano()
 }
 
 func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Session, error) {
@@ -49,6 +57,7 @@ func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Sess
 		config: config,
 		clock:  clock,
 		state:  domain.SessionReady,
+		seed:   resolveSeed(config),
 	}
 	if err := s.loadTarget(); err != nil {
 		return nil, err
@@ -63,6 +72,7 @@ func (s *Session) Cursor() int                { return len(s.input) }
 func (s *Session) Kind() domain.TestKind      { return s.config.Kind }
 func (s *Session) Config() domain.TestConfig  { return s.config }
 func (s *Session) Counts() domain.CharCounts  { return s.counts }
+func (s *Session) Seed() int64                { return s.seed }
 func (s *Session) State() domain.SessionState { return s.state }
 func (s *Session) Keystrokes() (correct, incorrect int) {
 	return s.keystrokesCorrect, s.keystrokesIncorrect
@@ -163,6 +173,7 @@ func (s *Session) Restart() error {
 	s.startedAt = time.Time{}
 	s.endedAt = time.Time{}
 	s.capsInversions = 0
+	s.seed = resolveSeed(s.config)
 	return s.loadTarget()
 }
 
@@ -178,6 +189,7 @@ func (s *Session) loadTarget() error {
 		WordLimit:   wordLimit,
 		Punctuation: s.config.Punctuation,
 		Numbers:     s.config.Numbers,
+		Seed:        s.seed,
 	})
 	if err != nil {
 		return err

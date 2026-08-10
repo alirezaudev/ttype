@@ -116,6 +116,7 @@ type testCLIFlags struct {
 	mode        string
 	punctuation bool
 	numbers     bool
+	seed        int64
 }
 
 func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
@@ -127,6 +128,7 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().IntVar(&f.width, "width", 0, "Typing area width in characters")
 	cmd.Flags().BoolVar(&f.punctuation, "punctuation", false, "Inject punctuation between words")
 	cmd.Flags().BoolVar(&f.numbers, "numbers", false, "Inject numbers into word tests")
+	cmd.Flags().Int64Var(&f.seed, "seed", 0, "Random seed for word generation")
 }
 
 func resolveTestConfig(cmd *cobra.Command, store interface {
@@ -189,5 +191,6 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		Mode:        mode,
 		Punctuation: punctuation,
 		Numbers:     numbers,
+		Seed:        f.seed,
 	})
 }
