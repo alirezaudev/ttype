@@ -66,6 +66,12 @@ type Result struct {
 	Seed                int64         `json:"seed,omitempty"`
 }
 
+type PersonalBests struct {
+	BestWPM      float64   `json:"best_wpm"`
+	BestAccuracy float64   `json:"best_accuracy"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 type Settings struct {
 	DefaultDuration  Duration `json:"default_duration"`
 	DefaultWordCount int      `json:"default_word_count,omitempty"`

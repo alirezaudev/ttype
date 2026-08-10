@@ -103,23 +103,36 @@ func unmarshalResult(s storedResult) domain.Result {
 	}
 }
 
-func (s *JSONStore) SaveResult(result domain.Result) error {
+func (s *JSONStore) SaveResult(result domain.Result) (PBUpdate, error) {
 	lock, err := acquireLock(s.dirs.Data)
 	if err != nil {
-		return fmt.Errorf("acquire lock: %w", err)
+		return PBUpdate{}, fmt.Errorf("acquire lock: %w", err)
 	}
 	defer lock.release()
 
 	history, err := s.loadHistory()
 	if err != nil {
-		return err
+		return PBUpdate{}, err
 	}
+
+	update := PBUpdate{
+		Label:   configLabel(result.Config),
+		NewWPM:  result.WPM,
+		PrevWPM: bestWPMForConfig(history, result.Config),
+	}
+	update.IsNew = result.WPM > update.PrevWPM
 
 	history = append(history, marshalResult(result))
 	if limit := s.historyLimit(); len(history) > limit {
 		history = history[len(history)-limit:]
 	}
-	return s.saveHistory(history)
+	if err := s.saveHistory(history); err != nil {
+		return PBUpdate{}, err
+	}
+	if err := s.updateBests(result); err != nil {
+		return PBUpdate{}, err
+	}
+	return update, nil
 }
 
 // ListResults returns the newest results first, at most limit of them.

@@ -29,7 +29,7 @@ func TestSaveResultRoundTrip(t *testing.T) {
 		Duration:            60 * time.Second,
 	}
 
-	if err := s.SaveResult(want); err != nil {
+	if _, err := s.SaveResult(want); err != nil {
 		t.Fatalf("SaveResult: %v", err)
 	}
 
@@ -81,7 +81,7 @@ func TestSaveResultEvictsOldest(t *testing.T) {
 			Timestamp: time.Now().UTC(),
 			Config:    domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60},
 		}
-		if err := s.SaveResult(result); err != nil {
+		if _, err := s.SaveResult(result); err != nil {
 			t.Fatalf("SaveResult: %v", err)
 		}
 	}

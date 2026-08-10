@@ -35,6 +35,7 @@ type AppModel struct {
 	navStack       []appPhase
 	test           TestModel
 	result         domain.Result
+	pbUpdate       storage.PBUpdate
 	finishedAt     time.Time
 	notice         statusNotice
 	settings       SettingsPanel
@@ -181,7 +182,7 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	next, cmd := m.test.Update(msg)
 	m.test = next.(TestModel)
 	if m.test.session.State() == domain.SessionFinished {
-		m.result, m.notice = m.finishResult()
+		m.result, m.pbUpdate, m.notice = m.finishResult()
 		m.phase = phaseResult
 		m.finishedAt = time.Now()
 		return m, tea.Batch(cmd, tea.ClearScreen)
@@ -196,18 +197,20 @@ func (m AppModel) inResultsGrace() bool {
 	return time.Since(m.finishedAt) < resultsKeyGrace
 }
 
-func (m AppModel) finishResult() (domain.Result, statusNotice) {
+func (m AppModel) finishResult() (domain.Result, storage.PBUpdate, statusNotice) {
 	result, err := m.test.session.Result()
 	if err != nil {
-		return result, errorNotice(fmt.Sprintf("result not saved: %s", err))
+		return result, storage.PBUpdate{}, errorNotice(fmt.Sprintf("result not saved: %s", err))
 	}
 	if m.store == nil {
-		return result, statusNotice{}
+		return result, storage.PBUpdate{}, statusNotice{}
 	}
-	if err := m.store.SaveResult(result); err != nil {
-		return result, errorNotice(fmt.Sprintf("result not saved: %s", err))
+
+	pb, err := m.store.SaveResult(result)
+	if err != nil {
+		return result, storage.PBUpdate{}, errorNotice(fmt.Sprintf("result not saved: %s", err))
 	}
-	return result, statusNotice{}
+	return result, pb, statusNotice{}
 }
 
 func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -273,7 +276,7 @@ func (m AppModel) View() string {
 	case phaseLanguagePicker:
 		return m.languagePicker.View()
 	case phaseResult:
-		return renderResult(m.result, m.theme, m.width, m.height, m.notice)
+		return renderResult(m.result, m.pbUpdate, m.theme, m.width, m.height, m.notice)
 	default:
 		return m.test.View()
 	}

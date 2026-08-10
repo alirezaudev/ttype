@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/domain"
+	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -17,7 +18,14 @@ func resultSubtitle(cfg domain.TestConfig) string {
 
 const resultColWidth = 9
 
-func renderResult(result domain.Result, theme Theme, width, height int, notice statusNotice) string {
+func pbNotice(pb storage.PBUpdate) string {
+	if pb.PrevWPM <= 0 {
+		return fmt.Sprintf("New personal best for %s!", pb.Label)
+	}
+	return fmt.Sprintf("New personal best for %s! (was %.2f)", pb.Label, pb.PrevWPM)
+}
+
+func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width, height int, notice statusNotice) string {
 	title := theme.Finished.Render("Test Complete")
 	subtitle := theme.Help.Render(resultSubtitle(result.Config))
 
@@ -48,6 +56,9 @@ func renderResult(result domain.Result, theme Theme, width, height int, notice s
 		values,
 		"",
 		elapsed,
+	}
+	if pb.IsNew {
+		lines = append(lines, "", theme.Finished.Render(pbNotice(pb)))
 	}
 	if !notice.empty() {
 		lines = append(lines, "", notice.render(theme))

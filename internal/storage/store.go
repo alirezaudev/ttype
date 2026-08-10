@@ -8,6 +8,7 @@ type Store interface {
 	Paths() Dirs
 	LoadSettings() (domain.Settings, error)
 	SaveSettings(domain.Settings) error
-	SaveResult(domain.Result) error
+	SaveResult(domain.Result) (PBUpdate, error)
 	ListResults(limit int) ([]domain.Result, error)
+	LoadBests() (domain.PersonalBests, error)
 }

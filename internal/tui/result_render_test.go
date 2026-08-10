@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
+	"github.com/alirezaudev/ttype/internal/storage"
 )
 
 func TestRenderResultContainsStats(t *testing.T) {
@@ -18,7 +19,7 @@ func TestRenderResultContainsStats(t *testing.T) {
 		Config:    domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},
 	}
 
-	out := renderResult(result, defaultTheme(), 0, 0, statusNotice{})
+	out := renderResult(result, storage.PBUpdate{}, defaultTheme(), 0, 0, statusNotice{})
 
 	for _, want := range []string{"120.50", "135.00", "94.50%", "7", "0:32", "60s", "timed", "Test Complete"} {
 		if !strings.Contains(out, want) {
@@ -32,7 +33,7 @@ func TestRenderResultWordsSubtitle(t *testing.T) {
 		Config: domain.TestConfig{Kind: domain.TestKindWords, WordCount: 25},
 	}
 
-	out := renderResult(result, defaultTheme(), 0, 0, statusNotice{})
+	out := renderResult(result, storage.PBUpdate{}, defaultTheme(), 0, 0, statusNotice{})
 
 	for _, want := range []string{"25 words", "words"} {
 		if !strings.Contains(out, want) {
@@ -46,7 +47,7 @@ func TestRenderResultCentered(t *testing.T) {
 		Config: domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},
 	}
 
-	out := renderResult(result, defaultTheme(), 120, 40, statusNotice{})
+	out := renderResult(result, storage.PBUpdate{}, defaultTheme(), 120, 40, statusNotice{})
 
 	lines := strings.Split(out, "\n")
 	if len(lines) != 40 {
