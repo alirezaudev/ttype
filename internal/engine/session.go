@@ -401,6 +401,7 @@ func (s *Session) Result() (domain.Result, error) {
 		KeystrokesIncorrect: s.keystrokesIncorrect,
 		TotalChars:          counts.TotalTyped(),
 		Duration:            s.Elapsed(),
+		Seed:                s.seed,
 	}, nil
 }
 

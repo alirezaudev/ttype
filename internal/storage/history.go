@@ -22,7 +22,10 @@ type storedResult struct {
 	TextMode            string  `json:"text_mode"`
 	Language            string  `json:"language,omitempty"`
 	Theme               string  `json:"theme"`
+	Punctuation         bool    `json:"punctuation,omitempty"`
+	Numbers             bool    `json:"numbers,omitempty"`
 	Width               int     `json:"width,omitempty"`
+	Seed                int64   `json:"seed,omitempty"`
 	WPM                 float64 `json:"wpm"`
 	RawWPM              float64 `json:"raw_wpm"`
 	Accuracy            float64 `json:"accuracy"`
@@ -48,7 +51,10 @@ func marshalResult(r domain.Result) storedResult {
 		TextMode:            string(r.Config.TextMode),
 		Language:            r.Config.Language,
 		Theme:               r.Config.Theme,
+		Punctuation:         r.Config.Punctuation,
+		Numbers:             r.Config.Numbers,
 		Width:               r.Config.Width,
+		Seed:                r.Seed,
 		WPM:                 r.WPM,
 		RawWPM:              r.RawWPM,
 		Accuracy:            r.Accuracy,
@@ -64,13 +70,15 @@ func unmarshalResult(s storedResult) domain.Result {
 	timestamp, _ := time.Parse(time.RFC3339, s.Timestamp)
 
 	cfg := domain.TestConfig{
-		Kind:      domain.TestKind(s.TestKind),
-		Duration:  domain.Duration(s.Duration),
-		WordCount: s.WordCount,
-		Width:     s.Width,
-		Theme:     s.Theme,
-		Language:  s.Language,
-		TextMode:  domain.TextMode(s.TextMode),
+		Kind:        domain.TestKind(s.TestKind),
+		Duration:    domain.Duration(s.Duration),
+		WordCount:   s.WordCount,
+		Width:       s.Width,
+		Theme:       s.Theme,
+		Language:    s.Language,
+		TextMode:    domain.TextMode(s.TextMode),
+		Punctuation: s.Punctuation,
+		Numbers:     s.Numbers,
 	}
 
 	elapsed := time.Duration(s.Duration) * time.Second
@@ -91,6 +99,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		KeystrokesIncorrect: s.KeystrokesIncorrect,
 		TotalChars:          s.TotalChars,
 		Duration:            elapsed,
+		Seed:                s.Seed,
 	}
 }
 
