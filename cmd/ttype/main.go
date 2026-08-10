@@ -41,11 +41,12 @@ func newRootCmd() *cobra.Command {
 
 	cmd.Version = version
 	bindTestFlags(cmd, flags)
-	registerCompletions(cmd)
 
 	cmd.AddCommand(newHistoryCmd())
 	cmd.AddCommand(newStatsCmd())
 	cmd.AddCommand(newLanguagesCmd())
+
+	registerCompletions(cmd)
 
 	return cmd
 }
