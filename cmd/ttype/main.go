@@ -44,6 +44,7 @@ func newRootCmd() *cobra.Command {
 	registerCompletions(cmd)
 
 	cmd.AddCommand(newHistoryCmd())
+	cmd.AddCommand(newStatsCmd())
 	cmd.AddCommand(newLanguagesCmd())
 
 	return cmd
@@ -76,6 +77,37 @@ func newHistoryCmd() *cobra.Command {
 	cmd.Flags().IntVar(&last, "last", 10, "Number of recent results to show")
 	cmd.Flags().IntVar(&limit, "limit", 0, "Alias for --last")
 	cmd.Flags().BoolVar(&plain, "plain", false, "Print a plain table instead of the interactive list")
+
+	return cmd
+}
+
+func newStatsCmd() *cobra.Command {
+	var mode string
+	var excludeFailed bool
+
+	cmd := &cobra.Command{
+		Use:               "stats",
+		Short:             "View statistics and personal bests",
+		ValidArgsFunction: cobra.NoFileCompletions,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			store, err := app.OpenStore()
+			if err != nil {
+				return err
+			}
+
+			filter := domain.StatsFilter{ExcludeFailed: excludeFailed}
+			if cmd.Flags().Changed("mode") {
+				textMode, err := domain.ParseTextMode(mode)
+				if err != nil {
+					return err
+				}
+				filter.TextMode = &textMode
+			}
+			return app.RunStats(store, filter)
+		},
+	}
+	cmd.Flags().StringVar(&mode, "mode", "", "Filter stats by text mode")
+	cmd.Flags().BoolVar(&excludeFailed, "exclude-failed", false, "Exclude failed tests from stats")
 
 	return cmd
 }

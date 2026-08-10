@@ -13,6 +13,10 @@ func registerCompletions(root *cobra.Command) {
 	_ = root.RegisterFlagCompletionFunc("words", suggestValues("10", "25", "50", "100"))
 
 	_ = root.RegisterFlagCompletionFunc("language", suggestValues())
+
+	if stats, _, err := root.Find([]string{"stats"}); err == nil {
+		_ = stats.RegisterFlagCompletionFunc("mode", suggestValues(textModeNames()...))
+	}
 }
 
 func textModeNames() []string {

@@ -72,6 +72,21 @@ type PersonalBests struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+type StatsFilter struct {
+	TextMode      *TextMode
+	ExcludeFailed bool
+}
+
+type StatsSummary struct {
+	TotalTests       int
+	FilterMode       string
+	AverageWPM       float64
+	AverageAccuracy  float64
+	BestWPM          float64
+	RecentAverageWPM float64
+	PersonalBest     PersonalBests
+}
+
 type Settings struct {
 	DefaultDuration  Duration `json:"default_duration"`
 	DefaultWordCount int      `json:"default_word_count,omitempty"`

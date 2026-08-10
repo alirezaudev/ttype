@@ -11,4 +11,5 @@ type Store interface {
 	SaveResult(domain.Result) (PBUpdate, error)
 	ListResults(limit int) ([]domain.Result, error)
 	LoadBests() (domain.PersonalBests, error)
+	Summary(domain.StatsFilter) (domain.StatsSummary, error)
 }
