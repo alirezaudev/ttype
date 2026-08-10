@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alirezaudev/ttype/assets"
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -77,12 +78,18 @@ func (p *Provider) Generate(opts domain.GenerateOptions) (string, error) {
 		return "", errors.New("words limit out of range")
 	}
 
-	sampled := sample(items, opts.WordLimit)
+	rng := newRNG(time.Now().UnixNano())
+
+	sampled := sample(items, opts.WordLimit, rng)
 
 	if opts.Numbers && wordsMode {
-		applyNumbers(sampled)
+		applyNumbers(sampled, rng)
 	}
-	return joinWords(sampled, opts.Punctuation && wordsMode), nil
+	return joinWords(sampled, opts.Punctuation && wordsMode, rng), nil
+}
+
+func newRNG(seed int64) *rand.Rand {
+	return rand.New(rand.NewPCG(uint64(seed), uint64(seed>>32)))
 }
 
 func (p *Provider) itemsForMode(mode domain.TextMode) ([]string, error) {
@@ -94,18 +101,18 @@ func (p *Provider) itemsForMode(mode domain.TextMode) ([]string, error) {
 }
 
 // sample draws limit words, or enough words to fill a timed test's buffer.
-func sample(words []string, limit int) []string {
+func sample(words []string, limit int, rng *rand.Rand) []string {
 	if limit > 0 {
 		out := make([]string, limit)
 		for i := range out {
-			out[i] = words[rand.IntN(len(words))]
+			out[i] = words[rng.IntN(len(words))]
 		}
 		return out
 	}
 
 	var out []string
 	for length := 0; length < minTargetRunes; {
-		word := words[rand.IntN(len(words))]
+		word := words[rng.IntN(len(words))]
 		if len(out) > 0 {
 			length++
 		}
@@ -115,15 +122,15 @@ func sample(words []string, limit int) []string {
 	return out
 }
 
-func applyNumbers(words []string) {
+func applyNumbers(words []string, rng *rand.Rand) {
 	for i := range words {
-		if rand.Float64() < numberChance {
-			words[i] = strconv.Itoa(rand.IntN(9999) + 1)
+		if rng.Float64() < numberChance {
+			words[i] = strconv.Itoa(rng.IntN(9999) + 1)
 		}
 	}
 }
 
-func joinWords(words []string, punct bool) string {
+func joinWords(words []string, punct bool, rng *rand.Rand) string {
 	if len(words) == 0 {
 		return ""
 	}
@@ -132,9 +139,9 @@ func joinWords(words []string, punct bool) string {
 	b.WriteString(words[0])
 	for _, word := range words[1:] {
 		sep := " "
-		if punct && rand.Float64() < punctChance {
+		if punct && rng.Float64() < punctChance {
 			sep = ". "
-			if rand.Float64() < commaShare {
+			if rng.Float64() < commaShare {
 				sep = ", "
 			}
 		}
