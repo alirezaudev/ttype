@@ -490,6 +490,7 @@ func (s *Session) Result() (domain.Result, error) {
 		WPM:                 live.WPM,
 		RawWPM:              live.RawWPM,
 		Accuracy:            live.Accuracy,
+		Consistency:         stats.Consistency(rawHistory),
 		WPMHistory:          s.WPMHistory(),
 		RawWPMHistory:       rawHistory,
 		ErrorHistory:        errHistory,

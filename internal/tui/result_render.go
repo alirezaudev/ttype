@@ -30,17 +30,18 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	subtitle := theme.Help.Render(resultSubtitle(result.Config))
 
 	var header strings.Builder
-	for i, label := range []string{"wpm", "raw", "acc", "err"} {
+	for i, label := range []string{"wpm", "raw", "acc", "con", "err"} {
 		if i > 0 {
 			header.WriteString(" ")
 		}
 		header.WriteString(theme.HUDStatLabel(label).Render(fmt.Sprintf("%-*s", resultColWidth, label)))
 	}
 	headers := header.String()
-	values := fmt.Sprintf("%-*s %-*s %-*s %-*d",
+	values := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*d",
 		resultColWidth, fmt.Sprintf("%.2f", result.WPM),
 		resultColWidth, fmt.Sprintf("%.2f", result.RawWPM),
 		resultColWidth, fmt.Sprintf("%.2f%%", result.Accuracy),
+		resultColWidth, fmt.Sprintf("%.2f%%", result.Consistency),
 		resultColWidth, result.Incorrect,
 	)
 

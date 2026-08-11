@@ -57,6 +57,7 @@ type Result struct {
 	WPM                 float64       `json:"wpm"`
 	RawWPM              float64       `json:"raw_wpm"`
 	Accuracy            float64       `json:"accuracy"`
+	Consistency         float64       `json:"consistency,omitempty"`
 	Correct             int           `json:"correct"`
 	Incorrect           int           `json:"incorrect"`
 	KeystrokesCorrect   int           `json:"keystrokes_correct,omitempty"`

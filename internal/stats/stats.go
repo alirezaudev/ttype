@@ -45,6 +45,43 @@ func Live(counts domain.CharCounts, elapsed time.Duration) domain.LiveStats {
 	}
 }
 
+func Consistency(rawSamples []float64) float64 {
+	if len(rawSamples) == 0 {
+		return 100
+	}
+
+	var sum float64
+	for _, v := range rawSamples {
+		sum += v
+	}
+	mean := sum / float64(len(rawSamples))
+	if mean <= 0 {
+		return 100
+	}
+
+	var variance float64
+	for _, v := range rawSamples {
+		d := v - mean
+		variance += d * d
+	}
+	stddev := math.Sqrt(variance / float64(len(rawSamples)))
+
+	score := consistencyCurve(stddev / mean)
+	if score < 0 {
+		return 0
+	}
+	if score > 100 {
+		return 100
+	}
+	return round2(score)
+}
+
+func consistencyCurve(cov float64) float64 {
+	c2 := cov * cov
+	s := cov * (1 + c2*(1.0/3+c2/5))
+	return 100 * (1 - math.Tanh(s))
+}
+
 func round2(v float64) float64 {
 	return math.Round(v*100) / 100
 }
