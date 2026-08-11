@@ -14,8 +14,15 @@ import (
 // skipRune marks input positions abandoned by a space commit.
 const skipRune = '\x00'
 
+const partialSecondFloor = 500 * time.Millisecond
+
 type TextSource interface {
 	Generate(opts domain.GenerateOptions) (string, error)
+}
+
+type secondBucket struct {
+	typed  int
+	errors int
 }
 
 type Session struct {
@@ -33,6 +40,8 @@ type Session struct {
 	endedAt             time.Time
 	capsInversions      int
 	seed                int64
+	wpmHistory          []float64
+	seconds             []secondBucket
 }
 
 func resolveSeed(config domain.TestConfig) int64 {
@@ -76,6 +85,20 @@ func (s *Session) Seed() int64                { return s.seed }
 func (s *Session) State() domain.SessionState { return s.state }
 func (s *Session) Keystrokes() (correct, incorrect int) {
 	return s.keystrokesCorrect, s.keystrokesIncorrect
+}
+
+func (s *Session) WPMHistory() []float64 {
+	return append([]float64(nil), s.wpmHistory...)
+}
+
+func (s *Session) RawWPMHistory() []float64 {
+	raw, _ := s.perSecondSamples()
+	return raw
+}
+
+func (s *Session) ErrorHistory() []int {
+	_, errs := s.perSecondSamples()
+	return errs
 }
 
 func (s *Session) Remaining() time.Duration {
@@ -173,6 +196,8 @@ func (s *Session) Restart() error {
 	s.startedAt = time.Time{}
 	s.endedAt = time.Time{}
 	s.capsInversions = 0
+	s.wpmHistory = s.wpmHistory[:0]
+	s.seconds = s.seconds[:0]
 	s.seed = resolveSeed(s.config)
 	return s.loadTarget()
 }
@@ -220,6 +245,8 @@ func (s *Session) InputRune(r rune) {
 
 	if commitsWords && r != ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] == ' ' {
 		s.keystrokesIncorrect++
+		s.bucketKeystroke(false)
+		s.recordWPMSnapshot()
 		return
 	}
 
@@ -238,15 +265,20 @@ func (s *Session) InputRune(r rune) {
 		case pos >= len(s.targetRunes):
 			s.keystrokesIncorrect++
 			s.counts.Extra++
+			s.bucketKeystroke(false)
 		case r == s.targetRunes[pos]:
 			s.keystrokesCorrect++
 			s.counts.Correct++
+			s.bucketKeystroke(true)
 		default:
 			s.keystrokesIncorrect++
 			s.counts.Incorrect++
+			s.bucketKeystroke(false)
 		}
 		s.input = append(s.input, r)
 	}
+
+	s.recordWPMSnapshot()
 
 	if s.config.Kind == domain.TestKindWords && len(s.input) >= len(s.targetRunes) {
 		s.finish()
@@ -350,6 +382,8 @@ func (s *Session) Tick() bool {
 		return false
 	}
 
+	s.recordWPMSnapshot()
+
 	if s.config.Kind == domain.TestKindWords {
 		return false
 	}
@@ -375,7 +409,67 @@ func (s *Session) Finish() {
 	s.finish()
 }
 
+func (s *Session) recordWPMSnapshot() {
+	if s.state != domain.SessionActive || s.startedAt.IsZero() {
+		return
+	}
+
+	elapsed := s.Elapsed()
+	sec := int(elapsed.Seconds())
+	if sec < 0 {
+		return
+	}
+
+	s.growSeries(sec)
+	s.wpmHistory[sec] = stats.WPM(s.counts.Correct, elapsed)
+}
+
+func (s *Session) bucketKeystroke(correct bool) {
+	sec := int(s.Elapsed().Seconds())
+	if sec < 0 {
+		return
+	}
+
+	s.growSeries(sec)
+	s.seconds[sec].typed++
+	if !correct {
+		s.seconds[sec].errors++
+	}
+}
+
+func (s *Session) growSeries(sec int) {
+	for len(s.wpmHistory) <= sec {
+		s.wpmHistory = append(s.wpmHistory, 0)
+	}
+	for len(s.seconds) <= sec {
+		s.seconds = append(s.seconds, secondBucket{})
+	}
+}
+
+func (s *Session) perSecondSamples() (raw []float64, errs []int) {
+	if len(s.seconds) == 0 {
+		return nil, nil
+	}
+
+	elapsed := s.Elapsed()
+	full := int(elapsed.Seconds())
+
+	for i, bucket := range s.seconds {
+		interval := time.Second
+		if i >= full {
+			interval = elapsed - time.Duration(full)*time.Second
+			if interval < partialSecondFloor {
+				break
+			}
+		}
+		raw = append(raw, stats.WPM(bucket.typed, interval))
+		errs = append(errs, bucket.errors)
+	}
+	return raw, errs
+}
+
 func (s *Session) finish() {
+	s.recordWPMSnapshot()
 	s.state = domain.SessionFinished
 	s.endedAt = s.clock.Now()
 }
@@ -387,6 +481,7 @@ func (s *Session) Result() (domain.Result, error) {
 
 	counts := s.Counts()
 	live := s.LiveStats()
+	rawHistory, errHistory := s.perSecondSamples()
 
 	return domain.Result{
 		ID:                  newResultID(),
@@ -395,6 +490,9 @@ func (s *Session) Result() (domain.Result, error) {
 		WPM:                 live.WPM,
 		RawWPM:              live.RawWPM,
 		Accuracy:            live.Accuracy,
+		WPMHistory:          s.WPMHistory(),
+		RawWPMHistory:       rawHistory,
+		ErrorHistory:        errHistory,
 		Correct:             counts.Correct,
 		Incorrect:           counts.Incorrect,
 		KeystrokesCorrect:   s.keystrokesCorrect,
@@ -428,6 +526,7 @@ func (s *Session) Elapsed() time.Duration {
 
 func (s *Session) skipCurrentWord(pos int) {
 	s.keystrokesIncorrect++
+	s.bucketKeystroke(false)
 
 	end := wordEndAt(s.targetRunes, pos)
 	for i := pos; i < end; i++ {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestSaveResultRoundTrip(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("results = %d, want 1", len(got))
 	}
-	if got[0] != want {
+	if !reflect.DeepEqual(got[0], want) {
 		t.Fatalf("result = %+v, want %+v", got[0], want)
 	}
 }
