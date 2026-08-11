@@ -28,6 +28,10 @@ func TestSaveResultRoundTrip(t *testing.T) {
 		KeystrokesIncorrect: 12,
 		TotalChars:          280,
 		Duration:            60 * time.Second,
+		Seed:                4242,
+		WPMHistory:          []float64{12, 40, 92.5},
+		RawWPMHistory:       []float64{24, 48, 96},
+		ErrorHistory:        []int{0, 2, 1},
 	}
 
 	if _, err := s.SaveResult(want); err != nil {
