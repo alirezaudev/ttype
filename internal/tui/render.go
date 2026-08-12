@@ -69,13 +69,13 @@ func hudTimer(session *engine.Session, cfg domain.TestConfig, elapsed time.Durat
 
 func renderCapsWarn(theme Theme) string {
 	label := "⚠ Caps Lock?"
-	if !chartUnicodeCapable() {
+	if !unicodeCapable() {
 		label = "! Caps Lock?"
 	}
 	return theme.CapsWarn.Render(" " + label + " ")
 }
 
-func chartUnicodeCapable() bool {
+func unicodeCapable() bool {
 	for _, key := range []string{"LC_ALL", "LC_CTYPE", "LANG"} {
 		v := os.Getenv(key)
 		if v == "" {

@@ -42,6 +42,27 @@ func TestRenderResultWordsSubtitle(t *testing.T) {
 	}
 }
 
+func TestRenderResultChartFitsSmallTerminal(t *testing.T) {
+	t.Setenv("LC_ALL", "C.UTF-8")
+
+	result := domain.Result{
+		Config:        domain.TestConfig{Kind: domain.TestKindTimed, Duration: 30},
+		WPMHistory:    []float64{0, 20, 40, 55, 60, 58},
+		RawWPMHistory: []float64{30, 50, 70, 65, 60},
+		ErrorHistory:  []int{0, 1, 0, 2, 0},
+	}
+	pb := storage.PBUpdate{IsNew: true, Label: "words/30s", PrevWPM: 51}
+
+	out := renderResult(result, pb, defaultTheme(), 80, 24, errorNotice("result not saved"))
+
+	if lines := strings.Split(out, "\n"); len(lines) != 24 {
+		t.Fatalf("height = %d, want 24:\n%s", len(lines), out)
+	}
+	if !strings.Contains(stripANSI(out), "wpm over time") {
+		t.Fatalf("chart missing:\n%s", out)
+	}
+}
+
 func TestRenderResultCentered(t *testing.T) {
 	result := domain.Result{
 		Config: domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},

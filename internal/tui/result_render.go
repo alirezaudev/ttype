@@ -16,7 +16,12 @@ func resultSubtitle(cfg domain.TestConfig) string {
 	return fmt.Sprintf("%ds · timed", cfg.Duration.Seconds())
 }
 
-const resultColWidth = 9
+const (
+	resultColWidth = 9
+
+	resultChartMaxWidth  = 64
+	resultChartMaxHeight = 12
+)
 
 func pbNotice(pb storage.PBUpdate) string {
 	if pb.PrevWPM <= 0 {
@@ -48,7 +53,7 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	elapsed := theme.Help.Render(formatClock(result.Duration) + " elapsed")
 	help := theme.Help.Render("tab/enter restart  C copy  S settings  L language")
 
-	lines := []string{
+	head := []string{
 		title,
 		"",
 		subtitle,
@@ -58,13 +63,29 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 		"",
 		elapsed,
 	}
+
+	var tail []string
 	if pb.IsNew {
-		lines = append(lines, "", theme.Finished.Render(pbNotice(pb)))
+		tail = append(tail, "", theme.Finished.Render(pbNotice(pb)))
 	}
 	if !notice.empty() {
-		lines = append(lines, "", notice.render(theme))
+		tail = append(tail, "", notice.render(theme))
 	}
-	lines = append(lines, "", help)
+	tail = append(tail, "", help)
+
+	lines := head
+	chart := renderResultChart(
+		result.WPMHistory,
+		result.RawWPMHistory,
+		result.ErrorHistory,
+		theme,
+		min(width-4, resultChartMaxWidth),
+		min(height-len(head)-len(tail)-1, resultChartMaxHeight),
+	)
+	if chart != "" {
+		lines = append(lines, "", chart)
+	}
+	lines = append(lines, tail...)
 
 	content := strings.Join(lines, "\n")
 
