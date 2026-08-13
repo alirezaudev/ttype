@@ -42,6 +42,7 @@ type Session struct {
 	seed                int64
 	wpmHistory          []float64
 	seconds             []secondBucket
+	events              []domain.ReplayEvent
 }
 
 func resolveSeed(config domain.TestConfig) int64 {
@@ -85,6 +86,14 @@ func (s *Session) Seed() int64                { return s.seed }
 func (s *Session) State() domain.SessionState { return s.state }
 func (s *Session) Keystrokes() (correct, incorrect int) {
 	return s.keystrokesCorrect, s.keystrokesIncorrect
+}
+
+func (s *Session) Events() []domain.ReplayEvent {
+	return append([]domain.ReplayEvent(nil), s.events...)
+}
+
+func (s *Session) recordEvent(kind domain.ReplayEventKind, r rune) {
+	s.events = append(s.events, domain.ReplayEvent{Offset: s.Elapsed(), Kind: kind, Rune: r})
 }
 
 func (s *Session) WPMHistory() []float64 {
@@ -198,6 +207,7 @@ func (s *Session) Restart() error {
 	s.capsInversions = 0
 	s.wpmHistory = s.wpmHistory[:0]
 	s.seconds = s.seconds[:0]
+	s.events = s.events[:0]
 	s.seed = resolveSeed(s.config)
 	return s.loadTarget()
 }
@@ -244,6 +254,7 @@ func (s *Session) InputRune(r rune) {
 	}
 
 	if commitsWords && r != ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] == ' ' {
+		s.recordEvent(domain.ReplayRune, r)
 		s.keystrokesIncorrect++
 		s.bucketKeystroke(false)
 		s.recordWPMSnapshot()
@@ -254,6 +265,8 @@ func (s *Session) InputRune(r rune) {
 		s.state = domain.SessionActive
 		s.startedAt = s.clock.Now()
 	}
+
+	s.recordEvent(domain.ReplayRune, r)
 
 	if skipping {
 		s.skipCurrentWord(pos)
@@ -286,6 +299,14 @@ func (s *Session) InputRune(r rune) {
 }
 
 func (s *Session) Backspace() bool {
+	if !s.backspace() {
+		return false
+	}
+	s.recordEvent(domain.ReplayBackspace, 0)
+	return true
+}
+
+func (s *Session) backspace() bool {
 	if s.state == domain.SessionFinished || len(s.input) == 0 {
 		return false
 	}
@@ -305,6 +326,14 @@ func (s *Session) Backspace() bool {
 }
 
 func (s *Session) DeleteWord() bool {
+	if !s.deleteWord() {
+		return false
+	}
+	s.recordEvent(domain.ReplayDeleteWord, 0)
+	return true
+}
+
+func (s *Session) deleteWord() bool {
 	if s.state == domain.SessionFinished || len(s.input) == 0 {
 		return false
 	}
