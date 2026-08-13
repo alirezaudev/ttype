@@ -130,31 +130,33 @@ func TestDeleteWordMidWordDeletesToWordStart(t *testing.T) {
 	}
 }
 
-func TestDeleteWordCorrectPrevRemovesOnlySpace(t *testing.T) {
+func TestDeleteWordAfterSpaceRemovesSpaceAndWord(t *testing.T) {
 	t.Parallel()
 
-	s, _ := newTestSession(t, "the cat sat", 60*time.Second)
-	typeString(s, "the ")
+	for _, typed := range []string{"the ", "thX "} {
+		s, _ := newTestSession(t, "the cat sat", 60*time.Second)
+		typeString(s, typed)
 
-	if !s.DeleteWord() {
-		t.Fatal("DeleteWord() = false, want true")
-	}
-	if got := string(s.Input()); got != "the" {
-		t.Fatalf("input = %q, want %q", got, "the")
+		if !s.DeleteWord() {
+			t.Fatalf("typed %q: DeleteWord() = false, want true", typed)
+		}
+		if got := s.Input(); got != nil {
+			t.Fatalf("typed %q: input = %q, want empty", typed, string(got))
+		}
 	}
 }
 
-func TestDeleteWordIncorrectPrevRemovesSpaceAndWord(t *testing.T) {
+func TestDeleteWordAfterSpaceStopsAtThePreviousWord(t *testing.T) {
 	t.Parallel()
 
 	s, _ := newTestSession(t, "the cat sat", 60*time.Second)
-	typeString(s, "thX ")
+	typeString(s, "the cat ")
 
 	if !s.DeleteWord() {
 		t.Fatal("DeleteWord() = false, want true")
 	}
-	if got := s.Input(); got != nil {
-		t.Fatalf("input = %q, want empty", string(got))
+	if got := string(s.Input()); got != "the " {
+		t.Fatalf("input = %q, want %q", got, "the ")
 	}
 }
 

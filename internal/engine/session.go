@@ -320,13 +320,8 @@ func (s *Session) DeleteWord() bool {
 		return false
 	}
 
-	prevStart := wordStart(pos-1, s.input)
-	if s.typedCorrectly(prevStart, pos) {
-		s.truncateInput(pos - 1)
-		return true
-	}
-
-	s.truncateInput(prevStart)
+	// Right after a separator the space and the word before it go in one press.
+	s.truncateInput(wordStart(pos-1, s.input))
 	return true
 }
 
@@ -363,18 +358,6 @@ func wordStartAt(target []rune, pos int) int {
 		start--
 	}
 	return start
-}
-
-func (s *Session) typedCorrectly(start, end int) bool {
-	if end > len(s.targetRunes) {
-		return false
-	}
-	for i := start; i < end; i++ {
-		if s.input[i] != s.targetRunes[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func (s *Session) Tick() bool {
