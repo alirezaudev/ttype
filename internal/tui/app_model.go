@@ -210,7 +210,21 @@ func (m AppModel) finishResult() (domain.Result, storage.PBUpdate, statusNotice)
 	if err != nil {
 		return result, storage.PBUpdate{}, errorNotice(fmt.Sprintf("result not saved: %s", err))
 	}
+	m.saveReplay(result.ID)
 	return result, pb, statusNotice{}
+}
+
+// Best effort: a missing recording only costs the playback, not the result.
+func (m AppModel) saveReplay(id string) {
+	replays, ok := m.store.(storage.ReplayStore)
+	if !ok {
+		return
+	}
+	events := m.test.session.Events()
+	if len(events) == 0 {
+		return
+	}
+	_ = replays.SaveReplay(id, domain.Replay{Target: m.test.session.Target(), Events: events})
 }
 
 func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
