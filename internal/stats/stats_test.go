@@ -89,3 +89,30 @@ func TestAccuracy(t *testing.T) {
 		})
 	}
 }
+
+func TestTopCharErrorsRanksByCountThenAlphabetically(t *testing.T) {
+	t.Parallel()
+
+	got := stats.TopCharErrors(map[string]int{"e": 2, "a": 5, "z": 2, "q": 1}, 3)
+	want := []stats.CharError{{"a", 5}, {"e", 2}, {"z", 2}}
+
+	if len(got) != len(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got %+v, want %+v", got, want)
+		}
+	}
+}
+
+func TestTopCharErrorsEmpty(t *testing.T) {
+	t.Parallel()
+
+	if got := stats.TopCharErrors(nil, 5); got != nil {
+		t.Fatalf("got %+v, want nil", got)
+	}
+	if got := stats.TopCharErrors(map[string]int{"a": 1}, 0); got != nil {
+		t.Fatalf("got %+v, want nil", got)
+	}
+}

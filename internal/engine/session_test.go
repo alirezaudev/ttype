@@ -542,3 +542,24 @@ func TestTimedSessionRequiresDuration(t *testing.T) {
 		t.Fatal("timed session without a duration should error")
 	}
 }
+
+func TestCharErrorsCountTheExpectedCharacter(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "the cat", 60*time.Second)
+	typeString(s, "tXX")
+	s.Backspace()
+	s.Backspace()
+	typeString(s, "hX")
+
+	want := map[string]int{"h": 1, "e": 2}
+	got := s.CharErrors()
+	if len(got) != len(want) {
+		t.Fatalf("char errors = %v, want %v", got, want)
+	}
+	for char, count := range want {
+		if got[char] != count {
+			t.Fatalf("char errors = %v, want %v", got, want)
+		}
+	}
+}

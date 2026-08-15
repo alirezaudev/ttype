@@ -37,9 +37,10 @@ type storedResult struct {
 	Skipped             int     `json:"skipped,omitempty"`
 	TotalChars          int     `json:"total_chars"`
 
-	WPMHistory    []float64 `json:"wpm_history,omitempty"`
-	RawWPMHistory []float64 `json:"raw_wpm_history,omitempty"`
-	ErrorHistory  []int     `json:"error_history,omitempty"`
+	WPMHistory    []float64      `json:"wpm_history,omitempty"`
+	RawWPMHistory []float64      `json:"raw_wpm_history,omitempty"`
+	ErrorHistory  []int          `json:"error_history,omitempty"`
+	CharErrors    map[string]int `json:"char_errors,omitempty"`
 }
 
 func marshalResult(r domain.Result) storedResult {
@@ -74,6 +75,7 @@ func marshalResult(r domain.Result) storedResult {
 		WPMHistory:          r.WPMHistory,
 		RawWPMHistory:       r.RawWPMHistory,
 		ErrorHistory:        r.ErrorHistory,
+		CharErrors:          r.CharErrors,
 	}
 }
 
@@ -116,6 +118,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		WPMHistory:          s.WPMHistory,
 		RawWPMHistory:       s.RawWPMHistory,
 		ErrorHistory:        s.ErrorHistory,
+		CharErrors:          s.CharErrors,
 	}
 }
 

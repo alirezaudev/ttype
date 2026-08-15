@@ -67,9 +67,10 @@ type Result struct {
 	Duration            time.Duration `json:"duration"`
 	Seed                int64         `json:"seed,omitempty"`
 
-	WPMHistory    []float64 `json:"wpm_history,omitempty"`
-	RawWPMHistory []float64 `json:"raw_wpm_history,omitempty"`
-	ErrorHistory  []int     `json:"error_history,omitempty"`
+	WPMHistory    []float64      `json:"wpm_history,omitempty"`
+	RawWPMHistory []float64      `json:"raw_wpm_history,omitempty"`
+	ErrorHistory  []int          `json:"error_history,omitempty"`
+	CharErrors    map[string]int `json:"char_errors,omitempty"`
 }
 
 type PersonalBests struct {

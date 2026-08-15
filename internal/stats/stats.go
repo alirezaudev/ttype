@@ -2,6 +2,7 @@ package stats
 
 import (
 	"math"
+	"sort"
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -80,6 +81,34 @@ func consistencyCurve(cov float64) float64 {
 	c2 := cov * cov
 	s := cov * (1 + c2*(1.0/3+c2/5))
 	return 100 * (1 - math.Tanh(s))
+}
+
+type CharError struct {
+	Char  string
+	Count int
+}
+
+// TopCharErrors ranks the most-missed expected characters, ties alphabetical.
+func TopCharErrors(counts map[string]int, n int) []CharError {
+	if len(counts) == 0 || n <= 0 {
+		return nil
+	}
+
+	out := make([]CharError, 0, len(counts))
+	for char, count := range counts {
+		out = append(out, CharError{Char: char, Count: count})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Count != out[j].Count {
+			return out[i].Count > out[j].Count
+		}
+		return out[i].Char < out[j].Char
+	})
+
+	if n > len(out) {
+		n = len(out)
+	}
+	return out[:n]
 }
 
 func round2(v float64) float64 {

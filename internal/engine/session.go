@@ -43,6 +43,7 @@ type Session struct {
 	wpmHistory          []float64
 	seconds             []secondBucket
 	skipped             int
+	charErrors          map[string]int
 	events              []domain.ReplayEvent
 }
 
@@ -64,11 +65,12 @@ func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Sess
 		return nil, errors.New("timed session requires a positive duration")
 	}
 	s := &Session{
-		source: source,
-		config: config,
-		clock:  clock,
-		state:  domain.SessionReady,
-		seed:   resolveSeed(config),
+		source:     source,
+		config:     config,
+		clock:      clock,
+		state:      domain.SessionReady,
+		seed:       resolveSeed(config),
+		charErrors: make(map[string]int),
 	}
 	if err := s.loadTarget(); err != nil {
 		return nil, err
@@ -89,6 +91,18 @@ func (s *Session) State() domain.SessionState { return s.state }
 // Skipped counts the letters abandoned by a space commit; separators do not
 // count, they were never there to type.
 func (s *Session) Skipped() int { return s.skipped }
+
+// CharErrors counts, per expected character, how often it was mistyped.
+func (s *Session) CharErrors() map[string]int {
+	if len(s.charErrors) == 0 {
+		return nil
+	}
+	out := make(map[string]int, len(s.charErrors))
+	for k, v := range s.charErrors {
+		out[k] = v
+	}
+	return out
+}
 func (s *Session) Keystrokes() (correct, incorrect int) {
 	return s.keystrokesCorrect, s.keystrokesIncorrect
 }
@@ -213,6 +227,7 @@ func (s *Session) Restart() error {
 	s.wpmHistory = s.wpmHistory[:0]
 	s.seconds = s.seconds[:0]
 	s.skipped = 0
+	s.charErrors = make(map[string]int)
 	s.events = s.events[:0]
 	s.seed = resolveSeed(s.config)
 	return s.loadTarget()
@@ -292,6 +307,7 @@ func (s *Session) InputRune(r rune) {
 		default:
 			s.keystrokesIncorrect++
 			s.counts.Incorrect++
+			s.charErrors[string(s.targetRunes[pos])]++
 			s.bucketKeystroke(false)
 		}
 		s.input = append(s.input, r)
@@ -520,6 +536,7 @@ func (s *Session) Result() (domain.Result, error) {
 		KeystrokesCorrect:   s.keystrokesCorrect,
 		KeystrokesIncorrect: s.keystrokesIncorrect,
 		Skipped:             s.skipped,
+		CharErrors:          s.CharErrors(),
 		TotalChars:          counts.TotalTyped(),
 		Duration:            s.Elapsed(),
 		Seed:                s.seed,
@@ -549,6 +566,7 @@ func (s *Session) Elapsed() time.Duration {
 
 func (s *Session) skipCurrentWord(pos int) {
 	s.keystrokesIncorrect++
+	s.charErrors[string(s.targetRunes[pos])]++
 	s.bucketKeystroke(false)
 
 	end := wordEndAt(s.targetRunes, pos)
