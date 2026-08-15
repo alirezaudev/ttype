@@ -62,6 +62,7 @@ type Result struct {
 	Incorrect           int           `json:"incorrect"`
 	KeystrokesCorrect   int           `json:"keystrokes_correct,omitempty"`
 	KeystrokesIncorrect int           `json:"keystrokes_incorrect,omitempty"`
+	Skipped             int           `json:"skipped,omitempty"`
 	TotalChars          int           `json:"total_chars"`
 	Duration            time.Duration `json:"duration"`
 	Seed                int64         `json:"seed,omitempty"`

@@ -183,3 +183,23 @@ func TestWordsProgressAdvancesPastSkippedWord(t *testing.T) {
 		t.Fatalf("progress = %d/%d, want 1/2", done, total)
 	}
 }
+
+func TestSkippedCountsMissedLetters(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "abcd efgh", 60*time.Second)
+	typeString(s, "ab ")
+	if got := s.Skipped(); got != 2 {
+		t.Fatalf("skipped = %d, want 2", got)
+	}
+
+	typeString(s, "ef ")
+	if got := s.Skipped(); got != 4 {
+		t.Fatalf("skipped = %d, want 4", got)
+	}
+
+	s.Backspace()
+	if got := s.Skipped(); got != 2 {
+		t.Fatalf("skipped after undo = %d, want 2", got)
+	}
+}

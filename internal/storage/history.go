@@ -34,6 +34,7 @@ type storedResult struct {
 	Incorrect           int     `json:"incorrect"`
 	KeystrokesCorrect   int     `json:"keystrokes_correct,omitempty"`
 	KeystrokesIncorrect int     `json:"keystrokes_incorrect,omitempty"`
+	Skipped             int     `json:"skipped,omitempty"`
 	TotalChars          int     `json:"total_chars"`
 
 	WPMHistory    []float64 `json:"wpm_history,omitempty"`
@@ -68,6 +69,7 @@ func marshalResult(r domain.Result) storedResult {
 		Incorrect:           r.Incorrect,
 		KeystrokesCorrect:   r.KeystrokesCorrect,
 		KeystrokesIncorrect: r.KeystrokesIncorrect,
+		Skipped:             r.Skipped,
 		TotalChars:          r.TotalChars,
 		WPMHistory:          r.WPMHistory,
 		RawWPMHistory:       r.RawWPMHistory,
@@ -107,6 +109,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		Incorrect:           s.Incorrect,
 		KeystrokesCorrect:   s.KeystrokesCorrect,
 		KeystrokesIncorrect: s.KeystrokesIncorrect,
+		Skipped:             s.Skipped,
 		TotalChars:          s.TotalChars,
 		Duration:            elapsed,
 		Seed:                s.Seed,
