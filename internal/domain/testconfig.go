@@ -17,6 +17,7 @@ type TestConfig struct {
 	TextMode    TextMode
 	Punctuation bool
 	Numbers     bool
+	MinWPM      int
 	Seed        int64
 }
 
@@ -26,6 +27,7 @@ type GenerateOptions struct {
 	Language    string
 	Punctuation bool
 	Numbers     bool
+	MinWPM      int
 	Seed        int64
 }
 

@@ -32,6 +32,9 @@ func pbNotice(pb storage.PBUpdate) string {
 
 func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width, height int, notice statusNotice) string {
 	title := theme.Finished.Render("Test Complete")
+	if result.Failed {
+		title = theme.Incorrect.Render("Test Failed")
+	}
 	subtitle := theme.Help.Render(resultSubtitle(result.Config))
 
 	var header strings.Builder
@@ -65,6 +68,9 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	}
 
 	var tail []string
+	if result.Failed {
+		tail = append(tail, "", theme.Incorrect.Render("Failed: "+result.FailureReason))
+	}
 	if pb.IsNew {
 		tail = append(tail, "", theme.Finished.Render(pbNotice(pb)))
 	}

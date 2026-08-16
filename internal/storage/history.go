@@ -25,6 +25,7 @@ type storedResult struct {
 	Punctuation         bool    `json:"punctuation,omitempty"`
 	Numbers             bool    `json:"numbers,omitempty"`
 	Width               int     `json:"width,omitempty"`
+	MinWPM              int     `json:"min_wpm,omitempty"`
 	Seed                int64   `json:"seed,omitempty"`
 	WPM                 float64 `json:"wpm"`
 	RawWPM              float64 `json:"raw_wpm"`
@@ -41,6 +42,8 @@ type storedResult struct {
 	RawWPMHistory []float64      `json:"raw_wpm_history,omitempty"`
 	ErrorHistory  []int          `json:"error_history,omitempty"`
 	CharErrors    map[string]int `json:"char_errors,omitempty"`
+	Failed        bool           `json:"failed,omitempty"`
+	FailureReason string         `json:"failure_reason,omitempty"`
 }
 
 func marshalResult(r domain.Result) storedResult {
@@ -61,6 +64,7 @@ func marshalResult(r domain.Result) storedResult {
 		Punctuation:         r.Config.Punctuation,
 		Numbers:             r.Config.Numbers,
 		Width:               r.Config.Width,
+		MinWPM:              r.Config.MinWPM,
 		Seed:                r.Seed,
 		WPM:                 r.WPM,
 		RawWPM:              r.RawWPM,
@@ -76,6 +80,8 @@ func marshalResult(r domain.Result) storedResult {
 		RawWPMHistory:       r.RawWPMHistory,
 		ErrorHistory:        r.ErrorHistory,
 		CharErrors:          r.CharErrors,
+		Failed:              r.Failed,
+		FailureReason:       r.FailureReason,
 	}
 }
 
@@ -92,6 +98,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		TextMode:    domain.TextMode(s.TextMode),
 		Punctuation: s.Punctuation,
 		Numbers:     s.Numbers,
+		MinWPM:      s.MinWPM,
 	}
 
 	elapsed := time.Duration(s.Duration) * time.Second
@@ -119,6 +126,8 @@ func unmarshalResult(s storedResult) domain.Result {
 		RawWPMHistory:       s.RawWPMHistory,
 		ErrorHistory:        s.ErrorHistory,
 		CharErrors:          s.CharErrors,
+		Failed:              s.Failed,
+		FailureReason:       s.FailureReason,
 	}
 }
 

@@ -563,3 +563,36 @@ func TestCharErrorsCountTheExpectedCharacter(t *testing.T) {
 		}
 	}
 }
+
+func TestMinWPMFailsOnlyAfterTheGrace(t *testing.T) {
+	t.Parallel()
+
+	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60, MinWPM: 40}
+	s, err := engine.NewSession(cfg, fixedSource("the cat sat on the mat"), clock)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+
+	typeString(s, "t")
+	clock.Advance(4 * time.Second)
+	if s.Tick(); s.State() == domain.SessionFinished {
+		t.Fatal("session failed inside the grace period")
+	}
+
+	clock.Advance(2 * time.Second)
+	if !s.Tick() {
+		t.Fatal("Tick() = false, want the slow session to end")
+	}
+
+	result, err := s.Result()
+	if err != nil {
+		t.Fatalf("Result: %v", err)
+	}
+	if !result.Failed {
+		t.Fatal("result.Failed = false, want true")
+	}
+	if result.FailureReason == "" {
+		t.Fatal("result.FailureReason is empty")
+	}
+}

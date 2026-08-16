@@ -71,6 +71,8 @@ type Result struct {
 	RawWPMHistory []float64      `json:"raw_wpm_history,omitempty"`
 	ErrorHistory  []int          `json:"error_history,omitempty"`
 	CharErrors    map[string]int `json:"char_errors,omitempty"`
+	Failed        bool           `json:"failed,omitempty"`
+	FailureReason string         `json:"failure_reason,omitempty"`
 }
 
 type PersonalBests struct {
@@ -103,6 +105,7 @@ type Settings struct {
 	DefaultMode      TextMode `json:"default_mode,omitempty"`
 	Punctuation      bool     `json:"default_punctuation,omitempty"`
 	Numbers          bool     `json:"default_numbers,omitempty"`
+	DefaultMinWPM    int      `json:"default_min_wpm,omitempty"`
 }
 
 func DefaultSettings() Settings {

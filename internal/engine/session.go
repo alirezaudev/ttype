@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"time"
 	"unicode"
 
@@ -15,6 +16,9 @@ import (
 const skipRune = '\x00'
 
 const partialSecondFloor = 500 * time.Millisecond
+
+// Grace before --min-wpm can fail a run.
+const minWPMGrace = 5 * time.Second
 
 type TextSource interface {
 	Generate(opts domain.GenerateOptions) (string, error)
@@ -44,6 +48,8 @@ type Session struct {
 	seconds             []secondBucket
 	skipped             int
 	charErrors          map[string]int
+	failed              bool
+	failureReason       string
 	events              []domain.ReplayEvent
 }
 
@@ -228,6 +234,8 @@ func (s *Session) Restart() error {
 	s.seconds = s.seconds[:0]
 	s.skipped = 0
 	s.charErrors = make(map[string]int)
+	s.failed = false
+	s.failureReason = ""
 	s.events = s.events[:0]
 	s.seed = resolveSeed(s.config)
 	return s.loadTarget()
@@ -314,8 +322,28 @@ func (s *Session) InputRune(r rune) {
 	}
 
 	s.recordWPMSnapshot()
+	s.checkMinWPM()
 
+	if s.state == domain.SessionFinished {
+		return
+	}
 	if s.config.Kind == domain.TestKindWords && len(s.input) >= len(s.targetRunes) {
+		s.finish()
+	}
+}
+
+// checkMinWPM ends the run once the pace drops below --min-wpm. The grace
+// period keeps the first few keystrokes from failing it instantly.
+func (s *Session) checkMinWPM() {
+	if s.config.MinWPM <= 0 || s.state != domain.SessionActive {
+		return
+	}
+	if s.Elapsed() < minWPMGrace {
+		return
+	}
+	if int(s.LiveStats().WPM) < s.config.MinWPM {
+		s.failed = true
+		s.failureReason = fmt.Sprintf("WPM below minimum (%d)", s.config.MinWPM)
 		s.finish()
 	}
 }
@@ -420,7 +448,11 @@ func (s *Session) Tick() bool {
 	}
 
 	s.recordWPMSnapshot()
+	s.checkMinWPM()
 
+	if s.state == domain.SessionFinished {
+		return true
+	}
 	if s.config.Kind == domain.TestKindWords {
 		return false
 	}
@@ -537,6 +569,8 @@ func (s *Session) Result() (domain.Result, error) {
 		KeystrokesIncorrect: s.keystrokesIncorrect,
 		Skipped:             s.skipped,
 		CharErrors:          s.CharErrors(),
+		Failed:              s.failed,
+		FailureReason:       s.failureReason,
 		TotalChars:          counts.TotalTyped(),
 		Duration:            s.Elapsed(),
 		Seed:                s.seed,
