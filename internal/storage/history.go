@@ -24,6 +24,8 @@ type storedResult struct {
 	Theme               string  `json:"theme"`
 	Punctuation         bool    `json:"punctuation,omitempty"`
 	Numbers             bool    `json:"numbers,omitempty"`
+	Blind               bool    `json:"blind,omitempty"`
+	Zen                 bool    `json:"zen,omitempty"`
 	Width               int     `json:"width,omitempty"`
 	MinWPM              int     `json:"min_wpm,omitempty"`
 	Seed                int64   `json:"seed,omitempty"`
@@ -63,6 +65,8 @@ func marshalResult(r domain.Result) storedResult {
 		Theme:               r.Config.Theme,
 		Punctuation:         r.Config.Punctuation,
 		Numbers:             r.Config.Numbers,
+		Blind:               r.Config.Blind,
+		Zen:                 r.Config.Zen,
 		Width:               r.Config.Width,
 		MinWPM:              r.Config.MinWPM,
 		Seed:                r.Seed,
@@ -98,6 +102,8 @@ func unmarshalResult(s storedResult) domain.Result {
 		TextMode:    domain.TextMode(s.TextMode),
 		Punctuation: s.Punctuation,
 		Numbers:     s.Numbers,
+		Blind:       s.Blind,
+		Zen:         s.Zen,
 		MinWPM:      s.MinWPM,
 	}
 

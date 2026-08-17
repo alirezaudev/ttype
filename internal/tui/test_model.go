@@ -69,32 +69,12 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TestModel) View() string {
 	var out strings.Builder
 
-	out.WriteString(renderHUD(m.session, m.theme, m.typingWidth(), m.cfg))
-	out.WriteString("\n\n")
-
-	cursor := m.session.Cursor()
-	input := m.session.Input()
-	target := m.session.TargetRunes()
-	lines := wordWrapIndices(target, m.typingWidth())
-	from, to := visibleLineWindow(lines, cursor, 3)
-	for li, line := range lines[from:to] {
-		for i := line.start; i < line.end; i++ {
-			r := target[i]
-			switch {
-			case i == cursor:
-				out.WriteString(m.theme.Cursor.Render(string(r)))
-			case i < cursor && input[i] == r:
-				out.WriteString(m.theme.Correct.Render(string(r)))
-			case i < cursor:
-				out.WriteString(m.theme.Incorrect.Render(string(r)))
-			default:
-				out.WriteString(m.theme.Pending.Render(string(r)))
-			}
-		}
-		if li < len(lines)-1 {
-			out.WriteByte('\n')
-		}
+	if !m.cfg.Zen {
+		out.WriteString(renderHUD(m.session, m.theme, m.typingWidth(), m.cfg))
+		out.WriteString("\n\n")
 	}
+	out.WriteString(m.renderWords())
+
 	if m.width == 0 {
 		return out.String()
 	}
@@ -102,6 +82,45 @@ func (m TestModel) View() string {
 	out.WriteString(m.hintLine())
 	block := lipgloss.NewStyle().Width(m.typingWidth()).Render(out.String())
 	return m.center(block)
+}
+
+func (m TestModel) renderWords() string {
+	cursor := m.session.Cursor()
+	input := m.session.Input()
+	target := m.session.TargetRunes()
+	revealed := cursor
+	if m.cfg.Blind {
+		revealed = blindRevealEnd(target, cursor)
+	}
+
+	lines := wordWrapIndices(target, m.typingWidth())
+	from, to := visibleLineWindow(lines, cursor, 3)
+
+	var out strings.Builder
+	for i := from; i < to; i++ {
+		line := lines[i]
+		for j := line.start; j < line.end; j++ {
+			r := target[j]
+			switch {
+			case j == cursor && m.cfg.Blind:
+				out.WriteString(m.theme.Cursor.Render("·"))
+			case j == cursor:
+				out.WriteString(m.theme.Cursor.Render(string(r)))
+			case j < cursor && j >= revealed:
+				out.WriteString(m.theme.Pending.Render("·"))
+			case j < cursor && input[j] == r:
+				out.WriteString(m.theme.Correct.Render(string(r)))
+			case j < cursor:
+				out.WriteString(m.theme.Incorrect.Render(string(r)))
+			default:
+				out.WriteString(m.theme.Pending.Render(string(r)))
+			}
+		}
+		if i < to-1 {
+			out.WriteByte('\n')
+		}
+	}
+	return out.String()
 }
 
 func (m TestModel) typingWidth() int {
@@ -134,7 +153,7 @@ func (m TestModel) hintLine() string {
 	if m.capsWarnActive() {
 		return renderCapsWarn(m.theme)
 	}
-	if m.session.State() == domain.SessionReady {
+	if !m.cfg.Zen && m.session.State() == domain.SessionReady {
 		return m.theme.Help.Render("start typing to begin")
 	}
 	return ""

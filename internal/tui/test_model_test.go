@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -31,6 +32,20 @@ func newModelSession(t *testing.T) (*engine.Session, *engine.FakeClock) {
 		t.Fatalf("NewSession: %v", err)
 	}
 	return s, clock
+}
+
+func newTestModelFor(t *testing.T, target string, cfg domain.TestConfig) TestModel {
+	t.Helper()
+
+	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	s, err := engine.NewSession(cfg, fixedSource(target), clock)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	m := NewTestModel(s, cfg, defaultTheme())
+	m.capsProbe = nil
+	m.setSize(80, 24)
+	return m
 }
 
 func TestFormatClock(t *testing.T) {
@@ -126,5 +141,23 @@ func TestTypingWidth(t *testing.T) {
 		if got := m.typingWidth(); got != test.want {
 			t.Errorf("%s: width=%d -> %d, want %d", test.name, test.width, got, test.want)
 		}
+	}
+}
+
+func TestBlindModeHidesTheWordInProgress(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60, Blind: true}
+	m := newTestModelFor(t, "the cat sat", cfg)
+	for _, r := range "the ca" {
+		m.session.InputRune(r)
+	}
+
+	view := stripANSI(m.View())
+	if strings.Contains(view, "ca") {
+		t.Fatalf("view = %q, want the word in progress hidden", view)
+	}
+	if !strings.Contains(view, "the") {
+		t.Fatalf("view = %q, want the committed word revealed", view)
 	}
 }

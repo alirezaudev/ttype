@@ -12,18 +12,22 @@ import (
 )
 
 func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestConfig) string {
+	if cfg.Zen {
+		return ""
+	}
+
 	live := session.LiveStats()
 	row := theme.HUDTime.Render(hudTimer(session, cfg, live.Elapsed))
 
 	_, errKeystrokes := session.Keystrokes()
-	line := hudLiveLine(live.WPM, live.RawWPM, live.Accuracy, errKeystrokes)
+	line := hudLiveLine(live.WPM, live.RawWPM, live.Accuracy, errKeystrokes, cfg.Blind)
 	if lipgloss.Width(row)+2+len(line) <= width {
 		row += "  " + theme.Help.Render(line)
 	}
 
 	brand := theme.HUDTitle.Render("ttype") +
 		theme.Help.Render(" · ") +
-		theme.HUDMode.Render(string(cfg.Kind))
+		theme.HUDMode.Render(string(cfg.TextMode))
 
 	if gap := width - lipgloss.Width(row+brand); gap >= 2 {
 		row += strings.Repeat(" ", gap) + brand
@@ -32,7 +36,12 @@ func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestC
 	return lipgloss.NewStyle().Width(width).Render(row)
 }
 
-func hudLiveLine(wpm, raw, acc float64, errs int) string {
+// Blind mode shows raw speed only: wpm, accuracy and the error count would
+// leak exactly what blind mode hides.
+func hudLiveLine(wpm, raw, acc float64, errs int, blind bool) string {
+	if blind {
+		return fmt.Sprintf("raw %-3s", hudNum(raw))
+	}
 	return fmt.Sprintf("wpm %-3s · raw %-3s · acc %-4s · err %-3s",
 		hudNum(wpm), hudNum(raw), fmt.Sprintf("%.0f%%", acc), hudNum(float64(errs)))
 }
@@ -65,6 +74,19 @@ func hudTimer(session *engine.Session, cfg domain.TestConfig, elapsed time.Durat
 		label = formatClock(elapsed)
 	}
 	return fmt.Sprintf("%-*s", len(full), label)
+}
+
+// blindRevealEnd is the start of the word under the cursor: everything before
+// it is revealed, the word in progress stays hidden.
+func blindRevealEnd(target []rune, cursor int) int {
+	if cursor <= 0 {
+		return 0
+	}
+	start := cursor
+	for start > 0 && target[start-1] != ' ' {
+		start--
+	}
+	return start
 }
 
 func renderCapsWarn(theme Theme) string {

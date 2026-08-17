@@ -14,6 +14,8 @@ type TestFlags struct {
 	Mode        string
 	Punctuation bool
 	Numbers     bool
+	Blind       bool
+	Zen         bool
 	MinWPM      int
 	Seed        int64
 }
@@ -46,6 +48,8 @@ func ConfigFromFlags(f TestFlags) (domain.TestConfig, error) {
 		TextMode:    textMode,
 		Punctuation: f.Punctuation,
 		Numbers:     f.Numbers,
+		Blind:       f.Blind,
+		Zen:         f.Zen,
 		MinWPM:      f.MinWPM,
 		Seed:        f.Seed,
 	}

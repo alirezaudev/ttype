@@ -33,9 +33,9 @@ func TestHUDLiveLineKeepsFixedWidth(t *testing.T) {
 		{9999, 9999, 100, 9999},
 	}
 
-	want := len(hudLiveLine(0, 0, 0, 0))
+	want := len(hudLiveLine(0, 0, 0, 0, false))
 	for _, test := range tests {
-		line := hudLiveLine(test.wpm, test.raw, test.acc, test.errs)
+		line := hudLiveLine(test.wpm, test.raw, test.acc, test.errs, false)
 		if len(line) != want {
 			t.Errorf("hudLiveLine(%v) = %q, width %d, want %d", test, line, len(line), want)
 		}
@@ -108,5 +108,28 @@ func TestHUDNarrowWidthDropsLiveStats(t *testing.T) {
 	}
 	if !strings.Contains(hud, "1:00") {
 		t.Fatalf("HUD = %q, want the timer kept", hud)
+	}
+}
+
+func TestBlindHUDShowsRawOnly(t *testing.T) {
+	t.Parallel()
+
+	line := hudLiveLine(80, 90, 97, 4, true)
+	if strings.Contains(line, "wpm") || strings.Contains(line, "acc") || strings.Contains(line, "err") {
+		t.Fatalf("blind live line = %q, want raw only", line)
+	}
+	if !strings.Contains(line, "raw") {
+		t.Fatalf("blind live line = %q, want the raw speed", line)
+	}
+}
+
+func TestZenHUDIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60, Zen: true}
+	s, _ := newHUDSession(t, cfg)
+
+	if got := renderHUD(s, defaultTheme(), 76, cfg); got != "" {
+		t.Fatalf("zen HUD = %q, want empty", got)
 	}
 }

@@ -149,6 +149,8 @@ type testCLIFlags struct {
 	mode        string
 	punctuation bool
 	numbers     bool
+	blind       bool
+	zen         bool
 	minWPM      int
 	seed        int64
 }
@@ -162,6 +164,8 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().IntVar(&f.width, "width", 0, "Typing area width in characters")
 	cmd.Flags().BoolVar(&f.punctuation, "punctuation", false, "Inject punctuation between words")
 	cmd.Flags().BoolVar(&f.numbers, "numbers", false, "Inject numbers into word tests")
+	cmd.Flags().BoolVar(&f.blind, "blind", false, "Hide correctness while typing")
+	cmd.Flags().BoolVar(&f.zen, "zen", false, "Words only: no header, no hints")
 	cmd.Flags().IntVar(&f.minWPM, "min-wpm", 0, "Fail the test if WPM drops below this")
 	cmd.Flags().Int64Var(&f.seed, "seed", 0, "Random seed for word generation")
 }
@@ -217,6 +221,16 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		numbers = settings.Numbers
 	}
 
+	blind := f.blind
+	if !cmd.Flags().Changed("blind") {
+		blind = settings.Blind
+	}
+
+	zen := f.zen
+	if !cmd.Flags().Changed("zen") {
+		zen = settings.Zen
+	}
+
 	minWPM := f.minWPM
 	if !cmd.Flags().Changed("min-wpm") {
 		minWPM = settings.DefaultMinWPM
@@ -231,6 +245,8 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		Mode:        mode,
 		Punctuation: punctuation,
 		Numbers:     numbers,
+		Blind:       blind,
+		Zen:         zen,
 		MinWPM:      minWPM,
 		Seed:        f.seed,
 	})

@@ -105,6 +105,8 @@ type Settings struct {
 	DefaultMode      TextMode `json:"default_mode,omitempty"`
 	Punctuation      bool     `json:"default_punctuation,omitempty"`
 	Numbers          bool     `json:"default_numbers,omitempty"`
+	Blind            bool     `json:"default_blind,omitempty"`
+	Zen              bool     `json:"default_zen,omitempty"`
 	DefaultMinWPM    int      `json:"default_min_wpm,omitempty"`
 }
 
