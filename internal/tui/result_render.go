@@ -54,7 +54,7 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	)
 
 	elapsed := theme.Help.Render(formatClock(result.Duration) + " elapsed")
-	help := theme.Help.Render("tab/enter restart  C copy  S settings  L language")
+	help := theme.Help.Render(resultsHelpLine())
 
 	head := []string{
 		title,

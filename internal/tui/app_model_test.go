@@ -58,7 +58,7 @@ func TestOpenSettingsFromResult(t *testing.T) {
 		t.Fatalf("phase = %v, want phaseResult", m.phase)
 	}
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	next, _ := m.Update(runeKey('S'))
 	m = next.(AppModel)
 
 	if m.phase != phaseSettings {
@@ -72,7 +72,7 @@ func TestSettingsApplyRestarts(t *testing.T) {
 	m, clock := newAppModel(t)
 	m = finishTest(m, clock)
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	next, _ := m.Update(runeKey('S'))
 	m = next.(AppModel)
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -94,7 +94,7 @@ func TestSettingsCancelReturnsToTest(t *testing.T) {
 	next, _ := m.Update(tickMsg(time.Now().Add(1 * time.Second)))
 	m = next.(AppModel)
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS}) // settings
+	next, _ = m.Update(runeKey('S')) // settings
 	m = next.(AppModel)
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc}) // return back to test
@@ -111,7 +111,7 @@ func TestSettingsCancelReturnsToResult(t *testing.T) {
 	m, clock := newAppModel(t)
 	m = finishTest(m, clock)
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	next, _ := m.Update(runeKey('S'))
 	m = next.(AppModel)
 
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})

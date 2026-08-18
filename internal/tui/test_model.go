@@ -6,6 +6,7 @@ import (
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,19 +47,17 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.session.Tick()
 		return m, tick()
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "enter":
+		switch {
+		case key.Matches(msg, testKeys.Restart):
 			_ = m.session.Restart()
-			return m, nil
-		case "backspace":
+		case key.Matches(msg, testKeys.Backspace):
 			m.session.Backspace()
-		case "ctrl+w", "ctrl+h", "alt+ctrl+h", "alt+backspace":
+		case key.Matches(msg, testKeys.DeleteWord):
 			m.session.DeleteWord()
 		default:
-			if len(msg.Runes) == 0 || m.session.State() == domain.SessionFinished {
+			if len(msg.Runes) == 0 || msg.Alt || m.session.State() == domain.SessionFinished {
 				return m, nil
 			}
-
 			m.session.InputRune(msg.Runes[0])
 		}
 	}
@@ -80,6 +79,10 @@ func (m TestModel) View() string {
 	}
 	out.WriteByte('\n')
 	out.WriteString(m.hintLine())
+	if !m.cfg.Zen {
+		out.WriteString("\n\n")
+		out.WriteString(m.theme.Help.Render(testHelpLine()))
+	}
 	block := lipgloss.NewStyle().Width(m.typingWidth()).Render(out.String())
 	return m.center(block)
 }

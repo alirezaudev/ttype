@@ -8,6 +8,7 @@ import (
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/alirezaudev/ttype/internal/text/langcache"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -96,10 +97,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case OpenLanguagePickerMsg:
-		m.languagePicker = NewLanguagePicker(m.langCache, m.cfg.Language, m.theme)
-		m.languagePicker.setSize(m.width, m.height)
-		m.pushPhase(phaseLanguagePicker)
-		return m, m.languagePicker.Init()
+		return m, m.openLanguagePicker()
 	case clipboardCopiedMsg:
 		if msg.err != nil {
 			m.notice = errorNotice("clipboard unavailable — run ttype doctor")
@@ -108,46 +106,32 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
+		if isQuitKey(msg) {
 			return m, tea.Quit
-		case "esc":
+		}
+		// q and Q are typed input on the test screen, so only esc backs out there.
+		if isEscKey(msg) || (m.phase != phaseTest && isBackKey(msg)) {
 			return m, m.popPhase()
 		}
 
+		// Keystrokes still in flight when the timer fires must not press
+		// anything on the screen that just appeared.
 		if m.phase == phaseResult && m.inResultsGrace() {
 			return m, nil
 		}
 		m.notice = statusNotice{}
 
-		switch msg.String() {
-		case "enter", "tab":
-			if m.phase == phaseResult {
+		if m.phase == phaseResult {
+			switch {
+			case key.Matches(msg, resultsKeys.Restart):
 				return m, m.restartTest()
-			}
-		case "C":
-			if m.phase == phaseResult {
+			case key.Matches(msg, resultsKeys.Copy):
 				return m, copyResultCmd(m.result)
+			case key.Matches(msg, resultsKeys.Settings):
+				return m, m.openSettings()
+			case key.Matches(msg, resultsKeys.Language):
+				return m, m.openLanguagePicker()
 			}
-		case "S":
-			if m.phase == phaseResult {
-				m.settings = NewSettingsPanel(m.cfg, m.theme)
-				m.settings.setSize(m.width, m.height)
-				m.pushPhase(phaseSettings)
-				return m, nil
-			}
-		case "L":
-			if m.phase == phaseResult {
-				m.languagePicker = NewLanguagePicker(m.langCache, m.cfg.Language, m.theme)
-				m.languagePicker.setSize(m.width, m.height)
-				m.pushPhase(phaseLanguagePicker)
-				return m, m.languagePicker.Init()
-			}
-		case "ctrl+s":
-			m.settings = NewSettingsPanel(m.cfg, m.theme)
-			m.settings.setSize(m.width, m.height)
-			m.pushPhase(phaseSettings)
-			return m, nil
 		}
 	}
 
@@ -163,6 +147,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *AppModel) openSettings() tea.Cmd {
+	m.settings = NewSettingsPanel(m.cfg, m.theme)
+	m.settings.setSize(m.width, m.height)
+	m.pushPhase(phaseSettings)
+	return nil
+}
+
+func (m *AppModel) openLanguagePicker() tea.Cmd {
+	m.languagePicker = NewLanguagePicker(m.langCache, m.cfg.Language, m.theme)
+	m.languagePicker.setSize(m.width, m.height)
+	m.pushPhase(phaseLanguagePicker)
+	return m.languagePicker.Init()
 }
 
 func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/text/langcache"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,29 +47,29 @@ func (m *SettingsPanel) setSize(width, height int) { m.width, m.height = width, 
 func (m SettingsPanel) Init() tea.Cmd { return nil }
 
 func (m SettingsPanel) Update(msg tea.Msg) (SettingsPanel, tea.Cmd, bool, bool) {
-	key, ok := msg.(tea.KeyMsg)
+	keyMsg, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m, nil, false, false
 	}
-	switch key.String() {
-	case "esc", "q":
+	switch {
+	case key.Matches(keyMsg, pickerKeys.Cancel), isBackKey(keyMsg):
 		return m, nil, true, false
-	case "enter":
+	case key.Matches(keyMsg, pickerKeys.Confirm):
 		if m.field == settingsLanguage {
 			return m, func() tea.Msg { return OpenLanguagePickerMsg{} }, false, false
 		}
 		return m, nil, true, true
-	case "up", "k":
+	case key.Matches(keyMsg, pickerKeys.Up):
 		if m.field > 0 {
 			m.field--
 		}
-	case "down", "j":
+	case key.Matches(keyMsg, pickerKeys.Down):
 		if m.field < settingsLastField {
 			m.field++
 		}
-	case "left", "h":
+	case key.Matches(keyMsg, pickerKeys.Left):
 		m.adjust(-1)
-	case "right", "l":
+	case key.Matches(keyMsg, pickerKeys.Right):
 		m.adjust(1)
 	}
 	return m, nil, false, false
@@ -223,7 +224,7 @@ func (m SettingsPanel) View() string {
 		m.row("punct", toggleLabel(m.cfg.Punctuation), m.field == settingsPunctuation),
 		m.row("numbers", toggleLabel(m.cfg.Numbers), m.field == settingsNumbers),
 		"",
-		m.theme.Help.Render("↑/↓ field  ←/→ value  enter apply  language: enter picks  esc back"),
+		m.theme.Help.Render(helpLine(pickerKeys.Up, pickerKeys.Left, pickerKeys.Confirm, appKeys.Back)),
 	}
 	content := strings.Join(lines, "\n")
 	if m.width == 0 || m.height == 0 {
