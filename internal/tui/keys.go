@@ -24,6 +24,7 @@ type appKeymap struct {
 
 type testKeymap struct {
 	Restart    key.Binding
+	ToggleLive key.Binding
 	DeleteWord key.Binding
 	Backspace  key.Binding
 	Skip       key.Binding
@@ -53,7 +54,8 @@ var appKeys = appKeymap{
 }
 
 var testKeys = testKeymap{
-	Restart: key.NewBinding(key.WithKeys("tab", "enter"), key.WithHelp("tab/enter", "restart")),
+	Restart:    key.NewBinding(key.WithKeys("tab", "enter"), key.WithHelp("tab/enter", "restart")),
+	ToggleLive: key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "live stats")),
 	// ctrl+h is what most terminals send for ctrl+backspace; the alt variants
 	// cover option+backspace on macOS and alt+backspace on Linux.
 	DeleteWord: key.NewBinding(
@@ -92,7 +94,7 @@ func helpLine(bindings ...key.Binding) string {
 }
 
 func testHelpLine() string {
-	return helpLine(testKeys.Restart, appKeys.Exit, testKeys.DeleteWord)
+	return helpLine(testKeys.Restart, appKeys.Exit, testKeys.DeleteWord, testKeys.ToggleLive)
 }
 
 func resultsHelpLine() string {

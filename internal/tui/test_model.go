@@ -16,6 +16,7 @@ type TestModel struct {
 	cfg       domain.TestConfig
 	theme     Theme
 	capsProbe func() bool
+	hideLive  bool
 	width     int
 	height    int
 }
@@ -50,6 +51,8 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, testKeys.Restart):
 			_ = m.session.Restart()
+		case key.Matches(msg, testKeys.ToggleLive):
+			m.hideLive = !m.hideLive
 		case key.Matches(msg, testKeys.Backspace):
 			m.session.Backspace()
 		case key.Matches(msg, testKeys.DeleteWord):
@@ -69,7 +72,7 @@ func (m TestModel) View() string {
 	var out strings.Builder
 
 	if !m.cfg.Zen {
-		out.WriteString(renderHUD(m.session, m.theme, m.typingWidth(), m.cfg))
+		out.WriteString(renderHUD(m.session, m.theme, m.typingWidth(), m.cfg, m.hideLive))
 		out.WriteString("\n\n")
 	}
 	out.WriteString(m.renderWords())

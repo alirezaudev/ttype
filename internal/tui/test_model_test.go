@@ -161,3 +161,19 @@ func TestBlindModeHidesTheWordInProgress(t *testing.T) {
 		t.Fatalf("view = %q, want the committed word revealed", view)
 	}
 }
+
+func TestToggleLiveStatsHidesTheLiveLine(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
+	m := newTestModelFor(t, "the cat sat", cfg)
+	if !strings.Contains(stripANSI(m.View()), "wpm") {
+		t.Fatal("live stats missing from the default view")
+	}
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	m = next.(TestModel)
+	if strings.Contains(stripANSI(m.View()), "wpm") {
+		t.Fatal("live stats still shown after ctrl+o")
+	}
+}

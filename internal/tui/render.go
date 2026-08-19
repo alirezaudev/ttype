@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestConfig) string {
+func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestConfig, hideLive bool) string {
 	if cfg.Zen {
 		return ""
 	}
@@ -19,10 +19,12 @@ func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestC
 	live := session.LiveStats()
 	row := theme.HUDTime.Render(hudTimer(session, cfg, live.Elapsed))
 
-	_, errKeystrokes := session.Keystrokes()
-	line := hudLiveLine(live.WPM, live.RawWPM, live.Accuracy, errKeystrokes, cfg.Blind)
-	if lipgloss.Width(row)+2+len(line) <= width {
-		row += "  " + theme.Help.Render(line)
+	if !hideLive {
+		_, errKeystrokes := session.Keystrokes()
+		line := hudLiveLine(live.WPM, live.RawWPM, live.Accuracy, errKeystrokes, cfg.Blind)
+		if lipgloss.Width(row)+2+len(line) <= width {
+			row += "  " + theme.Help.Render(line)
+		}
 	}
 
 	brand := theme.HUDTitle.Render("ttype") +
