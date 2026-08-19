@@ -11,6 +11,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// OpenSettingsMsg lets an overlay hand the app model the phase switch.
+type OpenSettingsMsg struct{}
+
 type settingsField int
 
 const (

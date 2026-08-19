@@ -37,7 +37,7 @@ func TestEveryBindingHasKeysAndHelp(t *testing.T) {
 
 	bindings := []key.Binding{
 		appKeys.Quit, appKeys.Back, appKeys.Exit,
-		testKeys.Restart, testKeys.ToggleLive, testKeys.DeleteWord, testKeys.Backspace, testKeys.Skip,
+		testKeys.Help, testKeys.Restart, testKeys.ToggleLive, testKeys.DeleteWord, testKeys.Backspace, testKeys.Skip,
 		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings, resultsKeys.Language,
 		pickerKeys.Up, pickerKeys.Left, pickerKeys.Confirm, pickerKeys.Cancel,
 	}
@@ -55,7 +55,7 @@ func TestEveryBindingHasKeysAndHelp(t *testing.T) {
 func TestHelpLinesComeFromTheBindings(t *testing.T) {
 	t.Parallel()
 
-	if got, want := testHelpLine(), "tab/enter restart - esc/ctrl+c quit - ctrl+bksp/ctrl+w delete word - ctrl+o live stats"; got != want {
+	if got, want := testHelpLine(), "? help - tab/enter restart - esc/ctrl+c quit - ctrl+bksp/ctrl+w delete word - ctrl+o live stats"; got != want {
 		t.Fatalf("testHelpLine() = %q, want %q", got, want)
 	}
 	if got := resultsHelpLine(); !strings.Contains(got, "C copy result") {

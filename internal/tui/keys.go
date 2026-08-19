@@ -23,6 +23,7 @@ type appKeymap struct {
 }
 
 type testKeymap struct {
+	Help       key.Binding
 	Restart    key.Binding
 	ToggleLive key.Binding
 	DeleteWord key.Binding
@@ -54,6 +55,8 @@ var appKeys = appKeymap{
 }
 
 var testKeys = testKeymap{
+	// Dispatched only before the first keystroke; mid-test "?" is typed input.
+	Help:       key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 	Restart:    key.NewBinding(key.WithKeys("tab", "enter"), key.WithHelp("tab/enter", "restart")),
 	ToggleLive: key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "live stats")),
 	// ctrl+h is what most terminals send for ctrl+backspace; the alt variants
@@ -94,7 +97,7 @@ func helpLine(bindings ...key.Binding) string {
 }
 
 func testHelpLine() string {
-	return helpLine(testKeys.Restart, appKeys.Exit, testKeys.DeleteWord, testKeys.ToggleLive)
+	return helpLine(testKeys.Help, testKeys.Restart, appKeys.Exit, testKeys.DeleteWord, testKeys.ToggleLive)
 }
 
 func resultsHelpLine() string {

@@ -234,3 +234,44 @@ func TestNextKeyDismissesTheNotice(t *testing.T) {
 		t.Fatalf("notice = %+v, want it dismissed", m.notice)
 	}
 }
+
+func TestHelpOverlayOnlyOpensBeforeTyping(t *testing.T) {
+	t.Parallel()
+
+	m, _ := newAppModel(t)
+	next, _ := m.Update(runeKey('?'))
+	m = next.(AppModel)
+	if m.phase != phaseHelp {
+		t.Fatalf("phase = %v, want phaseHelp", m.phase)
+	}
+
+	next, _ = m.Update(runeKey('x'))
+	m = next.(AppModel)
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v after dismissing help, want phaseTest", m.phase)
+	}
+
+	m.test.session.InputRune('a')
+	next, _ = m.Update(runeKey('?'))
+	m = next.(AppModel)
+	if m.phase == phaseHelp {
+		t.Fatal("? opened the overlay mid-test instead of typing it")
+	}
+	if got := string(m.test.session.Input()); !strings.HasSuffix(got, "?") {
+		t.Fatalf("input = %q, want the ? typed", got)
+	}
+}
+
+func TestHelpOverlayListsTheBindings(t *testing.T) {
+	t.Parallel()
+
+	help := NewHelpOverlay(defaultTheme())
+	help.setSize(100, 40)
+	view := stripANSI(help.View())
+
+	for _, want := range []string{"ctrl+bksp/ctrl+w", "delete word", "C", "copy result", "--zen"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("help overlay missing %q", want)
+		}
+	}
+}
