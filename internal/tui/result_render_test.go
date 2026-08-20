@@ -114,3 +114,18 @@ func TestRenderResultStacksBelowSeventyColumns(t *testing.T) {
 		t.Fatalf("narrow layout should be taller than the wide one:\nnarrow:\n%s\nwide:\n%s", narrow, wide)
 	}
 }
+
+func TestRenderResultShowsTheMissedCharacters(t *testing.T) {
+	result := domain.Result{
+		Config:     domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},
+		CharErrors: map[string]int{"e": 4, "t": 2, " ": 1},
+	}
+
+	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 80, 30, statusNotice{}))
+
+	for _, want := range []string{"missed", "e×4", "t×2", "space×1"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("result screen missing %q:\n%s", want, out)
+		}
+	}
+}

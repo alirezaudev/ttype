@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/domain"
+	"github.com/alirezaudev/ttype/internal/stats"
 	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -50,6 +51,9 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	}
 
 	tail := []string{"", renderStatStrip(resultStats(result, theme), theme, max(width-4, 20))}
+	if heatmap := renderCharHeatmap(result.CharErrors, theme, 8); heatmap != "" {
+		tail = append(tail, "", heatmap)
+	}
 	tail = append(tail, "", theme.Help.Render(resultsHelpLine()))
 
 	parts := append([]string{}, head...)
@@ -157,6 +161,24 @@ func renderStatStrip(segments []string, theme Theme, maxWidth int) string {
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// renderCharHeatmap lists the characters that tripped you up most.
+func renderCharHeatmap(charErrors map[string]int, theme Theme, limit int) string {
+	top := stats.TopCharErrors(charErrors, limit)
+	if len(top) == 0 {
+		return ""
+	}
+
+	parts := make([]string, 0, len(top))
+	for _, e := range top {
+		char := e.Char
+		if char == " " {
+			char = "space"
+		}
+		parts = append(parts, fmt.Sprintf("%s×%d", char, e.Count))
+	}
+	return theme.HUD.Render("missed ") + theme.Help.Render(strings.Join(parts, "  "))
 }
 
 // Results saved before keystroke counting carry zeros, so fall back to the
