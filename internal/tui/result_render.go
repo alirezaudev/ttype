@@ -9,19 +9,20 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func resultSubtitle(cfg domain.TestConfig) string {
-	if cfg.Kind == domain.TestKindWords {
-		return fmt.Sprintf("%d words · words", cfg.WordCount)
-	}
-	return fmt.Sprintf("%ds · timed", cfg.Duration.Seconds())
-}
-
 const (
-	resultColWidth = 9
+	// Below this the hero stacks above the chart instead of sitting beside it.
+	resultSideBySideMinWidth = 70
 
 	resultChartMaxWidth  = 64
 	resultChartMaxHeight = 12
 )
+
+func resultSubtitle(cfg domain.TestConfig) string {
+	if cfg.IsWordsMode() {
+		return fmt.Sprintf("%d words · %s", cfg.WordCount, cfg.TextMode)
+	}
+	return fmt.Sprintf("%ds · %s", cfg.Duration.Seconds(), cfg.TextMode)
+}
 
 func pbNotice(pb storage.PBUpdate) string {
 	if pb.PrevWPM <= 0 {
@@ -31,72 +32,138 @@ func pbNotice(pb storage.PBUpdate) string {
 }
 
 func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width, height int, notice statusNotice) string {
-	title := theme.Finished.Render("Test Complete")
+	titleText := "Test Complete"
+	title := theme.Finished.Render(titleText)
 	if result.Failed {
 		title = theme.Incorrect.Render("Test Failed")
 	}
-	subtitle := theme.Help.Render(resultSubtitle(result.Config))
 
-	var header strings.Builder
-	for i, label := range []string{"wpm", "raw", "acc", "con", "err"} {
-		if i > 0 {
-			header.WriteString(" ")
-		}
-		header.WriteString(theme.HUDStatLabel(label).Render(fmt.Sprintf("%-*s", resultColWidth, label)))
-	}
-	headers := header.String()
-	values := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*d",
-		resultColWidth, fmt.Sprintf("%.2f", result.WPM),
-		resultColWidth, fmt.Sprintf("%.2f", result.RawWPM),
-		resultColWidth, fmt.Sprintf("%.2f%%", result.Accuracy),
-		resultColWidth, fmt.Sprintf("%.2f%%", result.Consistency),
-		resultColWidth, result.Incorrect,
-	)
-
-	elapsed := theme.Help.Render(formatClock(result.Duration) + " elapsed")
-	help := theme.Help.Render(resultsHelpLine())
-
-	head := []string{
-		title,
-		"",
-		subtitle,
-		"",
-		headers,
-		values,
-		"",
-		elapsed,
-	}
-
-	var tail []string
-	if result.Failed {
-		tail = append(tail, "", theme.Incorrect.Render("Failed: "+result.FailureReason))
+	head := []string{title, theme.Help.Render(resultSubtitle(result.Config))}
+	if result.Failed && result.FailureReason != "" {
+		head = append(head, theme.Incorrect.Render(result.FailureReason))
 	}
 	if pb.IsNew {
-		tail = append(tail, "", theme.Finished.Render(pbNotice(pb)))
+		head = append(head, theme.HUDValue.Render(pbNotice(pb)))
 	}
 	if !notice.empty() {
-		tail = append(tail, "", notice.render(theme))
+		head = append(head, notice.render(theme))
 	}
-	tail = append(tail, "", help)
 
-	lines := head
-	chart := renderResultChart(
-		result.WPMHistory,
-		result.RawWPMHistory,
-		result.ErrorHistory,
-		theme,
-		min(width-4, resultChartMaxWidth),
-		min(height-len(head)-len(tail)-1, resultChartMaxHeight),
-	)
-	if chart != "" {
-		lines = append(lines, "", chart)
-	}
-	lines = append(lines, tail...)
+	tail := []string{"", renderStatStrip(resultStats(result, theme), theme, max(width-4, 20))}
+	tail = append(tail, "", theme.Help.Render(resultsHelpLine()))
 
-	content := strings.Join(lines, "\n")
+	parts := append([]string{}, head...)
+	parts = append(parts, "", renderResultCenterpiece(result, theme, width, height-len(head)-len(tail)-2))
+	parts = append(parts, tail...)
 
+	content := lipgloss.JoinVertical(lipgloss.Center, parts...)
 	if width == 0 || height == 0 {
 		return content
 	}
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, content)
+}
+
+func renderResultCenterpiece(result domain.Result, theme Theme, width, budget int) string {
+	sideBySide := width >= resultSideBySideMinWidth
+	hero := renderResultHero(result, theme, sideBySide)
+
+	if sideBySide {
+		chart := renderResultChart(
+			result.WPMHistory, result.RawWPMHistory, result.ErrorHistory, theme,
+			min(width-lipgloss.Width(hero)-8, 72),
+			max(min(budget, 16), lipgloss.Height(hero)),
+		)
+		if chart == "" {
+			return hero
+		}
+		return lipgloss.JoinHorizontal(lipgloss.Center, hero, "    ", chart)
+	}
+
+	chart := renderResultChart(
+		result.WPMHistory, result.RawWPMHistory, result.ErrorHistory, theme,
+		min(width-4, resultChartMaxWidth),
+		min(budget-lipgloss.Height(hero)-1, resultChartMaxHeight),
+	)
+	if chart == "" {
+		return hero
+	}
+	return lipgloss.JoinVertical(lipgloss.Center, hero, "", chart)
+}
+
+// The two numbers that matter, stacked when they sit next to the chart.
+func renderResultHero(result domain.Result, theme Theme, stacked bool) string {
+	wpmValue := fmt.Sprintf("%.0f", result.WPM)
+	accValue := fmt.Sprintf("%.0f%%", result.Accuracy)
+
+	if !unicodeCapable() {
+		return theme.Help.Render("wpm ") + theme.HUDWPM.Render(wpmValue) +
+			theme.Help.Render("   acc ") + theme.HUDAcc.Render(accValue)
+	}
+
+	wpm := lipgloss.JoinVertical(lipgloss.Left,
+		theme.Help.Render("wpm"), renderBigDigits(wpmValue, theme.HUDWPM))
+	acc := lipgloss.JoinVertical(lipgloss.Left,
+		theme.Help.Render("acc"), renderBigDigits(accValue, theme.HUDAcc))
+
+	if stacked {
+		return lipgloss.JoinVertical(lipgloss.Left, wpm, "", acc)
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, wpm, "   ", acc)
+}
+
+func resultStats(result domain.Result, theme Theme) []string {
+	seg := func(label, value string) string {
+		return theme.Help.Render(label+" ") + theme.HUDValue.Render(value)
+	}
+
+	extra := result.TotalChars - result.Correct - result.Incorrect
+	if extra < 0 {
+		extra = 0
+	}
+
+	segments := []string{
+		seg("raw", fmt.Sprintf("%.0f", result.RawWPM)),
+		seg("consistency", fmt.Sprintf("%.0f%%", result.Consistency)),
+		seg("errors", fmt.Sprintf("%d", keystrokeErrors(result))),
+		seg("chars", fmt.Sprintf("%d/%d/%d/%d", result.Correct, result.Incorrect, extra, result.Skipped)),
+		seg("time", formatClock(result.Duration)),
+	}
+	if result.Seed != 0 {
+		segments = append(segments, seg("seed", fmt.Sprintf("%d", result.Seed)))
+	}
+	return segments
+}
+
+// renderStatStrip joins the segments with dots, wrapping when one would push
+// the line past maxWidth.
+func renderStatStrip(segments []string, theme Theme, maxWidth int) string {
+	sep := theme.Help.Render(" · ")
+
+	var lines []string
+	line := ""
+	for _, segment := range segments {
+		if line == "" {
+			line = segment
+			continue
+		}
+		if candidate := line + sep + segment; lipgloss.Width(candidate) <= maxWidth {
+			line = candidate
+			continue
+		}
+		lines = append(lines, line)
+		line = segment
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Results saved before keystroke counting carry zeros, so fall back to the
+// buffer count for those.
+func keystrokeErrors(result domain.Result) int {
+	if result.KeystrokesCorrect+result.KeystrokesIncorrect > 0 {
+		return result.KeystrokesIncorrect
+	}
+	return result.Incorrect
 }
