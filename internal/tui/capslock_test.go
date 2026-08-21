@@ -13,7 +13,7 @@ func TestCapsWarnReplacesTheStartHint(t *testing.T) {
 	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60, Width: 50}
 	s, _ := newHUDSession(t, cfg)
 
-	m := NewTestModel(s, cfg, defaultTheme())
+	m := NewTestModel(s, cfg, defaultTheme(), domain.VersionInfo{})
 	capsOn := false
 	m.capsProbe = func() bool { return capsOn }
 	m.setSize(100, 40)

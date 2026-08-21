@@ -19,7 +19,7 @@ func TestRenderResultContainsStats(t *testing.T) {
 		Config:    domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60, TextMode: domain.TextModeWords},
 	}
 
-	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 0, 0, statusNotice{}))
+	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 0, 0, domain.VersionInfo{}, statusNotice{}))
 
 	for _, want := range []string{"raw 135", "errors 7", "0:32", "60s", "words", "Test Complete"} {
 		if !strings.Contains(out, want) {
@@ -33,7 +33,7 @@ func TestRenderResultWordsSubtitle(t *testing.T) {
 		Config: domain.TestConfig{Kind: domain.TestKindWords, WordCount: 25, TextMode: domain.TextModeWords},
 	}
 
-	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 0, 0, statusNotice{}))
+	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 0, 0, domain.VersionInfo{}, statusNotice{}))
 
 	for _, want := range []string{"25 words", "words"} {
 		if !strings.Contains(out, want) {
@@ -53,7 +53,7 @@ func TestRenderResultChartFitsSmallTerminal(t *testing.T) {
 	}
 	pb := storage.PBUpdate{IsNew: true, Label: "words/30s", PrevWPM: 51}
 
-	out := renderResult(result, pb, defaultTheme(), 80, 24, errorNotice("result not saved"))
+	out := renderResult(result, pb, defaultTheme(), 80, 24, domain.VersionInfo{}, errorNotice("result not saved"))
 
 	if lines := strings.Split(out, "\n"); len(lines) != 24 {
 		t.Fatalf("height = %d, want 24:\n%s", len(lines), out)
@@ -68,7 +68,7 @@ func TestRenderResultCentered(t *testing.T) {
 		Config: domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60},
 	}
 
-	out := renderResult(result, storage.PBUpdate{}, defaultTheme(), 120, 40, statusNotice{})
+	out := renderResult(result, storage.PBUpdate{}, defaultTheme(), 120, 40, domain.VersionInfo{}, statusNotice{})
 
 	lines := strings.Split(out, "\n")
 	if len(lines) != 40 {
@@ -121,7 +121,7 @@ func TestRenderResultShowsTheMissedCharacters(t *testing.T) {
 		CharErrors: map[string]int{"e": 4, "t": 2, " ": 1},
 	}
 
-	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 80, 30, statusNotice{}))
+	out := stripANSI(renderResult(result, storage.PBUpdate{}, defaultTheme(), 80, 30, domain.VersionInfo{}, statusNotice{}))
 
 	for _, want := range []string{"missed", "e×4", "t×2", "space×1"} {
 		if !strings.Contains(out, want) {

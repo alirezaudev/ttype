@@ -42,7 +42,7 @@ func newTestModelFor(t *testing.T, target string, cfg domain.TestConfig) TestMod
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
-	m := NewTestModel(s, cfg, defaultTheme())
+	m := NewTestModel(s, cfg, defaultTheme(), domain.VersionInfo{})
 	m.capsProbe = nil
 	m.setSize(80, 24)
 	return m
@@ -74,7 +74,7 @@ func TestEnterMidTestDoesNotScheduleTick(t *testing.T) {
 	t.Parallel()
 
 	session, _ := newModelSession(t)
-	m := NewTestModel(session, domain.TestConfig{}, defaultTheme())
+	m := NewTestModel(session, domain.TestConfig{}, defaultTheme(), domain.VersionInfo{})
 	session.InputRune('a')
 
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -90,7 +90,7 @@ func TestEnterAfterFinishDoesNotScheduleTick(t *testing.T) {
 	t.Parallel()
 
 	session, clock := newModelSession(t)
-	m := NewTestModel(session, domain.TestConfig{}, defaultTheme())
+	m := NewTestModel(session, domain.TestConfig{}, defaultTheme(), domain.VersionInfo{})
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 	session.Tick()
@@ -108,7 +108,7 @@ func TestTickAlwaysReschedules(t *testing.T) {
 	t.Parallel()
 
 	session, clock := newModelSession(t)
-	m := NewTestModel(session, domain.TestConfig{}, defaultTheme())
+	m := NewTestModel(session, domain.TestConfig{}, defaultTheme(), domain.VersionInfo{})
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 

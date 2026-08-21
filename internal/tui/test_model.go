@@ -15,17 +15,19 @@ type TestModel struct {
 	session   *engine.Session
 	cfg       domain.TestConfig
 	theme     Theme
+	version   domain.VersionInfo
 	capsProbe func() bool
 	hideLive  bool
 	width     int
 	height    int
 }
 
-func NewTestModel(session *engine.Session, cfg domain.TestConfig, theme Theme) TestModel {
+func NewTestModel(session *engine.Session, cfg domain.TestConfig, theme Theme, ver domain.VersionInfo) TestModel {
 	return TestModel{
 		session:   session,
 		cfg:       cfg,
 		theme:     theme,
+		version:   ver,
 		capsProbe: newCapsLockMonitor().on,
 	}
 }
@@ -87,7 +89,11 @@ func (m TestModel) View() string {
 		out.WriteString(m.theme.Help.Render(testHelpLine()))
 	}
 	block := lipgloss.NewStyle().Width(m.typingWidth()).Render(out.String())
-	return m.center(block)
+	return composeWithBottomFooter(
+		block,
+		renderFooterSection(m.theme, m.cfg, m.version, m.width),
+		m.width, m.height,
+	)
 }
 
 func (m TestModel) renderWords() string {
@@ -170,13 +176,6 @@ func (m TestModel) capsWarnActive() bool {
 		return true
 	}
 	return m.session.CapsLockSuspected()
-}
-
-func (m TestModel) center(content string) string {
-	if m.width == 0 || m.height == 0 {
-		return content
-	}
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 }
 
 type tickMsg time.Time

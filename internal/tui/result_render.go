@@ -32,7 +32,7 @@ func pbNotice(pb storage.PBUpdate) string {
 	return fmt.Sprintf("New personal best for %s! (was %.2f)", pb.Label, pb.PrevWPM)
 }
 
-func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width, height int, notice statusNotice) string {
+func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width, height int, ver domain.VersionInfo, notice statusNotice) string {
 	titleText := "Test Complete"
 	title := theme.Finished.Render(titleText)
 	if result.Failed {
@@ -56,15 +56,17 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	}
 	tail = append(tail, "", theme.Help.Render(resultsHelpLine()))
 
+	footer := renderFooterSection(theme, result.Config, ver, width)
+	budget := height - len(head) - len(tail) - 2
+	if footer != "" {
+		budget -= lipgloss.Height(footer)
+	}
+
 	parts := append([]string{}, head...)
-	parts = append(parts, "", renderResultCenterpiece(result, theme, width, height-len(head)-len(tail)-2))
+	parts = append(parts, "", renderResultCenterpiece(result, theme, width, budget))
 	parts = append(parts, tail...)
 
-	content := lipgloss.JoinVertical(lipgloss.Center, parts...)
-	if width == 0 || height == 0 {
-		return content
-	}
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, content)
+	return composeWithBottomFooter(lipgloss.JoinVertical(lipgloss.Center, parts...), footer, width, height)
 }
 
 func renderResultCenterpiece(result domain.Result, theme Theme, width, budget int) string {

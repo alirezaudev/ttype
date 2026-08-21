@@ -44,7 +44,7 @@ func RunTest(cfg domain.TestConfig, store storage.Store) error {
 		Store:    store,
 		Session:  session,
 	})
-	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
+	if _, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}
 	return nil

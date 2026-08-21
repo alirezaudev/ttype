@@ -69,7 +69,7 @@ func NewAppModel(opts Options) AppModel {
 		store:     opts.Store,
 		version:   opts.Version,
 		theme:     theme,
-		test:      NewTestModel(opts.Session, opts.Config, theme),
+		test:      NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
 }
 
@@ -120,6 +120,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.notice = errorNotice("clipboard unavailable — run ttype doctor")
 		} else {
 			m.notice = infoNotice("Copied to clipboard")
+		}
+		return m, nil
+	case tea.MouseMsg:
+		return m, footerClickCmd(msg, m.width, m.height, m.cfg, m.version)
+	case browserOpenedMsg:
+		if msg.err != nil {
+			m.notice = errorNotice("could not open the browser")
 		}
 		return m, nil
 	case tea.KeyMsg:
@@ -314,7 +321,7 @@ func (m *AppModel) restartTest() tea.Cmd {
 	if err != nil {
 		return nil
 	}
-	m.test = NewTestModel(session, m.cfg, m.theme)
+	m.test = NewTestModel(session, m.cfg, m.theme, m.version)
 	m.test.setSize(m.width, m.height)
 	m.phase = phaseTest
 	m.navStack = nil
@@ -332,7 +339,7 @@ func (m AppModel) View() string {
 	case phaseHelp:
 		return m.help.View()
 	case phaseResult:
-		return renderResult(m.result, m.pbUpdate, m.theme, m.width, m.height, m.notice)
+		return renderResult(m.result, m.pbUpdate, m.theme, m.width, m.height, m.version, m.notice)
 	default:
 		return m.test.View()
 	}
