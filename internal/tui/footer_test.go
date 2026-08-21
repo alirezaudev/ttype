@@ -67,3 +67,45 @@ func TestFooterMarksAnAvailableUpdate(t *testing.T) {
 		t.Fatalf("version label = %q, want an update marker", updated)
 	}
 }
+
+func TestFooterStaysThreeRowsAtEveryWidth(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Theme: ThemeDefault}
+	ver := domain.VersionInfo{Local: "1.2.0"}
+
+	for width := 120; width >= 5; width-- {
+		section := renderFooterSection(defaultTheme(), cfg, ver, width)
+		if got := strings.Count(section, "\n") + 1; got != 3 {
+			t.Fatalf("width %d: footer has %d rows, want 3:\n%s", width, got, section)
+		}
+	}
+}
+
+// Whatever the layout drops must also stop being clickable, or a stray click
+// opens a link that is not on screen.
+func TestFooterClicksMatchWhatIsShown(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Theme: ThemeDefault}
+	ver := domain.VersionInfo{Local: "1.2.0"}
+
+	for _, width := range []int{80, 60, 45, 34, 24, 16, 8} {
+		shown := stripANSI(renderFooter(defaultTheme(), cfg, ver, width))
+		for x := 0; x < width; x++ {
+			url, ok := footerURLAt(x, 21, width, 24, cfg, ver)
+			if !ok {
+				continue
+			}
+			label := ""
+			for _, link := range footerLinks() {
+				if link.url == url {
+					label = link.label
+				}
+			}
+			if label != "" && !strings.Contains(shown, label) {
+				t.Fatalf("width %d: click at %d opens %q which is not rendered:\n%s", width, x, label, shown)
+			}
+		}
+	}
+}

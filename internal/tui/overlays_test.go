@@ -94,21 +94,33 @@ func TestSettingsPanelWidthFromAuto(t *testing.T) {
 	}
 }
 
+// Handles both SGR colours and the OSC 8 hyperlinks the footer emits, which
+// end with ST (ESC \) rather than 'm'.
 func stripANSI(s string) string {
 	var b strings.Builder
-	esc := false
+	esc, osc := false, false
 	for _, r := range s {
-		if esc {
-			if r == 'm' {
+		switch {
+		case esc:
+			if osc {
+				if r == '\\' {
+					esc, osc = false, false
+				}
+				continue
+			}
+			switch r {
+			case ']':
+				osc = true
+			case 'm':
+				esc = false
+			case '\\':
 				esc = false
 			}
-			continue
-		}
-		if r == '\x1b' {
+		case r == '\x1b':
 			esc = true
-			continue
+		default:
+			b.WriteRune(r)
 		}
-		b.WriteRune(r)
 	}
 	return b.String()
 }

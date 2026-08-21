@@ -37,33 +37,75 @@ func footerLinks() []footerLink {
 // the layout has to be computed once and shared by the renderer and the
 // hit-test — otherwise clicks land next to what they look like they hit.
 type footerLayout struct {
-	rowWidth  int
-	offset    int
-	leftWidth int
-	gap       int
+	links       []footerLink
+	showTheme   bool
+	showVersion bool
+	rowWidth    int
+	offset      int
+	leftWidth   int
+	gap         int
+	total       int
 }
 
+// The row must never wrap: a wrapped footer changes the section height and
+// every click then lands one row off. So drop content until it fits — links
+// go from the right, then the theme name, and the version label survives
+// last because it carries the update notice.
 func footerLayoutFor(cfg domain.TestConfig, ver domain.VersionInfo, viewWidth int) footerLayout {
 	rowWidth := max(viewWidth, 1)
+	all := footerLinks()
 
-	labels := make([]string, 0, len(footerLinks()))
-	for _, link := range footerLinks() {
+	for _, candidate := range []struct {
+		links int
+		theme bool
+	}{
+		{len(all), true}, {3, true}, {2, true}, {1, true}, {1, false}, {0, false},
+	} {
+		l := measureFooter(cfg, ver, rowWidth, all[:candidate.links], candidate.theme)
+		if l.total <= rowWidth {
+			return l
+		}
+	}
+	return footerLayout{rowWidth: rowWidth}
+}
+
+func measureFooter(cfg domain.TestConfig, ver domain.VersionInfo, rowWidth int, links []footerLink, showTheme bool) footerLayout {
+	labels := make([]string, 0, len(links))
+	for _, link := range links {
 		labels = append(labels, link.label)
 	}
 	left := strings.Join(labels, "  ")
-	right := cfg.Theme + "  " + versionLabel(ver)
 
-	gap := 4
-	if len(left)+len(right)+gap < 40 {
-		gap = 8
+	right := versionLabel(ver)
+	if showTheme {
+		right = cfg.Theme + "  " + right
+	}
+
+	gap := 0
+	if left != "" {
+		gap = 4
+		if len(left)+len(right)+gap < 40 {
+			gap = 8
+		}
 	}
 
 	leftWidth := runewidth.StringWidth(left)
-	offset := (rowWidth - leftWidth - gap - runewidth.StringWidth(right)) / 2
+	total := leftWidth + gap + runewidth.StringWidth(right)
+	offset := (rowWidth - total) / 2
 	if offset < 0 {
 		offset = 0
 	}
-	return footerLayout{rowWidth: rowWidth, offset: offset, leftWidth: leftWidth, gap: gap}
+
+	return footerLayout{
+		links:       links,
+		showTheme:   showTheme,
+		showVersion: true,
+		rowWidth:    rowWidth,
+		offset:      offset,
+		leftWidth:   leftWidth,
+		gap:         gap,
+		total:       total,
+	}
 }
 
 func versionLabel(ver domain.VersionInfo) string {
@@ -91,9 +133,13 @@ func hyperlink(url, text string) string {
 
 func renderFooter(theme Theme, cfg domain.TestConfig, ver domain.VersionInfo, width int) string {
 	l := footerLayoutFor(cfg, ver, width)
+	row := lipgloss.NewStyle().Width(l.rowWidth).Align(lipgloss.Center)
+	if !l.showVersion {
+		return row.Render("")
+	}
 
-	left := make([]string, 0, len(footerLinks()))
-	for _, link := range footerLinks() {
+	left := make([]string, 0, len(l.links))
+	for _, link := range l.links {
 		left = append(left, hyperlink(link.url, theme.Footer.Underline(true).Render(link.label)))
 	}
 
@@ -101,11 +147,16 @@ func renderFooter(theme Theme, cfg domain.TestConfig, ver domain.VersionInfo, wi
 	if ver.UpdateAvailable {
 		versionStyle = theme.Finished.Underline(true)
 	}
-	right := theme.Footer.Render(cfg.Theme) + "  " +
-		hyperlink(GitHubURL+"/releases", versionStyle.Render(versionLabel(ver)))
+	right := hyperlink(GitHubURL+"/releases", versionStyle.Render(versionLabel(ver)))
+	if l.showTheme {
+		right = theme.Footer.Render(cfg.Theme) + "  " + right
+	}
 
-	line := strings.Join(left, "  ") + strings.Repeat(" ", l.gap) + right
-	return lipgloss.NewStyle().Width(l.rowWidth).Align(lipgloss.Center).Render(line)
+	line := strings.Join(left, "  ")
+	if line != "" {
+		line += strings.Repeat(" ", l.gap)
+	}
+	return row.Render(line + right)
 }
 
 func renderFooterSection(theme Theme, cfg domain.TestConfig, ver domain.VersionInfo, width int) string {
@@ -116,9 +167,21 @@ func renderFooterSection(theme Theme, cfg domain.TestConfig, ver domain.VersionI
 		lipgloss.Center,
 		renderFooter(theme, cfg, ver, width),
 		"",
-		lipgloss.NewStyle().Width(max(width, 1)).Align(lipgloss.Center).
-			Render(theme.Help.Render("click footer links - u update")),
+		footerHelp(theme, width),
 	)
+}
+
+// The hint degrades too, or it wraps where the links row no longer does.
+func footerHelp(theme Theme, width int) string {
+	rowWidth := max(width, 1)
+	text := ""
+	for _, candidate := range []string{"click footer links - u update", "u update"} {
+		if runewidth.StringWidth(candidate) <= rowWidth {
+			text = candidate
+			break
+		}
+	}
+	return lipgloss.NewStyle().Width(rowWidth).Align(lipgloss.Center).Render(theme.Help.Render(text))
 }
 
 // footerURLAt maps a click to a link. The links row is the third from the
@@ -130,7 +193,7 @@ func footerURLAt(x, y, viewWidth, viewHeight int, cfg domain.TestConfig, ver dom
 
 	l := footerLayoutFor(cfg, ver, viewWidth)
 	col := l.offset
-	for _, link := range footerLinks() {
+	for _, link := range l.links {
 		w := runewidth.StringWidth(link.label)
 		if x >= col && x < col+w {
 			return link.url, true
@@ -138,7 +201,13 @@ func footerURLAt(x, y, viewWidth, viewHeight int, cfg domain.TestConfig, ver dom
 		col += w + 2
 	}
 
-	versionStart := l.offset + l.leftWidth + l.gap + runewidth.StringWidth(cfg.Theme) + 2
+	if !l.showVersion {
+		return "", false
+	}
+	versionStart := l.offset + l.leftWidth + l.gap
+	if l.showTheme {
+		versionStart += runewidth.StringWidth(cfg.Theme) + 2
+	}
 	if x >= versionStart && x < versionStart+runewidth.StringWidth(versionLabel(ver)) {
 		return GitHubURL + "/releases", true
 	}
