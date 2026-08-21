@@ -275,3 +275,30 @@ func TestHelpOverlayListsTheBindings(t *testing.T) {
 		}
 	}
 }
+
+func TestModePickerAppliesAndRestarts(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m = finishTest(m, clock)
+
+	next, _ := m.Update(runeKey('M'))
+	m = next.(AppModel)
+	if m.phase != phaseModePicker {
+		t.Fatalf("phase = %v, want phaseModePicker", m.phase)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = next.(AppModel)
+	picked := m.modePicker.Selected()
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+
+	if m.cfg.TextMode != picked {
+		t.Fatalf("mode = %q, want %q", m.cfg.TextMode, picked)
+	}
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v after picking a mode, want phaseTest", m.phase)
+	}
+}

@@ -21,6 +21,7 @@ const (
 	phaseResult
 	phaseSettings
 	phaseLanguagePicker
+	phaseModePicker
 	phaseHelp
 )
 
@@ -42,6 +43,7 @@ type AppModel struct {
 	notice         statusNotice
 	settings       SettingsPanel
 	languagePicker LanguagePicker
+	modePicker     ModePicker
 	help           HelpOverlay
 	theme          Theme
 	version        domain.VersionInfo
@@ -74,7 +76,7 @@ func NewAppModel(opts Options) AppModel {
 }
 
 func (m *AppModel) sizables() []sizable {
-	return []sizable{&m.test, &m.settings, &m.languagePicker, &m.help}
+	return []sizable{&m.test, &m.settings, &m.languagePicker, &m.modePicker, &m.help}
 }
 
 func (m *AppModel) pushPhase(next appPhase) {
@@ -115,6 +117,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.openLanguagePicker()
 	case OpenSettingsMsg:
 		return m, m.openSettings()
+	case OpenModePickerMsg:
+		return m, m.openModePicker()
 	case clipboardCopiedMsg:
 		if msg.err != nil {
 			m.notice = errorNotice("clipboard unavailable — run ttype doctor")
@@ -160,6 +164,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, copyResultCmd(m.result)
 			case key.Matches(msg, resultsKeys.Settings):
 				return m, m.openSettings()
+			case key.Matches(msg, resultsKeys.Mode):
+				return m, m.openModePicker()
 			case key.Matches(msg, resultsKeys.Language):
 				return m, m.openLanguagePicker()
 			}
@@ -175,6 +181,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateSettings(msg)
 	case phaseLanguagePicker:
 		return m.updateLanguagePicker(msg)
+	case phaseModePicker:
+		return m.updateModePicker(msg)
 	case phaseHelp:
 		return m.updateHelp(msg)
 	}
@@ -196,6 +204,13 @@ func (m *AppModel) openHelp() tea.Cmd {
 	return nil
 }
 
+func (m *AppModel) openModePicker() tea.Cmd {
+	m.modePicker = NewModePicker(m.cfg.TextMode, m.theme)
+	m.modePicker.setSize(m.width, m.height)
+	m.pushPhase(phaseModePicker)
+	return nil
+}
+
 func (m *AppModel) openLanguagePicker() tea.Cmd {
 	m.languagePicker = NewLanguagePicker(m.langCache, m.cfg.Language, m.theme)
 	m.languagePicker.setSize(m.width, m.height)
@@ -214,6 +229,20 @@ func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settings.cfg.Language = m.cfg.Language
 	}
 	return m, tea.Batch(cmd, m.popPhase())
+}
+
+func (m AppModel) updateModePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd, done, apply := m.modePicker.Update(msg)
+	m.modePicker = next
+	if !done {
+		return m, cmd
+	}
+	if !apply {
+		return m, tea.Batch(cmd, m.popPhase())
+	}
+	m.cfg.TextMode = m.modePicker.Selected()
+	m.persistConfigDefaults()
+	return m, tea.Batch(cmd, m.restartTest())
 }
 
 func (m AppModel) updateHelp(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -336,6 +365,8 @@ func (m AppModel) View() string {
 		return m.settings.View()
 	case phaseLanguagePicker:
 		return m.languagePicker.View()
+	case phaseModePicker:
+		return m.modePicker.View()
 	case phaseHelp:
 		return m.help.View()
 	case phaseResult:
