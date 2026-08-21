@@ -24,7 +24,7 @@ func newAppModel(t *testing.T) (AppModel, *engine.FakeClock) {
 	if err != nil {
 		t.Fatalf("NewSession: %v", err)
 	}
-	return NewAppModel(cfg, source, nil, session, nil), clock
+	return NewAppModel(Options{Config: cfg, Provider: source, Session: session}), clock
 }
 
 func finishTest(m AppModel, clock *engine.FakeClock) AppModel {

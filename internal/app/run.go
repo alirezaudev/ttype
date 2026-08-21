@@ -37,7 +37,13 @@ func RunTest(cfg domain.TestConfig, store storage.Store) error {
 		return fmt.Errorf("start session: %w", err)
 	}
 
-	model := tui.NewAppModel(cfg, provider, provider.LanguageCache(), session, store)
+	model := tui.NewAppModel(tui.Options{
+		Config:   cfg,
+		Provider: provider,
+		Cache:    provider.LanguageCache(),
+		Store:    store,
+		Session:  session,
+	})
 	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}

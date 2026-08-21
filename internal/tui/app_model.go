@@ -44,19 +44,32 @@ type AppModel struct {
 	languagePicker LanguagePicker
 	help           HelpOverlay
 	theme          Theme
+	version        domain.VersionInfo
 	width          int
 	height         int
 }
 
-func NewAppModel(cfg domain.TestConfig, provider engine.TextSource, cache *langcache.Cache, session *engine.Session, store storage.Store) AppModel {
-	theme := ResolveTheme(cfg.Theme)
+// Options carries everything the app model needs from the composition root.
+// tui never imports app, so the wiring comes in through here.
+type Options struct {
+	Config   domain.TestConfig
+	Provider engine.TextSource
+	Cache    *langcache.Cache
+	Store    storage.Store
+	Session  *engine.Session
+	Version  domain.VersionInfo
+}
+
+func NewAppModel(opts Options) AppModel {
+	theme := ResolveTheme(opts.Config.Theme)
 	return AppModel{
-		cfg:       cfg,
-		provider:  provider,
-		langCache: cache,
-		store:     store,
+		cfg:       opts.Config,
+		provider:  opts.Provider,
+		langCache: opts.Cache,
+		store:     opts.Store,
+		version:   opts.Version,
 		theme:     theme,
-		test:      NewTestModel(session, cfg, theme),
+		test:      NewTestModel(opts.Session, opts.Config, theme),
 	}
 }
 
