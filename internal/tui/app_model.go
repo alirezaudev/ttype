@@ -17,7 +17,8 @@ const resultsKeyGrace = 700 * time.Millisecond
 type appPhase int
 
 const (
-	phaseTest appPhase = iota
+	phaseWelcome appPhase = iota
+	phaseTest
 	phaseResult
 	phaseSettings
 	phaseLanguagePicker
@@ -44,6 +45,7 @@ type AppModel struct {
 	settings       SettingsPanel
 	languagePicker LanguagePicker
 	modePicker     ModePicker
+	welcome        Welcome
 	help           HelpOverlay
 	theme          Theme
 	version        domain.VersionInfo
@@ -60,11 +62,12 @@ type Options struct {
 	Store    storage.Store
 	Session  *engine.Session
 	Version  domain.VersionInfo
+	Welcome  bool
 }
 
 func NewAppModel(opts Options) AppModel {
 	theme := ResolveTheme(opts.Config.Theme)
-	return AppModel{
+	m := AppModel{
 		cfg:       opts.Config,
 		provider:  opts.Provider,
 		langCache: opts.Cache,
@@ -73,10 +76,17 @@ func NewAppModel(opts Options) AppModel {
 		theme:     theme,
 		test:      NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
+	if opts.Welcome {
+		m.phase = phaseWelcome
+		m.welcome = NewWelcome(opts.Config, theme)
+	} else {
+		m.phase = phaseTest
+	}
+	return m
 }
 
 func (m *AppModel) sizables() []sizable {
-	return []sizable{&m.test, &m.settings, &m.languagePicker, &m.modePicker, &m.help}
+	return []sizable{&m.test, &m.settings, &m.languagePicker, &m.modePicker, &m.welcome, &m.help}
 }
 
 func (m *AppModel) pushPhase(next appPhase) {
@@ -137,6 +147,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if isQuitKey(msg) {
 			return m, tea.Quit
 		}
+		// The welcome screen is the root: it owns esc, which confirms.
+		if m.phase == phaseWelcome {
+			return m.updateWelcome(msg)
+		}
 		// q and Q are typed input on the test screen, so only esc backs out there.
 		if isEscKey(msg) || (m.phase != phaseTest && isBackKey(msg)) {
 			return m, m.popPhase()
@@ -173,6 +187,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.phase {
+	case phaseWelcome:
+		return m.updateWelcome(msg)
 	case phaseTest:
 		return m.updateTest(msg)
 	case phaseResult:
@@ -229,6 +245,32 @@ func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settings.cfg.Language = m.cfg.Language
 	}
 	return m, tea.Batch(cmd, m.popPhase())
+}
+
+func (m AppModel) updateWelcome(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd, done := m.welcome.Update(msg)
+	m.welcome = next
+	if !done {
+		return m, cmd
+	}
+
+	m.cfg = m.welcome.Config()
+	m.theme = ResolveTheme(m.cfg.Theme)
+	m.persistConfigDefaults()
+	m.markOnboarded()
+	return m, tea.Batch(cmd, m.restartTest())
+}
+
+func (m *AppModel) markOnboarded() {
+	if m.store == nil {
+		return
+	}
+	settings, err := m.store.LoadSettings()
+	if err != nil {
+		return
+	}
+	settings.Onboarded = true
+	_ = m.store.SaveSettings(settings)
 }
 
 func (m AppModel) updateModePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -361,6 +403,8 @@ func (m *AppModel) restartTest() tea.Cmd {
 
 func (m AppModel) View() string {
 	switch m.phase {
+	case phaseWelcome:
+		return m.welcome.View()
 	case phaseSettings:
 		return m.settings.View()
 	case phaseLanguagePicker:

@@ -108,6 +108,7 @@ type Settings struct {
 	Blind            bool     `json:"default_blind,omitempty"`
 	Zen              bool     `json:"default_zen,omitempty"`
 	DefaultMinWPM    int      `json:"default_min_wpm,omitempty"`
+	Onboarded        bool     `json:"onboarded,omitempty"`
 }
 
 func DefaultSettings() Settings {

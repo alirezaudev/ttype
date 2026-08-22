@@ -302,3 +302,25 @@ func TestModePickerAppliesAndRestarts(t *testing.T) {
 		t.Fatalf("phase = %v after picking a mode, want phaseTest", m.phase)
 	}
 }
+
+func TestWelcomeAppliesDefaultsAndStartsTheTest(t *testing.T) {
+	t.Parallel()
+
+	m, _ := newAppModel(t)
+	m.phase = phaseWelcome
+	m.welcome = NewWelcome(m.cfg, m.theme)
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m = next.(AppModel)
+	picked := m.welcome.Config().TextMode
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v after the welcome screen, want phaseTest", m.phase)
+	}
+	if m.cfg.TextMode != picked {
+		t.Fatalf("mode = %q, want %q", m.cfg.TextMode, picked)
+	}
+}

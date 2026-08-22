@@ -37,7 +37,13 @@ func RunTest(cfg domain.TestConfig, store storage.Store) error {
 		return fmt.Errorf("start session: %w", err)
 	}
 
+	settings, err := store.LoadSettings()
+	if err != nil {
+		return fmt.Errorf("load settings: %w", err)
+	}
+
 	model := tui.NewAppModel(tui.Options{
+		Welcome:  !settings.Onboarded,
 		Config:   cfg,
 		Provider: provider,
 		Cache:    provider.LanguageCache(),
