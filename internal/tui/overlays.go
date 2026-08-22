@@ -25,10 +25,13 @@ const (
 	settingsTheme
 	settingsPunctuation
 	settingsNumbers
+	settingsBlind
+	settingsZen
+	settingsMinWPM
 )
 
 const (
-	settingsLastField  = settingsNumbers
+	settingsLastField  = settingsMinWPM
 	settingsLabelWidth = 10
 	settingsValueWidth = 10
 )
@@ -152,6 +155,18 @@ func (m *SettingsPanel) adjust(dir int) {
 		m.cfg.Punctuation = !m.cfg.Punctuation
 	case settingsNumbers:
 		m.cfg.Numbers = !m.cfg.Numbers
+	case settingsBlind:
+		m.cfg.Blind = !m.cfg.Blind
+	case settingsZen:
+		m.cfg.Zen = !m.cfg.Zen
+	case settingsMinWPM:
+		m.cfg.MinWPM += dir * 5
+		if m.cfg.MinWPM < 0 {
+			m.cfg.MinWPM = 0
+		}
+		if m.cfg.MinWPM > 300 {
+			m.cfg.MinWPM = 300
+		}
 	}
 }
 
@@ -197,6 +212,13 @@ func (m SettingsPanel) widthLabel() string {
 	return fmt.Sprintf("%d", m.cfg.Width)
 }
 
+func (m SettingsPanel) minWPMLabel() string {
+	if m.cfg.MinWPM <= 0 {
+		return "off"
+	}
+	return fmt.Sprintf("%d", m.cfg.MinWPM)
+}
+
 func (m SettingsPanel) themeLabel() string {
 	if m.cfg.Theme == "" {
 		return ThemeDefault
@@ -226,6 +248,9 @@ func (m SettingsPanel) View() string {
 		m.row("theme", m.themeLabel(), m.field == settingsTheme),
 		m.row("punct", toggleLabel(m.cfg.Punctuation), m.field == settingsPunctuation),
 		m.row("numbers", toggleLabel(m.cfg.Numbers), m.field == settingsNumbers),
+		m.row("blind", toggleLabel(m.cfg.Blind), m.field == settingsBlind),
+		m.row("zen", toggleLabel(m.cfg.Zen), m.field == settingsZen),
+		m.row("min wpm", m.minWPMLabel(), m.field == settingsMinWPM),
 		"",
 		m.theme.Help.Render(helpLine(pickerKeys.Up, pickerKeys.Left, pickerKeys.Confirm, appKeys.Back)),
 	}

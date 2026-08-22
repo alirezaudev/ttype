@@ -374,6 +374,9 @@ func (m *AppModel) persistConfigDefaults() {
 	settings.DefaultMode = m.cfg.TextMode
 	settings.Punctuation = m.cfg.Punctuation
 	settings.Numbers = m.cfg.Numbers
+	settings.Blind = m.cfg.Blind
+	settings.Zen = m.cfg.Zen
+	settings.DefaultMinWPM = m.cfg.MinWPM
 	if m.cfg.IsWordsMode() {
 		settings.DefaultWordCount = m.cfg.WordCount
 	} else {

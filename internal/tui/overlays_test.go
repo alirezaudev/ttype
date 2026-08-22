@@ -138,3 +138,29 @@ func TestSettingsPanelWidthLeftToAutoAtZero(t *testing.T) {
 		t.Fatalf("width = %d, want 0 (auto)", p.cfg.Width)
 	}
 }
+
+func TestSettingsPanelCoversTheNewOptions(t *testing.T) {
+	t.Parallel()
+
+	p := NewSettingsPanel(domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60}, defaultTheme())
+	view := stripANSI(p.View())
+
+	for _, want := range []string{"blind", "zen", "min wpm", "off"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("settings panel missing %q:\n%s", want, view)
+		}
+	}
+
+	p.field = settingsMinWPM
+	p.adjust(1)
+	p.adjust(1)
+	if p.cfg.MinWPM != 10 {
+		t.Fatalf("min wpm = %d, want 10", p.cfg.MinWPM)
+	}
+	p.adjust(-1)
+	p.adjust(-1)
+	p.adjust(-1)
+	if p.cfg.MinWPM != 0 {
+		t.Fatalf("min wpm = %d, want it to stop at 0", p.cfg.MinWPM)
+	}
+}
