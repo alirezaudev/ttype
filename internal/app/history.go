@@ -8,6 +8,9 @@ import (
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/alirezaudev/ttype/internal/text/langcache"
+	"github.com/alirezaudev/ttype/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
+	"golang.org/x/term"
 )
 
 func RunHistory(store storage.Store, limit int, plain bool) error {
@@ -16,9 +19,20 @@ func RunHistory(store storage.Store, limit int, plain bool) error {
 		return fmt.Errorf("load history: %w", err)
 	}
 
-	_ = plain
+	if plain || !term.IsTerminal(int(os.Stdout.Fd())) {
+		printHistoryTable(os.Stdout, results)
+		return nil
+	}
 
-	printHistoryTable(os.Stdout, results)
+	settings, err := store.LoadSettings()
+	if err != nil {
+		return fmt.Errorf("load settings: %w", err)
+	}
+
+	model := tui.NewHistoryModel(store, results, tui.ResolveTheme(settings.Theme))
+	if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
+		return fmt.Errorf("tui: %w", err)
+	}
 	return nil
 }
 
