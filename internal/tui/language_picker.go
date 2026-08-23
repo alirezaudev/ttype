@@ -6,6 +6,7 @@ import (
 	"github.com/alirezaudev/ttype/internal/text/langcache"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 type OpenLanguagePickerMsg struct{}
@@ -201,16 +202,29 @@ func languageWindow(ids []string, idx, height int, theme Theme, cache *langcache
 		}
 	}
 
+	// The rows are centered as a block, so the downloaded mark has to sit in
+	// its own column: pad every name to the widest one first, otherwise the
+	// ticks scatter across the list.
+	nameWidth := 0
+	for i := start; i < end; i++ {
+		if w := runewidth.StringWidth(langcache.DisplayName(ids[i])); w > nameWidth {
+			nameWidth = w
+		}
+	}
+
 	var lines []string
 	for i := start; i < end; i++ {
 		prefix := "  "
 		if i == idx {
 			prefix = "> "
 		}
-		label := langcache.DisplayName(ids[i])
+
+		name := langcache.DisplayName(ids[i])
+		mark := " "
 		if cache != nil && ids[i] != "" && cache.Cached(ids[i]) {
-			label += " ✓"
+			mark = "✓"
 		}
+		label := name + strings.Repeat(" ", nameWidth-runewidth.StringWidth(name)) + "  " + mark
 		lines = append(lines, prefix+theme.HUDValue.Render(label))
 	}
 	return lines

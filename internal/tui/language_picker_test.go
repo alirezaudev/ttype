@@ -1,9 +1,14 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/alirezaudev/ttype/internal/text/langcache"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mattn/go-runewidth"
 )
 
 func loadedPicker(t *testing.T, current string, ids ...string) LanguagePicker {
@@ -93,5 +98,44 @@ func TestLanguagePickerBuiltInComesFirst(t *testing.T) {
 
 	if p.filtered[0] != "" {
 		t.Fatalf("first entry = %q, want the built-in list", p.filtered[0])
+	}
+}
+
+func TestLanguageWindowKeepsTheMarkInOneColumn(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	cache := langcache.New(dir)
+	if err := os.MkdirAll(cache.Dir(), 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	cached := filepath.Join(cache.Dir(), "english_1k.json")
+	if err := os.WriteFile(cached, []byte(`{"name":"english_1k","words":["one"]}`), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	ids := []string{"", "english_1k", "spanish"}
+	rows := languageWindow(ids, 0, 30, defaultTheme(), cache)
+
+	width := -1
+	for _, row := range rows {
+		got := runewidth.StringWidth(stripANSI(row))
+		if width == -1 {
+			width = got
+			continue
+		}
+		if got != width {
+			t.Fatalf("rows are ragged:\n%s", strings.Join(rows, "\n"))
+		}
+	}
+
+	marked := 0
+	for _, row := range rows {
+		if strings.HasSuffix(stripANSI(row), "✓") {
+			marked++
+		}
+	}
+	if marked != 1 {
+		t.Fatalf("marked rows = %d, want 1:\n%s", marked, strings.Join(rows, "\n"))
 	}
 }
