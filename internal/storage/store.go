@@ -1,6 +1,10 @@
 package storage
 
-import "github.com/alirezaudev/ttype/internal/domain"
+import (
+	"io"
+
+	"github.com/alirezaudev/ttype/internal/domain"
+)
 
 const maxHistoryEntries = 1000
 
@@ -12,6 +16,8 @@ type Store interface {
 	ListResults(limit int) ([]domain.Result, error)
 	LoadBests() (domain.PersonalBests, error)
 	Summary(domain.StatsFilter) (domain.StatsSummary, error)
+	Trend(domain.StatsFilter) ([]float64, error)
+	ExportCSV(io.Writer, domain.StatsFilter) error
 }
 
 // Replays stay off Store so a store that only keeps results is still usable;
