@@ -83,8 +83,8 @@ func newHistoryCmd() *cobra.Command {
 }
 
 func newStatsCmd() *cobra.Command {
-	var mode string
-	var excludeFailed bool
+	var mode, export string
+	var excludeFailed, trend bool
 
 	cmd := &cobra.Command{
 		Use:               "stats",
@@ -104,11 +104,21 @@ func newStatsCmd() *cobra.Command {
 				}
 				filter.TextMode = &textMode
 			}
-			return app.RunStats(store, filter)
+
+			if export != "" && export != "csv" {
+				return fmt.Errorf("unknown export format %q (only csv)", export)
+			}
+			return app.RunStats(store, app.StatsOptions{
+				Filter:    filter,
+				Trend:     trend,
+				ExportCSV: export == "csv",
+			})
 		},
 	}
 	cmd.Flags().StringVar(&mode, "mode", "", "Filter stats by text mode")
 	cmd.Flags().BoolVar(&excludeFailed, "exclude-failed", false, "Exclude failed tests from stats")
+	cmd.Flags().BoolVar(&trend, "trend", false, "Show a sparkline of wpm over time")
+	cmd.Flags().StringVar(&export, "export", "", "Export the history instead of printing stats (csv)")
 
 	return cmd
 }
