@@ -42,11 +42,83 @@ func newRootCmd() *cobra.Command {
 	cmd.Version = version
 	bindTestFlags(cmd, flags)
 
+	cmd.AddCommand(newConfigCmd())
 	cmd.AddCommand(newHistoryCmd())
 	cmd.AddCommand(newStatsCmd())
 	cmd.AddCommand(newLanguagesCmd())
 
 	registerCompletions(cmd)
+
+	return cmd
+}
+
+func newConfigCmd() *cobra.Command {
+	var (
+		duration, wordCount, width, minWPM int
+		mode, language, theme              string
+		punctuation, numbers, blind, zen   bool
+	)
+
+	cmd := &cobra.Command{
+		Use:               "config",
+		Short:             "Show or change the saved defaults",
+		ValidArgsFunction: cobra.NoFileCompletions,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			store, err := app.OpenStore()
+			if err != nil {
+				return err
+			}
+
+			changes := app.ConfigChanges{}
+			flags := cmd.Flags()
+			if flags.Changed("default-time") {
+				changes.Duration = &duration
+			}
+			if flags.Changed("default-words") {
+				changes.WordCount = &wordCount
+			}
+			if flags.Changed("default-mode") {
+				changes.Mode = &mode
+			}
+			if flags.Changed("default-language") {
+				changes.Language = &language
+			}
+			if flags.Changed("theme") {
+				changes.Theme = &theme
+			}
+			if flags.Changed("default-width") {
+				changes.Width = &width
+			}
+			if flags.Changed("default-min-wpm") {
+				changes.MinWPM = &minWPM
+			}
+			if flags.Changed("default-punctuation") {
+				changes.Punctuation = &punctuation
+			}
+			if flags.Changed("default-numbers") {
+				changes.Numbers = &numbers
+			}
+			if flags.Changed("default-blind") {
+				changes.Blind = &blind
+			}
+			if flags.Changed("default-zen") {
+				changes.Zen = &zen
+			}
+			return app.RunConfig(store, changes)
+		},
+	}
+
+	cmd.Flags().IntVar(&duration, "default-time", 0, "Default timed test duration in seconds")
+	cmd.Flags().IntVar(&wordCount, "default-words", 0, "Default word count test size")
+	cmd.Flags().StringVar(&mode, "default-mode", "", "Default text mode")
+	cmd.Flags().StringVar(&language, "default-language", "", "Default language id")
+	cmd.Flags().StringVar(&theme, "theme", "", "Default color theme")
+	cmd.Flags().IntVar(&width, "default-width", 0, "Default typing area width (0 = auto)")
+	cmd.Flags().IntVar(&minWPM, "default-min-wpm", 0, "Default minimum WPM (0 = off)")
+	cmd.Flags().BoolVar(&punctuation, "default-punctuation", false, "Inject punctuation by default")
+	cmd.Flags().BoolVar(&numbers, "default-numbers", false, "Inject numbers by default")
+	cmd.Flags().BoolVar(&blind, "default-blind", false, "Start in blind mode by default")
+	cmd.Flags().BoolVar(&zen, "default-zen", false, "Start in zen mode by default")
 
 	return cmd
 }
