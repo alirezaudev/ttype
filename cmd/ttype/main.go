@@ -47,6 +47,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newStatsCmd())
 	cmd.AddCommand(newLanguagesCmd())
 	cmd.AddCommand(newDoctorCmd())
+	cmd.AddCommand(newClearCmd())
 
 	registerCompletions(cmd)
 
@@ -219,6 +220,36 @@ func newLanguagesCmd() *cobra.Command {
 	download.Flags().IntVarP(&jobs, "jobs", "j", 8, "Number of parallel downloads")
 
 	cmd.AddCommand(download)
+
+	return cmd
+}
+
+func newClearCmd() *cobra.Command {
+	var yes bool
+
+	cmd := &cobra.Command{
+		Use:       "clear [history|languages|all]",
+		Short:     "Delete saved history or downloaded languages",
+		Args:      cobra.MaximumNArgs(1),
+		ValidArgs: []string{"history", "languages", "all"},
+		RunE: func(_ *cobra.Command, args []string) error {
+			target := app.ClearHistory
+			if len(args) == 1 {
+				parsed, err := app.ParseClearTarget(args[0])
+				if err != nil {
+					return err
+				}
+				target = parsed
+			}
+
+			store, err := app.OpenStore()
+			if err != nil {
+				return err
+			}
+			return app.RunClear(store, target, yes, os.Stdout, os.Stdin)
+		},
+	}
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt")
 
 	return cmd
 }
