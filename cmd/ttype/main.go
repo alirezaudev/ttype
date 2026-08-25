@@ -46,6 +46,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newHistoryCmd())
 	cmd.AddCommand(newStatsCmd())
 	cmd.AddCommand(newLanguagesCmd())
+	cmd.AddCommand(newDoctorCmd())
 
 	registerCompletions(cmd)
 
@@ -220,6 +221,22 @@ func newLanguagesCmd() *cobra.Command {
 	cmd.AddCommand(download)
 
 	return cmd
+}
+
+func newDoctorCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:               "doctor",
+		Short:             "Check that the terminal and environment are set up",
+		ValidArgsFunction: cobra.NoFileCompletions,
+		SilenceUsage:      true,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			store, err := app.OpenStore()
+			if err != nil {
+				return err
+			}
+			return app.RunDoctor(store)
+		},
+	}
 }
 
 type testCLIFlags struct {
