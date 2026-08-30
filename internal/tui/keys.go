@@ -37,6 +37,7 @@ type resultsKeymap struct {
 	Settings key.Binding
 	Mode     key.Binding
 	Language key.Binding
+	Update   key.Binding
 }
 
 type pickerKeymap struct {
@@ -76,6 +77,7 @@ var resultsKeys = resultsKeymap{
 	Settings: key.NewBinding(key.WithKeys("S"), key.WithHelp("S", "settings")),
 	Mode:     key.NewBinding(key.WithKeys("M"), key.WithHelp("M", "mode picker")),
 	Language: key.NewBinding(key.WithKeys("L"), key.WithHelp("L", "language picker")),
+	Update:   key.NewBinding(key.WithKeys("u", "U"), key.WithHelp("u", "update")),
 }
 
 var pickerKeys = pickerKeymap{

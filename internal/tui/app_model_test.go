@@ -324,3 +324,22 @@ func TestWelcomeAppliesDefaultsAndStartsTheTest(t *testing.T) {
 		t.Fatalf("mode = %q, want %q", m.cfg.TextMode, picked)
 	}
 }
+
+func TestVersionCheckReachesTheFooter(t *testing.T) {
+	t.Parallel()
+
+	m, _ := newAppModel(t)
+	next, _ := m.Update(VersionCheckedMsg{Info: domain.VersionInfo{
+		Local: "1.0.0", Latest: "1.1.0", UpdateAvailable: true,
+	}})
+	m = next.(AppModel)
+
+	if !m.version.UpdateAvailable || !m.test.version.UpdateAvailable {
+		t.Fatal("the version check did not reach the models")
+	}
+
+	m.setSize(80, 24)
+	if !strings.Contains(stripANSI(m.View()), "new") {
+		t.Fatalf("footer does not flag the update:\n%s", stripANSI(m.View()))
+	}
+}

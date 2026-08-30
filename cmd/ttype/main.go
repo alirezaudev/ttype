@@ -35,7 +35,7 @@ func newRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return app.RunTest(cfg, store)
+			return app.RunTest(cfg, store, version)
 		},
 	}
 

@@ -49,6 +49,7 @@ type AppModel struct {
 	help           HelpOverlay
 	theme          Theme
 	version        domain.VersionInfo
+	checkVersion   func() domain.VersionInfo
 	width          int
 	height         int
 }
@@ -63,18 +64,21 @@ type Options struct {
 	Session  *engine.Session
 	Version  domain.VersionInfo
 	Welcome  bool
+	// CheckVersion runs once in the background; nil skips the check.
+	CheckVersion func() domain.VersionInfo
 }
 
 func NewAppModel(opts Options) AppModel {
 	theme := ResolveTheme(opts.Config.Theme)
 	m := AppModel{
-		cfg:       opts.Config,
-		provider:  opts.Provider,
-		langCache: opts.Cache,
-		store:     opts.Store,
-		version:   opts.Version,
-		theme:     theme,
-		test:      NewTestModel(opts.Session, opts.Config, theme, opts.Version),
+		cfg:          opts.Config,
+		provider:     opts.Provider,
+		langCache:    opts.Cache,
+		store:        opts.Store,
+		version:      opts.Version,
+		checkVersion: opts.CheckVersion,
+		theme:        theme,
+		test:         NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
 	if opts.Welcome {
 		m.phase = phaseWelcome
@@ -83,6 +87,13 @@ func NewAppModel(opts Options) AppModel {
 		m.phase = phaseTest
 	}
 	return m
+}
+
+func (m *AppModel) setSize(width, height int) {
+	m.width, m.height = width, height
+	for _, s := range m.sizables() {
+		s.setSize(width, height)
+	}
 }
 
 func (m *AppModel) sizables() []sizable {
@@ -111,17 +122,27 @@ func (m *AppModel) popPhase() tea.Cmd {
 }
 
 func (m AppModel) Init() tea.Cmd {
-	return m.test.Init()
+	if m.checkVersion == nil {
+		return m.test.Init()
+	}
+	return tea.Batch(m.test.Init(), checkVersionCmd(m.checkVersion))
+}
+
+// VersionCheckedMsg carries the result of the background release check.
+type VersionCheckedMsg struct{ Info domain.VersionInfo }
+
+func checkVersionCmd(check func() domain.VersionInfo) tea.Cmd {
+	return func() tea.Msg { return VersionCheckedMsg{Info: check()} }
 }
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		for _, s := range m.sizables() {
-			s.setSize(msg.Width, msg.Height)
-		}
+		m.setSize(msg.Width, msg.Height)
+		return m, nil
+	case VersionCheckedMsg:
+		m.version = msg.Info
+		m.test.version = msg.Info
 		return m, nil
 	case OpenLanguagePickerMsg:
 		return m, m.openLanguagePicker()
@@ -182,6 +203,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.openModePicker()
 			case key.Matches(msg, resultsKeys.Language):
 				return m, m.openLanguagePicker()
+			case key.Matches(msg, resultsKeys.Update) && m.version.UpdateAvailable:
+				return m, openURLCmd(GitHubURL + "/releases")
 			}
 		}
 	}

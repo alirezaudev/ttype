@@ -38,7 +38,8 @@ func TestEveryBindingHasKeysAndHelp(t *testing.T) {
 	bindings := []key.Binding{
 		appKeys.Quit, appKeys.Back, appKeys.Exit,
 		testKeys.Help, testKeys.Restart, testKeys.ToggleLive, testKeys.DeleteWord, testKeys.Backspace, testKeys.Skip,
-		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings, resultsKeys.Language,
+		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings,
+		resultsKeys.Mode, resultsKeys.Language, resultsKeys.Update,
 		pickerKeys.Up, pickerKeys.Left, pickerKeys.Confirm, pickerKeys.Cancel,
 	}
 
