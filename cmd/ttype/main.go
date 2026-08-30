@@ -48,6 +48,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newLanguagesCmd())
 	cmd.AddCommand(newDoctorCmd())
 	cmd.AddCommand(newClearCmd())
+	cmd.AddCommand(newUpdateCmd())
 
 	registerCompletions(cmd)
 
@@ -222,6 +223,17 @@ func newLanguagesCmd() *cobra.Command {
 	cmd.AddCommand(download)
 
 	return cmd
+}
+
+func newUpdateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:               "update",
+		Short:             "Update ttype to the latest release",
+		ValidArgsFunction: cobra.NoFileCompletions,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return app.RunUpdate(os.Stdout, version)
+		},
+	}
 }
 
 func newClearCmd() *cobra.Command {
