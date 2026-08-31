@@ -49,27 +49,66 @@ func (m HelpOverlay) Update(msg tea.Msg) (HelpOverlay, tea.Cmd, bool) {
 
 func (m HelpOverlay) View() string {
 	width := helpOverlayWidth
-	if m.width > 0 && m.width-4 < width {
-		width = m.width - 4
+	if m.width > 0 {
+		width = min(width, m.width-4)
+	}
+	if width < 8 {
+		width = max(m.width-2, 4)
 	}
 
-	lines := []string{m.theme.Finished.Render("ttype")}
-	lines = append(lines, "", m.theme.HUDTitle.Render("During a test"))
-	for _, b := range []key.Binding{
-		testKeys.Backspace, testKeys.DeleteWord, testKeys.Skip,
-		testKeys.ToggleLive, testKeys.Restart, appKeys.Exit,
-	} {
-		lines = append(lines, m.theme.Help.Render(overlayRow(b.Help().Key, b.Help().Desc)))
+	// The border and padding cost two rows and four columns; whatever is left
+	// is what the sections get to fill. Zooming the terminal font can leave
+	// very few rows, so the content drops a section at a time.
+	budget := m.height
+	if budget > 0 {
+		budget -= 2
 	}
 
-	lines = append(lines, "", m.theme.HUDTitle.Render("Results"))
-	for _, b := range []key.Binding{
-		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings,
-		resultsKeys.Mode, resultsKeys.Language,
-	} {
-		lines = append(lines, m.theme.Help.Render(overlayRow(b.Help().Key, b.Help().Desc)))
+	box := m.theme.Border.
+		BorderStyle(lipgloss.RoundedBorder()).
+		Padding(0, 1).
+		Width(width)
+
+	// Truncate rather than wrap: a wrapped row would silently cost a line the
+	// budget above did not account for.
+	inner := lipgloss.NewStyle().MaxWidth(max(width-2, 1))
+	lines := m.lines(budget)
+	for i, line := range lines {
+		lines[i] = inner.Render(line)
 	}
 
+	rendered := box.Render(strings.Join(lines, "\n"))
+	if m.width == 0 || m.height == 0 {
+		return rendered
+	}
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, rendered)
+}
+
+// lines builds the tallest variant that fits the row budget, and hard-clips if
+// even the shortest one does not.
+func (m HelpOverlay) lines(budget int) []string {
+	variants := [][]string{
+		m.full(),
+		m.withoutFlags(),
+		m.duringTestOnly(),
+		m.essentials(),
+	}
+
+	for _, lines := range variants {
+		if budget <= 0 || len(lines) <= budget {
+			return lines
+		}
+	}
+
+	shortest := variants[len(variants)-1]
+	if budget < 1 {
+		budget = 1
+	}
+	return shortest[:min(len(shortest), budget)]
+}
+
+func (m HelpOverlay) full() []string {
+	lines := m.withoutFlags()
 	lines = append(lines, "", m.theme.HUDTitle.Render("Flags"))
 	for _, example := range []struct{ flag, desc string }{
 		{"--time 30", "30 second test"},
@@ -80,18 +119,40 @@ func (m HelpOverlay) View() string {
 	} {
 		lines = append(lines, m.theme.Help.Render(overlayRow(example.flag, example.desc)))
 	}
+	return append(lines, "", m.footerHint())
+}
 
-	lines = append(lines, "", m.theme.Help.Render(
-		helpLine(helpOverlayKeys.Settings, helpOverlayKeys.Mode, appKeys.Back)))
-
-	box := m.theme.Border.
-		BorderStyle(lipgloss.RoundedBorder()).
-		Padding(0, 1).
-		Width(width).
-		Render(strings.Join(lines, "\n"))
-
-	if m.width == 0 || m.height == 0 {
-		return box
+func (m HelpOverlay) withoutFlags() []string {
+	lines := m.duringTestOnly()
+	lines = append(lines, "", m.theme.HUDTitle.Render("Results"))
+	for _, b := range []key.Binding{
+		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings,
+		resultsKeys.Mode, resultsKeys.Language,
+	} {
+		lines = append(lines, m.theme.Help.Render(overlayRow(b.Help().Key, b.Help().Desc)))
 	}
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box)
+	return append(lines, "", m.footerHint())
+}
+
+func (m HelpOverlay) duringTestOnly() []string {
+	lines := []string{m.theme.Finished.Render("ttype"), "", m.theme.HUDTitle.Render("During a test")}
+	for _, b := range []key.Binding{
+		testKeys.Backspace, testKeys.DeleteWord, testKeys.Skip,
+		testKeys.ToggleLive, testKeys.Restart, appKeys.Exit,
+	} {
+		lines = append(lines, m.theme.Help.Render(overlayRow(b.Help().Key, b.Help().Desc)))
+	}
+	return lines
+}
+
+func (m HelpOverlay) essentials() []string {
+	return []string{
+		m.theme.Help.Render(overlayRow(testKeys.Restart.Help().Key, "restart")),
+		m.theme.Help.Render(overlayRow(appKeys.Exit.Help().Key, "quit")),
+		m.theme.Help.Render("  man ttype"),
+	}
+}
+
+func (m HelpOverlay) footerHint() string {
+	return m.theme.Help.Render(helpLine(helpOverlayKeys.Settings, helpOverlayKeys.Mode, appKeys.Back))
 }
