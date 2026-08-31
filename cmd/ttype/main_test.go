@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"testing"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -57,5 +58,30 @@ func TestResolveTestConfig(t *testing.T) {
 	}
 	if overridden.Theme != "dracula" {
 		t.Fatalf("theme = %q, want the saved setting to survive", overridden.Theme)
+	}
+}
+
+func TestOutputRejectsUnknownFormat(t *testing.T) {
+	t.Parallel()
+
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"--output", "yaml"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("an unknown output format should be rejected")
+	}
+}
+
+func TestAllowSkipIsDeprecatedAndHidden(t *testing.T) {
+	t.Parallel()
+
+	flag := newRootCmd().Flags().Lookup("allow-skip")
+	if flag == nil {
+		t.Fatal("--allow-skip should still parse for old scripts")
+	}
+	if flag.Deprecated == "" || !flag.Hidden {
+		t.Fatalf("--allow-skip should be deprecated and hidden, got %+v", flag)
 	}
 }

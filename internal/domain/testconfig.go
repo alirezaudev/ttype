@@ -8,19 +8,19 @@ const (
 )
 
 type TestConfig struct {
-	Kind        TestKind
-	Duration    Duration
-	WordCount   int
-	Width       int
-	Theme       string
-	Language    string
-	TextMode    TextMode
-	Punctuation bool
-	Numbers     bool
-	Blind       bool
-	Zen         bool
-	MinWPM      int
-	Seed        int64
+	Kind        TestKind `json:"test_kind"`
+	Duration    Duration `json:"duration"`
+	WordCount   int      `json:"word_count,omitempty"`
+	TextMode    TextMode `json:"text_mode"`
+	Language    string   `json:"language,omitempty"`
+	Theme       string   `json:"theme"`
+	Width       int      `json:"width,omitempty"`
+	Punctuation bool     `json:"punctuation,omitempty"`
+	Numbers     bool     `json:"numbers,omitempty"`
+	Blind       bool     `json:"blind,omitempty"`
+	Zen         bool     `json:"zen,omitempty"`
+	MinWPM      int      `json:"min_wpm,omitempty"`
+	Seed        int64    `json:"seed,omitempty"`
 }
 
 type GenerateOptions struct {

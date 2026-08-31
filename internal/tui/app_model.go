@@ -50,6 +50,8 @@ type AppModel struct {
 	theme          Theme
 	version        domain.VersionInfo
 	checkVersion   func() domain.VersionInfo
+	quitOnFinish   bool
+	finished       bool
 	width          int
 	height         int
 }
@@ -64,6 +66,9 @@ type Options struct {
 	Session  *engine.Session
 	Version  domain.VersionInfo
 	Welcome  bool
+	// QuitOnFinish leaves the results screen out of the way so the caller can
+	// print the result itself (--output json).
+	QuitOnFinish bool
 	// CheckVersion runs once in the background; nil skips the check.
 	CheckVersion func() domain.VersionInfo
 }
@@ -77,6 +82,7 @@ func NewAppModel(opts Options) AppModel {
 		store:        opts.Store,
 		version:      opts.Version,
 		checkVersion: opts.CheckVersion,
+		quitOnFinish: opts.QuitOnFinish,
 		theme:        theme,
 		test:         NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
@@ -119,6 +125,11 @@ func (m *AppModel) popPhase() tea.Cmd {
 
 	m.phase = prev
 	return nil
+}
+
+// Result reports the finished run, if the session got that far.
+func (m AppModel) Result() (domain.Result, bool) {
+	return m.result, m.finished
 }
 
 func (m AppModel) Init() tea.Cmd {
@@ -324,6 +335,10 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.test = next.(TestModel)
 	if m.test.session.State() == domain.SessionFinished {
 		m.result, m.pbUpdate, m.notice = m.finishResult()
+		m.finished = true
+		if m.quitOnFinish {
+			return m, tea.Quit
+		}
 		m.phase = phaseResult
 		m.finishedAt = time.Now()
 		return m, tea.Batch(cmd, tea.ClearScreen)

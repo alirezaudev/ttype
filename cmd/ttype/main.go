@@ -31,11 +31,15 @@ func newRootCmd() *cobra.Command {
 				return err
 			}
 
+			if flags.output != "" && flags.output != "json" {
+				return fmt.Errorf("unknown output format %q (only json)", flags.output)
+			}
+
 			cfg, err := resolveTestConfig(cmd, store, flags)
 			if err != nil {
 				return err
 			}
-			return app.RunTest(cfg, store, version)
+			return app.RunTest(cfg, store, version, flags.output == "json")
 		},
 	}
 
@@ -295,6 +299,8 @@ type testCLIFlags struct {
 	zen         bool
 	minWPM      int
 	seed        int64
+	output      string
+	allowSkip   bool
 }
 
 func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
@@ -310,6 +316,11 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().BoolVar(&f.zen, "zen", false, "Words only: no header, no hints")
 	cmd.Flags().IntVar(&f.minWPM, "min-wpm", 0, "Fail the test if WPM drops below this")
 	cmd.Flags().Int64Var(&f.seed, "seed", 0, "Random seed for word generation")
+	cmd.Flags().StringVar(&f.output, "output", "", "Print the result instead of showing it (json)")
+
+	// Skipping is part of how space works now, so the old flag does nothing.
+	cmd.Flags().BoolVar(&f.allowSkip, "allow-skip", false, "Deprecated, has no effect")
+	_ = cmd.Flags().MarkDeprecated("allow-skip", "space already commits the word")
 }
 
 func resolveTestConfig(cmd *cobra.Command, store interface {

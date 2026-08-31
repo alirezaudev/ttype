@@ -1,7 +1,9 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
@@ -21,7 +23,7 @@ func OpenStore() (storage.Store, error) {
 }
 
 // RunTest starts an interactive typing test in the terminal.
-func RunTest(cfg domain.TestConfig, store storage.Store, version string) error {
+func RunTest(cfg domain.TestConfig, store storage.Store, version string, outputJSON bool) error {
 	dirs, err := storage.DefaultDirs()
 	if err != nil {
 		return fmt.Errorf("resolve data dir: %w", err)
@@ -43,7 +45,8 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string) error {
 	}
 
 	model := tui.NewAppModel(tui.Options{
-		Welcome:      !settings.Onboarded,
+		Welcome:      !settings.Onboarded && !outputJSON,
+		QuitOnFinish: outputJSON,
 		Version:      domain.VersionInfo{Local: version},
 		CheckVersion: func() domain.VersionInfo { return CheckVersion(version) },
 		Config:       cfg,
@@ -52,8 +55,20 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string) error {
 		Store:        store,
 		Session:      session,
 	})
-	if _, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+	final, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+	if err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}
-	return nil
+
+	if !outputJSON {
+		return nil
+	}
+	result, ok := final.(tui.AppModel).Result()
+	if !ok {
+		return nil
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(result)
 }
