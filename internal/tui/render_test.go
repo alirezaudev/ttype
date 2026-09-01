@@ -133,3 +133,33 @@ func TestZenHUDIsEmpty(t *testing.T) {
 		t.Fatalf("zen HUD = %q, want empty", got)
 	}
 }
+
+// Batching must not change a single visible character.
+func TestBatchedRenderMatchesTheCharacters(t *testing.T) {
+	t.Parallel()
+
+	const target = "the quick brown fox jumps over the lazy dog"
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
+	m := newTestModelFor(t, target, cfg)
+	for _, r := range "the qwick brown " {
+		m.session.InputRune(r)
+	}
+
+	got := stripANSI(m.renderWords())
+	want := strings.Join(visibleTargetLines(m), "\n")
+	if got != want {
+		t.Fatalf("rendered %q, want %q", got, want)
+	}
+}
+
+func visibleTargetLines(m TestModel) []string {
+	target := m.session.TargetRunes()
+	lines := wordWrapIndices(target, m.typingWidth())
+	from, to := visibleLineWindow(lines, m.session.Cursor(), 3)
+
+	out := make([]string, 0, to-from)
+	for i := from; i < to; i++ {
+		out = append(out, string(target[lines[i].start:lines[i].end]))
+	}
+	return out
+}

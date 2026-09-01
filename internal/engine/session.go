@@ -98,6 +98,28 @@ func (s *Session) State() domain.SessionState { return s.state }
 // count, they were never there to type.
 func (s *Session) Skipped() int { return s.skipped }
 
+type KeystrokeStatus int
+
+const (
+	KeystrokePending KeystrokeStatus = iota
+	KeystrokeCorrect
+	KeystrokeIncorrect
+)
+
+// StatusAt reports how position i was typed, without copying the buffer.
+func (s *Session) StatusAt(i int) KeystrokeStatus {
+	switch {
+	case i >= len(s.input):
+		return KeystrokePending
+	case i >= len(s.targetRunes):
+		return KeystrokeIncorrect
+	case s.input[i] == s.targetRunes[i]:
+		return KeystrokeCorrect
+	default:
+		return KeystrokeIncorrect
+	}
+}
+
 // CharErrors counts, per expected character, how often it was mistyped.
 func (s *Session) CharErrors() map[string]int {
 	if len(s.charErrors) == 0 {

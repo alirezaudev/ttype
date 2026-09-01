@@ -36,11 +36,21 @@ func newModelSession(t *testing.T) (*engine.Session, *engine.FakeClock) {
 
 func newTestModelFor(t *testing.T, target string, cfg domain.TestConfig) TestModel {
 	t.Helper()
+	return buildTestModel(t, target, cfg)
+}
+
+func newBenchTestModel(b *testing.B, target string, cfg domain.TestConfig) TestModel {
+	b.Helper()
+	return buildTestModel(b, target, cfg)
+}
+
+func buildTestModel(tb testing.TB, target string, cfg domain.TestConfig) TestModel {
+	tb.Helper()
 
 	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
 	s, err := engine.NewSession(cfg, fixedSource(target), clock)
 	if err != nil {
-		t.Fatalf("NewSession: %v", err)
+		tb.Fatalf("NewSession: %v", err)
 	}
 	m := NewTestModel(s, cfg, defaultTheme(), domain.VersionInfo{})
 	m.capsProbe = nil

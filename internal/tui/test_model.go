@@ -96,9 +96,29 @@ func (m TestModel) View() string {
 	)
 }
 
+// cellKind groups characters by the style they render with, so a run of them
+// costs one Render call instead of one per character.
+type cellKind int
+
+const (
+	cellPending cellKind = iota
+	cellCorrect
+	cellIncorrect
+)
+
+func (m TestModel) styleFor(kind cellKind) lipgloss.Style {
+	switch kind {
+	case cellCorrect:
+		return m.theme.Correct
+	case cellIncorrect:
+		return m.theme.Incorrect
+	default:
+		return m.theme.Pending
+	}
+}
+
 func (m TestModel) renderWords() string {
 	cursor := m.session.Cursor()
-	input := m.session.Input()
 	target := m.session.TargetRunes()
 	revealed := cursor
 	if m.cfg.Blind {
@@ -108,26 +128,54 @@ func (m TestModel) renderWords() string {
 	lines := wordWrapIndices(target, m.typingWidth())
 	from, to := visibleLineWindow(lines, cursor, 3)
 
-	var out strings.Builder
+	var out, run strings.Builder
+	runKind := cellPending
+	flush := func() {
+		if run.Len() == 0 {
+			return
+		}
+		out.WriteString(m.styleFor(runKind).Render(run.String()))
+		run.Reset()
+	}
+
 	for i := from; i < to; i++ {
 		line := lines[i]
 		for j := line.start; j < line.end; j++ {
 			r := target[j]
-			switch {
-			case j == cursor && m.cfg.Blind:
-				out.WriteString(m.theme.Cursor.Render("·"))
-			case j == cursor:
-				out.WriteString(m.theme.Cursor.Render(string(r)))
-			case j < cursor && j >= revealed:
-				out.WriteString(m.theme.Pending.Render("·"))
-			case j < cursor && input[j] == r:
-				out.WriteString(m.theme.Correct.Render(string(r)))
-			case j < cursor:
-				out.WriteString(m.theme.Incorrect.Render(string(r)))
-			default:
-				out.WriteString(m.theme.Pending.Render(string(r)))
+
+			// The cursor keeps its own call: it is a single cell and its style
+			// never matches the run around it.
+			if j == cursor {
+				flush()
+				text := string(r)
+				if m.cfg.Blind {
+					text = "·"
+				}
+				out.WriteString(m.theme.Cursor.Render(text))
+				continue
 			}
+
+			kind := cellPending
+			text := string(r)
+			switch {
+			case j < cursor && j >= revealed:
+				text = "·"
+			case j < cursor:
+				switch m.session.StatusAt(j) {
+				case engine.KeystrokeCorrect:
+					kind = cellCorrect
+				case engine.KeystrokeIncorrect:
+					kind = cellIncorrect
+				}
+			}
+
+			if kind != runKind {
+				flush()
+				runKind = kind
+			}
+			run.WriteString(text)
 		}
+		flush()
 		if i < to-1 {
 			out.WriteByte('\n')
 		}
