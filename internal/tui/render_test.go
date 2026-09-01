@@ -163,3 +163,25 @@ func visibleTargetLines(m TestModel) []string {
 	}
 	return out
 }
+
+func TestWrapCacheRecomputesOnResize(t *testing.T) {
+	t.Parallel()
+
+	target := []rune("the quick brown fox jumps over the lazy dog")
+	cache := &wrapCache{}
+
+	wide := cache.wrap(target, string(target), 60)
+	if len(cache.wrap(target, string(target), 60)) != len(wide) {
+		t.Fatal("a repeat wrap at the same width should reuse the cache")
+	}
+
+	narrow := cache.wrap(target, string(target), 20)
+	if len(narrow) <= len(wide) {
+		t.Fatalf("narrow wrap = %d lines, wide = %d; expected more lines", len(narrow), len(wide))
+	}
+
+	other := []rune("a different target entirely")
+	if got := cache.wrap(other, string(other), 20); string(other[got[0].start:got[0].end]) == "" {
+		t.Fatal("a new target should be re-wrapped")
+	}
+}

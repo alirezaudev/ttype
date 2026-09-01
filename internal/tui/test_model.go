@@ -11,12 +11,33 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// wrapCache memoizes the word wrap, which only changes on restart or resize.
+// It hangs off the model by pointer so Bubble Tea's value copies share it.
+type wrapCache struct {
+	target string
+	width  int
+	lines  []lineSpan
+}
+
+func (c *wrapCache) wrap(target []rune, text string, width int) []lineSpan {
+	if c == nil {
+		return wordWrapIndices(target, width)
+	}
+	if c.target != text || c.width != width || c.lines == nil {
+		c.target = text
+		c.width = width
+		c.lines = wordWrapIndices(target, width)
+	}
+	return c.lines
+}
+
 type TestModel struct {
 	session   *engine.Session
 	cfg       domain.TestConfig
 	theme     Theme
 	version   domain.VersionInfo
 	capsProbe func() bool
+	wrap      *wrapCache
 	hideLive  bool
 	width     int
 	height    int
@@ -29,6 +50,7 @@ func NewTestModel(session *engine.Session, cfg domain.TestConfig, theme Theme, v
 		theme:     theme,
 		version:   ver,
 		capsProbe: newCapsLockMonitor().on,
+		wrap:      &wrapCache{},
 	}
 }
 
@@ -125,7 +147,7 @@ func (m TestModel) renderWords() string {
 		revealed = blindRevealEnd(target, cursor)
 	}
 
-	lines := wordWrapIndices(target, m.typingWidth())
+	lines := m.wrap.wrap(target, m.session.Target(), m.typingWidth())
 	from, to := visibleLineWindow(lines, cursor, 3)
 
 	var out, run strings.Builder
