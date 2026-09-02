@@ -30,3 +30,10 @@ run: build
 clean:
 	rm coverage.out
 	rm -rf bin/
+.PHONY: completions
+completions: build
+	@mkdir -p contrib/completions
+	./bin/$(BINARY) completion bash       > contrib/completions/$(BINARY).bash
+	./bin/$(BINARY) completion zsh        > contrib/completions/_$(BINARY)
+	./bin/$(BINARY) completion fish       > contrib/completions/$(BINARY).fish
+	./bin/$(BINARY) completion powershell > contrib/completions/$(BINARY).ps1
