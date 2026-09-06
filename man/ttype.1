@@ -1,0 +1,214 @@
+.\" This file written by AI :)
+.\" Man page for ttype.
+.TH TTYPE 1 "September 2026" "ttype" "User Commands"
+.SH NAME
+ttype \- terminal typing practice
+.SH SYNOPSIS
+.B ttype
+.RI [ flags ]
+.br
+.B ttype
+.I command
+.RI [ flags ]
+.SH DESCRIPTION
+.B ttype
+is a typing test that runs entirely in the terminal. It measures words per
+minute, raw speed, accuracy and consistency, keeps a local history of every
+run, and can play a finished run back keystroke by keystroke.
+.PP
+With no arguments it starts a 60 second timed test using the saved defaults.
+.SH TEST FLAGS
+.TP
+.BI \-\-time " N"
+Run a timed test of N seconds. Default 60.
+.TP
+.BI \-\-words " N"
+Run until N words are finished instead of against the clock.
+.TP
+.BI \-\-mode " MODE"
+Text to type: \fBwords\fR, \fBsentences\fR, \fBsql\fR, \fBgo\fR,
+\fBbackend\fR, \fBpython\fR, \fBshell\fR or \fBregex\fR.
+In the word modes space commits the current word; the code modes keep spaces
+literal.
+.TP
+.BI \-\-language " ID"
+Word list to sample from, for example \fBspanish\fR or \fBenglish_1k\fR.
+Downloaded once and cached locally.
+.TP
+.BI \-\-theme " NAME"
+Colour theme: \fBdefault\fR, \fBmonokai\fR or \fBdracula\fR.
+.TP
+.B \-\-punctuation
+Inject punctuation between words.
+.TP
+.B \-\-numbers
+Inject numbers between words.
+.TP
+.B \-\-blind
+Hide correctness while typing. The live line shows raw speed only.
+.TP
+.B \-\-zen
+Words and nothing else: no header, no hints, no footer.
+.TP
+.BI \-\-min\-wpm " N"
+Fail the run if the pace drops below N after a five second grace period.
+.TP
+.BI \-\-width " N"
+Typing area width in columns. 0 follows the terminal, capped at 100.
+.TP
+.BI \-\-seed " N"
+Seed the generator, so the same seed always produces the same text.
+.TP
+.BI \-\-output " json"
+Print the finished result as JSON instead of showing the result screen.
+.TP
+.B \-\-allow\-skip
+Deprecated and ignored. Space already commits the word.
+.SH COMMANDS
+.TP
+.B history [\-\-last N] [\-\-plain]
+List past results. On a terminal this is an interactive table where
+.B enter
+plays the selected run back;
+.B \-\-plain
+prints a plain table instead.
+.TP
+.B stats [\-\-mode M] [\-\-exclude\-failed] [\-\-trend] [\-\-export csv]
+Averages, personal bests and an optional sparkline of wpm over time.
+.B \-\-export csv
+writes the history to standard output instead.
+.TP
+.B config [\-\-default\-* ...]
+Print the saved defaults, or change the ones you name.
+.TP
+.B languages [download]
+List cached word lists, or fetch every available list.
+.TP
+.B clear [history|languages|all] [\-\-yes]
+Delete saved data. Asks for confirmation unless
+.B \-\-yes
+is given.
+.TP
+.B doctor
+Check the terminal size, colour support, locale, clipboard tool and data
+directory, with a hint for anything that fails.
+.TP
+.B update
+Download and install the latest release, verifying its checksum first.
+.TP
+.B completion [bash|zsh|fish|powershell]
+Print a completion script for the given shell.
+.SH KEYS
+.SS While typing
+.TP
+.B backspace
+Delete one character.
+.TP
+.B ctrl+backspace, ctrl+w, alt+backspace
+Delete the word before the cursor, along with the space after it.
+.TP
+.B space
+Commit the current word and move on, skipping whatever was left of it.
+.TP
+.B ctrl+o
+Show or hide the live stats line.
+.TP
+.B tab, enter
+Restart with fresh text.
+.TP
+.B ?
+Open the help overlay. Only before the first keystroke; once a run is under
+way it is typed input.
+.TP
+.B esc, ctrl+c
+Quit.
+.SS On the result screen
+.TP
+.B tab, enter, r
+Restart.
+.TP
+.B C
+Copy the result line to the clipboard.
+.TP
+.B S
+Settings.
+.TP
+.B M
+Mode picker.
+.TP
+.B L
+Language picker.
+.TP
+.B u
+Open the releases page when a newer version exists.
+.TP
+.B q, esc
+Quit.
+.SS Replay playback
+.TP
+.B space
+Pause and resume.
+.TP
+.B 1, 2, 4
+Playback speed.
+.TP
+.B r
+Start the replay over.
+.TP
+.B esc, q
+Back to the history table.
+.SH STATISTICS
+.TP
+.B wpm
+Correct characters divided by five, over the elapsed time.
+.TP
+.B raw
+Every character typed, right or wrong, over the same time.
+.TP
+.B accuracy
+Correct keystrokes as they were typed. Correcting a mistake does not restore
+it.
+.TP
+.B consistency
+How even the per-second raw speed was, on a 0 to 100 scale.
+.SH FILES
+.TP
+.I ~/.config/ttype/config.json
+Saved defaults.
+.TP
+.I ~/.local/share/ttype/history.json
+Test history, capped at the newest 1000 runs.
+.TP
+.I ~/.local/share/ttype/bests.json
+Personal bests.
+.TP
+.I ~/.local/share/ttype/replays/
+Recorded runs, newest 50 kept.
+.TP
+.I ~/.local/share/ttype/languages/
+Downloaded word lists.
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+Overrides the config directory.
+.TP
+.B XDG_DATA_HOME
+Overrides the data directory.
+.TP
+.B NO_COLOR
+Disables colour output.
+.SH EXAMPLES
+.TP
+A quick sprint:
+.B ttype \-\-time 15
+.TP
+Fifty words of Go with the numbers on:
+.B ttype \-\-words 50 \-\-mode go \-\-numbers
+.TP
+The same text as a friend:
+.B ttype \-\-seed 4242
+.TP
+Export everything to a spreadsheet:
+.B ttype stats \-\-export csv > runs.csv
+.SH SEE ALSO
+Project page: https://github.com/alirezaudev/ttype

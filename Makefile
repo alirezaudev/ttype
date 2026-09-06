@@ -1,5 +1,6 @@
 BINARY := ttype
 CMD := ./cmd/ttype
+PREFIX ?= /usr/local
 
 .PHONY: build
 build:
@@ -37,3 +38,7 @@ completions: build
 	./bin/$(BINARY) completion zsh        > contrib/completions/_$(BINARY)
 	./bin/$(BINARY) completion fish       > contrib/completions/$(BINARY).fish
 	./bin/$(BINARY) completion powershell > contrib/completions/$(BINARY).ps1
+
+.PHONY: man-install
+man-install:
+	install -Dm644 man/$(BINARY).1 $(DESTDIR)$(PREFIX)/share/man/man1/$(BINARY).1
