@@ -4,12 +4,20 @@ Terminal-first typing practice inspired by [Monkeytype](https://monkeytype.com).
 A typing test that runs entirely in your terminal: eight text modes, downloadable
 language lists, a wpm chart on the result screen, and a replay of every run.
 
-## Build
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
+```
+
+Or build it yourself:
 
 ```sh
 make build
 ./bin/ttype
 ```
+
+`sh uninstall.sh` removes it again; add `--purge` to drop your history too.
 
 ## Usage
 
