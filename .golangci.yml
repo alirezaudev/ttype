@@ -1,0 +1,49 @@
+# This file written by AI :)
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - misspell
+    - revive
+
+  settings:
+    errcheck:
+      # Writes to stdout and deferred closes on readers: nothing useful to do
+      # with the error, and checking every one buries the ones that matter.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - (io.Closer).Close
+        - (*compress/gzip.Reader).Close
+        - (*os.File).Close
+        - os.Remove
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+
+  exclusions:
+    rules:
+      # Test helpers write to buffers and temp dirs where a failure is either
+      # impossible or already fatal.
+      - path: _test\.go
+        linters:
+          - errcheck
+      # The consistency curve is the fifth-order atanh series on purpose;
+      # "simplifying" it would change every score ever recorded.
+      - path: internal/stats/stats\.go
+        text: "consistencyCurve"
+      # Truncated language names in the history column are not typos.
+      - path: internal/app/history_test\.go
+        linters:
+          - misspell
+
+formatters:
+  enable:
+    - gofmt

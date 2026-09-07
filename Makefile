@@ -23,6 +23,14 @@ cover-html: cover
 lint:
 	go vet ./...
 
+.PHONY: lint-strict
+lint-strict:
+	golangci-lint run ./...
+
+.PHONY: bench
+bench:
+	go test -run XXX -bench . -benchmem ./...
+
 .PHONY: run
 run: build
 	./bin/$(BINARY)
