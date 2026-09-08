@@ -1,0 +1,88 @@
+# This file written by AI :)
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "these files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test -race ./...
+
+      - name: benchmarks compile and run
+        run: go test -run XXX -bench . -benchtime=1x ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.12.2
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: install scripts parse
+        run: |
+          sh -n install.sh
+          sh -n uninstall.sh
+
+      - name: man page renders
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq groff
+          groff -man -Tutf8 man/ttype.1 > /dev/null
+
+      - name: completions are up to date
+        run: |
+          make completions
+          git diff --exit-code contrib/completions
+
+      - name: cross compile
+        run: |
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            GOOS=${target%/*} GOARCH=${target#*/} go build ./... || exit 1
+          done
