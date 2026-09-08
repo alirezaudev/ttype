@@ -192,14 +192,17 @@ func (c *Cache) DownloadAll(plan DownloadPlan, workers int, progress func(done, 
 			defer wg.Done()
 			for entry := range jobs {
 				err := c.Ensure(entry.ID)
+
+				// The callback prints a progress line, so it runs under the
+				// lock: several workers reporting at once would interleave
+				// their output and race on whatever the caller counts.
+				mu.Lock()
 				if progress != nil {
 					progress(int(done.Add(1)), total, entry.ID, err)
 				}
-				if err == nil {
-					continue
+				if err != nil {
+					failures = append(failures, fmt.Errorf("%s: %w", entry.ID, err))
 				}
-				mu.Lock()
-				failures = append(failures, fmt.Errorf("%s: %w", entry.ID, err))
 				mu.Unlock()
 			}
 		}()
