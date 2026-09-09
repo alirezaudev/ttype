@@ -7,7 +7,7 @@ pkgrel=1
 pkgdesc="Terminal-first typing practice"
 arch=('x86_64' 'aarch64')
 url="https://github.com/alirezaudev/ttype"
-license=('MIT')
+license=('custom')
 provides=('ttype')
 conflicts=('ttype')
 
@@ -19,5 +19,4 @@ sha256sums_aarch64=('SKIP')
 package() {
 	install -Dm755 "$srcdir/ttype" "$pkgdir/usr/bin/ttype"
 	install -Dm644 "$srcdir/ttype.1" "$pkgdir/usr/share/man/man1/ttype.1"
-	install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

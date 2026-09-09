@@ -1,0 +1,84 @@
+# This file written by AI :)
+#
+# Release builds for ttype. The archive names here are a contract: install.sh
+# and `ttype update` both look for ttype_<version>_<os>_<arch>.tar.gz.
+version: 2
+
+project_name: ttype
+
+before:
+  hooks:
+    - go mod tidy
+    - make completions
+
+builds:
+  - id: ttype
+    main: ./cmd/ttype
+    binary: ttype
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: ttype
+    ids: [ttype]
+    # No "v" in the version, and the man page rides along on Unix.
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - README.md
+      - src: man/ttype.1
+        info:
+          mode: 0644
+      - src: contrib/completions/*
+        dst: completions
+        strip_parent: true
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - "^ci:"
+      - "^test:"
+  groups:
+    - title: Features
+      regexp: '^feat'
+      order: 0
+    - title: Fixes
+      regexp: '^fix'
+      order: 1
+    - title: Performance
+      regexp: '^perf'
+      order: 2
+    - title: Other
+      order: 99
+
+release:
+  github:
+    owner: alirezaudev
+    name: ttype
+  draft: false
+  prerelease: auto
+  footer: |
+    ---
+
+    Install:
+
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
+    ```

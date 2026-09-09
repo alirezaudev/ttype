@@ -50,3 +50,7 @@ completions: build
 .PHONY: man-install
 man-install:
 	install -Dm644 man/$(BINARY).1 $(DESTDIR)$(PREFIX)/share/man/man1/$(BINARY).1
+
+.PHONY: release-snapshot
+release-snapshot:
+	goreleaser release --snapshot --clean

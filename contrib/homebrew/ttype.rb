@@ -6,7 +6,6 @@ class Ttype < Formula
   desc "Terminal-first typing practice"
   homepage "https://github.com/alirezaudev/ttype"
   version "0.0.0"
-  license "MIT"
 
   on_macos do
     on_arm do

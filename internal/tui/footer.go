@@ -16,7 +16,7 @@ const (
 	GitHubURL  = "https://github.com/alirezaudev/ttype"
 	ContactURL = "https://github.com/alirezaudev/ttype/issues"
 	SupportURL = "https://github.com/sponsors/alirezaudev"
-	TermsURL   = "https://github.com/alirezaudev/ttype/blob/main/LICENSE"
+	TermsURL   = "https://github.com/alirezaudev/ttype#readme"
 )
 
 type footerLink struct {
@@ -29,7 +29,7 @@ func footerLinks() []footerLink {
 		{"contact", ContactURL},
 		{"support", SupportURL},
 		{"github", GitHubURL},
-		{"terms", TermsURL},
+		{"about", TermsURL},
 	}
 }
 
