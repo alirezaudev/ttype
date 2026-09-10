@@ -138,7 +138,7 @@ func (m HelpOverlay) duringTestOnly() []string {
 	lines := []string{m.theme.Finished.Render("ttype"), "", m.theme.HUDTitle.Render("During a test")}
 	for _, b := range []key.Binding{
 		testKeys.Backspace, testKeys.DeleteWord, testKeys.Skip,
-		testKeys.ToggleLive, testKeys.Restart, appKeys.Exit,
+		testKeys.ToggleLive, appKeys.Settings, testKeys.Restart, appKeys.Exit,
 	} {
 		lines = append(lines, m.theme.Help.Render(overlayRow(b.Help().Key, b.Help().Desc)))
 	}
