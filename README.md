@@ -23,7 +23,7 @@ Building it yourself needs Go 1.26:
 make build && ./bin/ttype
 ```
 
-To remove it again: `sh uninstall.sh`, or `--purge` to take your history with it.
+To remove it again: `ttype uninstall`, or `--purge` to take your history with it.
 
 ## Typing
 
@@ -96,6 +96,7 @@ default for next time, so the flags are for one-offs.
 | `ttype clear` | Delete history, languages, or both |
 | `ttype doctor` | Check the terminal, locale, clipboard and data directory |
 | `ttype update` | Update to the latest release |
+| `ttype uninstall` | Remove the binary and man page; `--purge` takes your data too |
 | `ttype completion` | Completion script for bash, zsh, fish or powershell |
 
 Shell completions are also generated into `contrib/completions/`, and

@@ -53,6 +53,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(newDoctorCmd())
 	cmd.AddCommand(newClearCmd())
 	cmd.AddCommand(newUpdateCmd())
+	cmd.AddCommand(newUninstallCmd())
 
 	registerCompletions(cmd)
 
@@ -225,6 +226,23 @@ func newLanguagesCmd() *cobra.Command {
 	download.Flags().IntVarP(&jobs, "jobs", "j", 8, "Number of parallel downloads")
 
 	cmd.AddCommand(download)
+
+	return cmd
+}
+
+func newUninstallCmd() *cobra.Command {
+	var purge, yes bool
+
+	cmd := &cobra.Command{
+		Use:               "uninstall",
+		Short:             "Remove ttype from this machine",
+		ValidArgsFunction: cobra.NoFileCompletions,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return app.RunUninstall(os.Stdout, os.Stdin, purge, yes)
+		},
+	}
+	cmd.Flags().BoolVar(&purge, "purge", false, "Also delete your settings and history")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the confirmation prompt")
 
 	return cmd
 }
