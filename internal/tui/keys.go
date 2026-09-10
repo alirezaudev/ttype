@@ -108,15 +108,21 @@ func testHelpLine() string {
 	return helpLine(testKeys.Help, testKeys.Restart, appKeys.Exit, testKeys.DeleteWord, testKeys.ToggleLive)
 }
 
-func resultsHelpLine() string {
-	return helpLine(
+// The least important bindings go first when the line will not fit. Letting
+// it run off the edge reads as a broken render.
+func resultsHelpLine(width int) string {
+	bindings := []key.Binding{
 		resultsKeys.Restart,
 		appKeys.Quit,
 		resultsKeys.Copy,
 		resultsKeys.Settings,
 		resultsKeys.Mode,
 		resultsKeys.Language,
-	)
+	}
+	for width > 0 && len(bindings) > 1 && len(helpLine(bindings...)) > width {
+		bindings = bindings[:len(bindings)-1]
+	}
+	return helpLine(bindings...)
 }
 
 func overlayRow(keyLabel, desc string) string {

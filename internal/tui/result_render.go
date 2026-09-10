@@ -54,7 +54,7 @@ func renderResult(result domain.Result, pb storage.PBUpdate, theme Theme, width,
 	if heatmap := renderCharHeatmap(result.CharErrors, theme, 8); heatmap != "" {
 		tail = append(tail, "", heatmap)
 	}
-	tail = append(tail, "", theme.Help.Render(resultsHelpLine()))
+	tail = append(tail, "", theme.Help.Render(resultsHelpLine(width)))
 
 	footer := renderFooterSection(theme, result.Config, ver, width)
 	budget := height - len(head) - len(tail) - 2

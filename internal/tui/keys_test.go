@@ -59,7 +59,10 @@ func TestHelpLinesComeFromTheBindings(t *testing.T) {
 	if got, want := testHelpLine(), "? help - tab/enter restart - esc/ctrl+c quit - ctrl+bksp/ctrl+w delete word - ctrl+o live stats"; got != want {
 		t.Fatalf("testHelpLine() = %q, want %q", got, want)
 	}
-	if got := resultsHelpLine(); !strings.Contains(got, "C copy result") {
-		t.Fatalf("resultsHelpLine() = %q, want the copy binding", got)
+	if got := resultsHelpLine(0); !strings.Contains(got, "C copy result") {
+		t.Fatalf("resultsHelpLine(0) = %q, want the copy binding", got)
+	}
+	if got := resultsHelpLine(40); len(got) > 40 {
+		t.Fatalf("resultsHelpLine(40) = %q, want it trimmed to fit", got)
 	}
 }
