@@ -10,7 +10,7 @@ Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your termi
 [![Go](https://img.shields.io/github/go-mod/go-version/alirezaudev/ttype)](go.mod)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey)](#install)
 
-<img src="https://github.com/user-attachments/assets/74de90bb-5e58-4ebe-b751-0c7cc757bf7c" alt="A twelve word test, one typo, and the results screen">
+<img src="https://github.com/alirezaudev/ttype/releases/download/v1.0.0/demo.gif" alt="A twelve word test, one typo, and the results screen">
 
 </div>
 
@@ -115,42 +115,49 @@ becomes the default for next time, so the flags are for one-offs.
 <details>
 <summary><b>Code modes</b> — Go, SQL and shell, then the mode picker</summary>
 
-![Typing Go, SQL and shell snippets, then the mode picker](https://github.com/user-attachments/assets/b84f33ed-b67f-4fe0-9abf-475d47270d60)
+![Typing Go, SQL and shell snippets, then the mode picker](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/modes.gif)
 
 </details>
 
 <details>
 <summary><b>Replays</b> — watch a past run play itself back</summary>
 
-![Browsing history and watching a run replay at 1x and 2x](https://github.com/user-attachments/assets/a1ce88c5-eed5-4f07-b587-30538f160a91)
+![Browsing history and watching a run replay at 1x and 2x](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/replay.gif)
 
 </details>
 
 <details>
 <summary><b>Blind, zen and min-wpm</b></summary>
 
-![Blind mode, zen mode, and a run that fails the min-wpm threshold](https://github.com/user-attachments/assets/6a9e56b2-04df-4889-ad70-a43296ae6392)
+![Blind mode, zen mode, and a run that fails the min-wpm threshold](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/gameplay.gif)
 
 </details>
 
 <details>
 <summary><b>Themes</b> — default, monokai, dracula</summary>
 
-![The same test in the default, monokai and dracula themes](https://github.com/user-attachments/assets/5e9dd8d9-361c-46dc-b752-620907c4718f)
+![The same test in the default, monokai and dracula themes](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/themes.gif)
 
 </details>
 
 <details>
 <summary><b>Stats</b> — averages, a trend sparkline, CSV out</summary>
 
-![The stats screen, the trend sparkline and a CSV export](https://github.com/user-attachments/assets/097bdfaa-9ec4-4fca-9898-9d182a3abe69)
+![The stats screen, the trend sparkline and a CSV export](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/stats.gif)
 
 </details>
 
 <details>
 <summary><b>Help and settings</b></summary>
 
-![The help overlay and the settings panel](https://github.com/user-attachments/assets/7bf64b79-35a5-427f-b6f2-5a29e58ec3ba)
+![The help overlay and the settings panel](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/help.gif)
+
+</details>
+
+<details>
+<summary><b>The CLI</b> — the command list, doctor, and saved defaults</summary>
+
+![ttype --help, ttype doctor and ttype config](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/cli.gif)
 
 </details>
 
