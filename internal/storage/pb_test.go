@@ -143,3 +143,39 @@ func TestBestsFileTracksAllTimeRecords(t *testing.T) {
 		t.Fatalf("best accuracy = %.2f, want 99", bests.BestAccuracy)
 	}
 }
+
+// A run that ended because it dropped under --min-wpm is a failure, and
+// failures were being announced as personal bests on the result screen.
+func TestFailedRunsAreNotPersonalBests(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
+	cfg := domain.TestConfig{Kind: domain.TestKindWords, WordCount: 12, TextMode: domain.TextModeWords, MinWPM: 60}
+
+	pb, err := s.SaveResult(domain.Result{
+		ID: "a", Timestamp: time.Now().UTC(), Config: cfg, WPM: 55, Accuracy: 100,
+		Failed: true, FailureReason: "WPM below minimum (60)",
+	})
+	if err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	if pb.IsNew {
+		t.Fatal("a failed run was announced as a personal best")
+	}
+
+	bests, err := s.LoadBests()
+	if err != nil {
+		t.Fatalf("LoadBests: %v", err)
+	}
+	if bests.BestWPM != 0 {
+		t.Fatalf("all-time best = %.2f, want 0 — the only run failed", bests.BestWPM)
+	}
+
+	pb, err = s.SaveResult(domain.Result{ID: "b", Timestamp: time.Now().UTC(), Config: cfg, WPM: 40})
+	if err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	if !pb.IsNew || pb.PrevWPM != 0 {
+		t.Fatalf("pb = %+v, want a first best — the 55 wpm run failed", pb)
+	}
+}

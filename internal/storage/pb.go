@@ -38,6 +38,9 @@ func bestWPMForConfig(history []storedResult, cfg domain.TestConfig) float64 {
 
 	var best float64
 	for _, item := range history {
+		if item.Failed {
+			continue
+		}
 		if configLabel(unmarshalResult(item).Config) != label {
 			continue
 		}

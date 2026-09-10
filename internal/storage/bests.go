@@ -32,7 +32,13 @@ func (s *JSONStore) LoadBests() (domain.PersonalBests, error) {
 	return bests, nil
 }
 
+// A run that stopped early because it dropped under --min-wpm is kept in
+// history but never counts as a best.
 func (s *JSONStore) updateBests(result domain.Result) error {
+	if result.Failed {
+		return nil
+	}
+
 	bests, err := s.LoadBests()
 	if err != nil {
 		return err
