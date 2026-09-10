@@ -17,9 +17,10 @@ import (
 // itself and "?" is only dispatched before the first keystroke.
 
 type appKeymap struct {
-	Quit key.Binding
-	Back key.Binding
-	Exit key.Binding
+	Quit     key.Binding
+	Back     key.Binding
+	Exit     key.Binding
+	Settings key.Binding
 }
 
 type testKeymap struct {
@@ -54,6 +55,9 @@ var appKeys = appKeymap{
 	Back: key.NewBinding(key.WithKeys("esc", "q", "Q"), key.WithHelp("esc/q", "back")),
 	// The test screen is the root of the stack, so back leaves the program.
 	Exit: key.NewBinding(key.WithKeys("esc", "ctrl+c"), key.WithHelp("esc/ctrl+c", "quit")),
+	// Reachable mid-test too, unlike the S mnemonic: a modifier chord can
+	// never be mistaken for typed input.
+	Settings: key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "settings")),
 }
 
 var testKeys = testKeymap{

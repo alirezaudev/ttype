@@ -343,3 +343,34 @@ func TestVersionCheckReachesTheFooter(t *testing.T) {
 		t.Fatalf("footer does not flag the update:\n%s", stripANSI(m.View()))
 	}
 }
+
+func TestCtrlSOpensSettingsDuringATest(t *testing.T) {
+	t.Parallel()
+
+	m, _ := newAppModel(t)
+	m.test.session.InputRune('a')
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+
+	if m.phase != phaseSettings {
+		t.Fatalf("phase = %v after ctrl+s mid-test, want phaseSettings", m.phase)
+	}
+	if got := string(m.test.session.Input()); got != "a" {
+		t.Fatalf("input = %q, want ctrl+s not to be typed", got)
+	}
+}
+
+func TestCtrlSStillOpensSettingsFromResults(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m = finishTest(m, clock)
+
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+
+	if m.phase != phaseSettings {
+		t.Fatalf("phase = %v, want phaseSettings", m.phase)
+	}
+}

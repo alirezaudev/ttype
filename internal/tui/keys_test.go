@@ -36,7 +36,7 @@ func TestEveryBindingHasKeysAndHelp(t *testing.T) {
 	t.Parallel()
 
 	bindings := []key.Binding{
-		appKeys.Quit, appKeys.Back, appKeys.Exit,
+		appKeys.Quit, appKeys.Back, appKeys.Exit, appKeys.Settings,
 		testKeys.Help, testKeys.Restart, testKeys.ToggleLive, testKeys.DeleteWord, testKeys.Backspace, testKeys.Skip,
 		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings,
 		resultsKeys.Mode, resultsKeys.Language, resultsKeys.Update,

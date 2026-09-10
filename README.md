@@ -60,6 +60,7 @@ default for next time, so the flags are for one-offs.
 | `ctrl+backspace` `ctrl+w` `alt+backspace` | Delete the word and the space after it |
 | `space` | Next word, skipping the rest of this one |
 | `ctrl+o` | Toggle the live stats line |
+| `ctrl+s` | Settings, without leaving the run |
 | `tab` `enter` | Restart with fresh text |
 | `?` | Help — before the first keystroke; after that it is just a character |
 | `esc` `ctrl+c` | Quit |

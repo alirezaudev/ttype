@@ -195,6 +195,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.notice = statusNotice{}
 
+		// ctrl+s opens settings from anywhere a test or its result is on
+		// screen; the pickers and overlays own their own keys.
+		if key.Matches(msg, appKeys.Settings) && (m.phase == phaseTest || m.phase == phaseResult) {
+			return m, m.openSettings()
+		}
+
 		// The help key only exists before the first keystroke — after that "?"
 		// is a character the target may well contain.
 		if m.phase == phaseTest && key.Matches(msg, testKeys.Help) &&
