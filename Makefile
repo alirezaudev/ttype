@@ -1,10 +1,12 @@
 BINARY := ttype
 CMD := ./cmd/ttype
 PREFIX ?= /usr/local
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+TAPES := $(patsubst docs/tapes/%.tape,%,$(wildcard docs/tapes/[!_]*.tape))
 
 .PHONY: build
 build:
-	go build -o bin/$(BINARY) $(CMD)
+	go build -ldflags "-X main.version=$(VERSION)" -o bin/$(BINARY) $(CMD)
 
 .PHONY: test
 test:
@@ -34,6 +36,19 @@ bench:
 .PHONY: run
 run: build
 	./bin/$(BINARY)
+
+.PHONY: demo
+# Record docs/tapes/*.tape into docs/*.gif. `make demo TAPE=modes` for one.
+# Tapes run from the repo root and point PATH at ./bin, and they isolate the
+# config and data dirs so recording never touches real history — which only
+# works on Linux.
+demo: build
+	@command -v vhs >/dev/null || { echo "vhs not installed: https://github.com/charmbracelet/vhs"; exit 1; }
+	@for t in $(if $(TAPE),$(TAPE),$(TAPES)); do \
+		test -f docs/tapes/$$t.tape || { echo "no such tape: $$t"; exit 1; }; \
+		echo "recording $$t"; \
+		vhs docs/tapes/$$t.tape || exit 1; \
+	done
 
 .PHONY: clean
 clean:
