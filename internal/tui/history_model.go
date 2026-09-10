@@ -63,7 +63,7 @@ func NewHistoryModel(store storage.Store, results []domain.Result, theme Theme) 
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(min(max(len(rows), 1), 15)),
+		table.WithHeight(min(max(len(rows), 1), 15)+historyHeaderHeight),
 	)
 	styles := table.DefaultStyles()
 	styles.Header = theme.HUDTitle.BorderStyle(lipgloss.NormalBorder()).BorderBottom(true)
@@ -73,6 +73,10 @@ func NewHistoryModel(store storage.Store, results []domain.Result, theme Theme) 
 
 	return HistoryModel{store: store, results: results, table: t, theme: theme}
 }
+
+// The table's height counts its header and the rule under it, so asking for
+// the row count alone leaves the oldest run off the bottom.
+const historyHeaderHeight = 2
 
 const languageColumnWidth = 10
 
