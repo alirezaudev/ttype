@@ -42,6 +42,23 @@ func TestHUDLiveLineKeepsFixedWidth(t *testing.T) {
 	}
 }
 
+// The first keystroke lands a few milliseconds into the run; reading the pace
+// straight off that elapsed time used to peg the line at 999.
+func TestHUDPaceHoldsThroughTheFirstSecond(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
+	s, clock := newHUDSession(t, cfg)
+
+	s.InputRune('h')
+	clock.Advance(40 * time.Millisecond)
+
+	hud := stripANSI(renderHUD(s, defaultTheme(), 76, cfg, false))
+	if !strings.Contains(hud, "wpm 12 ") || !strings.Contains(hud, "raw 12 ") {
+		t.Fatalf("HUD = %q, want one character rated over a whole second", hud)
+	}
+}
+
 func TestHUDTimerFollowsSessionState(t *testing.T) {
 	t.Parallel()
 

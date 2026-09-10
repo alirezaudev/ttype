@@ -21,7 +21,8 @@ func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestC
 
 	if !hideLive {
 		_, errKeystrokes := session.Keystrokes()
-		line := hudLiveLine(live.WPM, live.RawWPM, live.Accuracy, errKeystrokes, cfg.Blind)
+		wpm, raw := hudPace(live)
+		line := hudLiveLine(wpm, raw, live.Accuracy, errKeystrokes, cfg.Blind)
 		if lipgloss.Width(row)+2+len(line) <= width {
 			row += "  " + theme.Help.Render(line)
 		}
@@ -36,6 +37,17 @@ func renderHUD(session *engine.Session, theme Theme, width int, cfg domain.TestC
 	}
 
 	return lipgloss.NewStyle().Width(width).Render(row)
+}
+
+// hudPace rates the first second of a run as a full second. The first
+// keystroke lands a few milliseconds in, and dividing by that extrapolates to
+// a four-digit pace, so the line flashed 999 before settling.
+func hudPace(live domain.LiveStats) (wpm, raw float64) {
+	if live.Elapsed <= 0 || live.Elapsed >= time.Second {
+		return live.WPM, live.RawWPM
+	}
+	scale := live.Elapsed.Seconds()
+	return live.WPM * scale, live.RawWPM * scale
 }
 
 // Blind mode shows raw speed only: wpm, accuracy and the error count would
