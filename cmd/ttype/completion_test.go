@@ -6,6 +6,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/alirezaudev/ttype/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -102,10 +103,18 @@ func completeFlag(t *testing.T, cmd *cobra.Command, flag string) []string {
 }
 
 func TestLanguageCompletionListsTheCache(t *testing.T) {
+	// The data dir is XDG on Linux but ~/Library on macOS, so point both at a
+	// temp root and ask storage where that actually lands.
 	dir := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", dir)
+	t.Setenv("HOME", dir)
 
-	languages := filepath.Join(dir, "ttype", "languages")
+	dirs, err := storage.DefaultDirs()
+	if err != nil {
+		t.Fatalf("DefaultDirs: %v", err)
+	}
+
+	languages := filepath.Join(dirs.Data, "languages")
 	if err := os.MkdirAll(languages, 0o700); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
