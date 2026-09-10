@@ -9,3 +9,5 @@ coverage.out
 
 # OS
 .DS_Store
+# Recorded demos live on GitHub, not in the repo
+docs/*.gif

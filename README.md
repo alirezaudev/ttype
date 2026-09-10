@@ -1,29 +1,90 @@
+<div align="center">
+
 # ttype
 
-Terminal typing practice with code modes, replays, and a wpm chart.
+**Terminal typing practice with code modes, replays, and a wpm chart.**
 Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your terminal.
 
-```sh
-ttype
-```
+[![CI](https://github.com/alirezaudev/ttype/actions/workflows/ci.yml/badge.svg)](https://github.com/alirezaudev/ttype/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/alirezaudev/ttype?color=blue)](https://github.com/alirezaudev/ttype/releases/latest)
+[![Go](https://img.shields.io/github/go-mod/go-version/alirezaudev/ttype)](go.mod)
+[![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey)](#install)
+
+<img src="https://github.com/user-attachments/assets/74de90bb-5e58-4ebe-b751-0c7cc757bf7c" alt="A twelve word test, one typo, and the results screen">
+
+</div>
+
+## Why
+
+- **For fun.** I wanted to stop tabbing out to a browser to warm up, so I wrote the thing I kept opening.
+- Eight text modes, including **Go, SQL, Python, shell and regex** snippets, where spaces and brackets are part of the practice.
+- Every run is **recorded keystroke by keystroke** and can be watched back at the speed it was typed.
+- A per-second **wpm chart**, a consistency score, and a heatmap of the characters you actually miss.
+- **Blind mode**, **zen mode**, and a **min-wpm threshold** that ends the run when you slow down.
+- Downloadable word lists, three themes, shell completions, and a man page.
+- One static binary. No browser, no runtime, no config file to write by hand.
 
 ## Install
+
+### Linux and macOS
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
 ```
 
-The script picks the right build for your machine, verifies its checksum, and
-drops the binary and man page under `/usr/local` (or `~/.local`, if that is
-where it can write). Later on, `ttype update` does the same in place.
-
-Building it yourself needs Go 1.26:
+Or, if you would rather use wget:
 
 ```sh
-make build && ./bin/ttype
+wget -qO- https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
 ```
 
-To remove it again: `ttype uninstall`, or `--purge` to take your history with it.
+The script picks the right build for your machine, checks it against
+`checksums.txt`, and installs the binary and the man page under `/usr/local` —
+or `~/.local`, if that is where it can write. After that, `ttype update` does
+the same thing in place.
+
+### Windows
+
+Download `ttype_<version>_windows_amd64.tar.gz` (or `_arm64`) from the
+[latest release](https://github.com/alirezaudev/ttype/releases/latest), unpack
+it, and put `ttype.exe` somewhere on your `PATH`. A Scoop manifest lives in
+[`contrib/scoop/ttype.json`](contrib/scoop/ttype.json).
+
+### With Go
+
+```sh
+go install github.com/alirezaudev/ttype/cmd/ttype@latest
+```
+
+The binary lands in `$(go env GOPATH)/bin`, so make sure that is on your `PATH`.
+
+### From source
+
+Needs Go 1.26:
+
+```sh
+git clone https://github.com/alirezaudev/ttype.git
+cd ttype
+make build
+./bin/ttype
+```
+
+### Package managers
+
+| | |
+| --- | --- |
+| Homebrew | [`contrib/homebrew/ttype.rb`](contrib/homebrew/ttype.rb) |
+| AUR | [`contrib/aur/PKGBUILD`](contrib/aur/PKGBUILD) |
+| Scoop | [`contrib/scoop/ttype.json`](contrib/scoop/ttype.json) |
+
+### Uninstall
+
+`ttype uninstall` removes the binary and the man page, and `--purge` takes your
+history with it. If the binary is already gone:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/alirezaudev/ttype/main/uninstall.sh | sh
+```
 
 ## Typing
 
@@ -38,7 +99,6 @@ ttype --blind               # no feedback until the run ends
 ttype --zen                 # words only, nothing else on screen
 ttype --min-wpm 60          # fail the run if you drop below 60
 ttype --seed 42             # same text, every time
-ttype --output json         # print the result instead of showing it
 ```
 
 Eight modes: `words` `sentences` `sql` `go` `backend` `python` `shell` `regex`.
@@ -47,8 +107,52 @@ In the two word modes, space commits the current word and skips whatever is
 left of it — the same as the reference app. The code modes keep spaces literal,
 because indentation is part of what you are practising.
 
-Whatever you set in the settings panel (`S` on the result screen) becomes the
-default for next time, so the flags are for one-offs.
+Whatever you set in the settings panel (`ctrl+s`, or `S` on the result screen)
+becomes the default for next time, so the flags are for one-offs.
+
+## More of it
+
+<details>
+<summary><b>Code modes</b> — Go, SQL and shell, then the mode picker</summary>
+
+![Typing Go, SQL and shell snippets, then the mode picker](https://github.com/user-attachments/assets/b84f33ed-b67f-4fe0-9abf-475d47270d60)
+
+</details>
+
+<details>
+<summary><b>Replays</b> — watch a past run play itself back</summary>
+
+![Browsing history and watching a run replay at 1x and 2x](https://github.com/user-attachments/assets/a1ce88c5-eed5-4f07-b587-30538f160a91)
+
+</details>
+
+<details>
+<summary><b>Blind, zen and min-wpm</b></summary>
+
+![Blind mode, zen mode, and a run that fails the min-wpm threshold](https://github.com/user-attachments/assets/6a9e56b2-04df-4889-ad70-a43296ae6392)
+
+</details>
+
+<details>
+<summary><b>Themes</b> — default, monokai, dracula</summary>
+
+![The same test in the default, monokai and dracula themes](https://github.com/user-attachments/assets/5e9dd8d9-361c-46dc-b752-620907c4718f)
+
+</details>
+
+<details>
+<summary><b>Stats</b> — averages, a trend sparkline, CSV out</summary>
+
+![The stats screen, the trend sparkline and a CSV export](https://github.com/user-attachments/assets/097bdfaa-9ec4-4fca-9898-9d182a3abe69)
+
+</details>
+
+<details>
+<summary><b>Help and settings</b></summary>
+
+![The help overlay and the settings panel](https://github.com/user-attachments/assets/7bf64b79-35a5-427f-b6f2-5a29e58ec3ba)
+
+</details>
 
 ## Keys
 
