@@ -100,8 +100,12 @@ func (m LanguagePicker) Update(msg tea.Msg) (LanguagePicker, tea.Cmd, bool, bool
 				m.setSelection(m.Selected())
 			}
 		default:
-			if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] >= ' ' {
-				m.filter += string(msg.Runes[0])
+			if msg.Type == tea.KeyRunes {
+				for _, r := range msg.Runes {
+					if r >= ' ' {
+						m.filter += string(r)
+					}
+				}
 				m.idx = 0
 				m.filtered = m.buildFiltered()
 			}

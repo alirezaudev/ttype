@@ -187,3 +187,34 @@ func TestToggleLiveStatsHidesTheLiveLine(t *testing.T) {
 		t.Fatal("live stats still shown after ctrl+o")
 	}
 }
+
+func TestKeysArrivingTogetherAreAllTyped(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
+	m := newTestModelFor(t, "hello world", cfg)
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("hello")})
+	m = next.(TestModel)
+
+	if got := m.session.Cursor(); got != 5 {
+		t.Fatalf("cursor = %d after one message carrying hello, want 5", got)
+	}
+	for i := range 5 {
+		if m.session.StatusAt(i) != engine.KeystrokeCorrect {
+			t.Fatalf("position %d was not typed correctly", i)
+		}
+	}
+}
+
+func TestPasteDoesNotType(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
+	m := newTestModelFor(t, "hello world", cfg)
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("hello"), Paste: true})
+	m = next.(TestModel)
+
+	if got := m.session.Cursor(); got != 0 {
+		t.Fatalf("cursor = %d after a paste, want 0", got)
+	}
+}

@@ -82,10 +82,14 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, testKeys.DeleteWord):
 			m.session.DeleteWord()
 		default:
-			if len(msg.Runes) == 0 || msg.Alt || m.session.State() == domain.SessionFinished {
+			// A paste is not typing.
+			if msg.Paste || len(msg.Runes) == 0 || msg.Alt || m.session.State() == domain.SessionFinished {
 				return m, nil
 			}
-			m.session.InputRune(msg.Runes[0])
+			// Keys that arrive in one read (SSH, an input method) share a message.
+			for _, r := range msg.Runes {
+				m.session.InputRune(r)
+			}
 		}
 	}
 

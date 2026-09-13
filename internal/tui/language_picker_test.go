@@ -50,6 +50,20 @@ func TestLanguagePickerFilterNarrowsTheList(t *testing.T) {
 	}
 }
 
+func TestLanguagePickerFilterKeepsKeysThatArriveTogether(t *testing.T) {
+	t.Parallel()
+
+	p := loadedPicker(t, "", "french", "spanish", "swedish")
+	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("sp")})
+
+	if p.filter != "sp" {
+		t.Fatalf("filter = %q, want sp", p.filter)
+	}
+	if got := p.Selected(); got != "spanish" {
+		t.Fatalf("selected = %q, want spanish", got)
+	}
+}
+
 func TestLanguagePickerBackspaceWidensTheList(t *testing.T) {
 	t.Parallel()
 
