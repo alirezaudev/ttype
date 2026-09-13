@@ -218,6 +218,10 @@ func TestGenerateEveryRegisteredMode(t *testing.T) {
 			if strings.TrimSpace(target) == "" {
 				t.Fatal("mode produced no text")
 			}
+			// Enter restarts and the engine drops control runes, so a newline can never be typed.
+			if strings.Contains(target, "\n") {
+				t.Fatalf("target has a newline nobody can type: %q", target)
+			}
 		})
 	}
 }
@@ -233,7 +237,7 @@ func TestGenerateRegexItemsCarryTheirComment(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 
-	if !strings.Contains(target, "#") || !strings.Contains(target, "\n") {
+	if !strings.Contains(target, "# ") {
 		t.Fatalf("regex items lost their paired comment: %q", target)
 	}
 }

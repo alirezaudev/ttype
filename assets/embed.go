@@ -82,7 +82,7 @@ func loadRegexSnippets(fs embed.FS, path string) ([]string, error) {
 			continue
 		}
 		if comment != "" {
-			snippets = append(snippets, comment+"\n"+line)
+			snippets = append(snippets, comment+" "+line)
 			comment = ""
 			continue
 		}
