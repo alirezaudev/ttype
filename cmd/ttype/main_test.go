@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"runtime/debug"
 	"testing"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -83,5 +84,34 @@ func TestAllowSkipIsDeprecatedAndHidden(t *testing.T) {
 	}
 	if flag.Deprecated == "" || !flag.Hidden {
 		t.Fatalf("--allow-skip should be deprecated and hidden, got %+v", flag)
+	}
+}
+
+func TestResolveVersion(t *testing.T) {
+	t.Parallel()
+
+	buildInfo := func(version string, ok bool) func() (*debug.BuildInfo, bool) {
+		return func() (*debug.BuildInfo, bool) {
+			return &debug.BuildInfo{Main: debug.Module{Version: version}}, ok
+		}
+	}
+
+	tests := []struct {
+		name    string
+		stamped string
+		read    func() (*debug.BuildInfo, bool)
+		want    string
+	}{
+		{"release ldflags win", "1.4.0", buildInfo("v9.9.9", true), "1.4.0"},
+		{"go install of a tag", "dev", buildInfo("v1.2.0", true), "1.2.0"},
+		{"local build", "dev", buildInfo("(devel)", true), "dev"},
+		{"pseudo-version", "dev", buildInfo("v1.0.1-0.20260913120000-bd2b72b1c3d4+dirty", true), "dev"},
+		{"no build info", "dev", buildInfo("", false), "dev"},
+	}
+
+	for _, test := range tests {
+		if got := resolveVersion(test.stamped, test.read); got != test.want {
+			t.Errorf("%s: resolveVersion(%q) = %q, want %q", test.name, test.stamped, got, test.want)
+		}
 	}
 }

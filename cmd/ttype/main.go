@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"runtime/debug"
+	"strings"
 
 	"github.com/alirezaudev/ttype/internal/app"
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -11,11 +14,27 @@ import (
 
 var version = "dev"
 
+// Pseudo-versions and "(devel)" are not releases, so they stay "dev".
+var releaseVersion = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+
 func main() {
+	version = resolveVersion(version, debug.ReadBuildInfo)
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// go install skips the release ldflags but still stamps the module version.
+func resolveVersion(stamped string, readBuildInfo func() (*debug.BuildInfo, bool)) string {
+	if stamped != "dev" {
+		return stamped
+	}
+	info, ok := readBuildInfo()
+	if !ok || !releaseVersion.MatchString(info.Main.Version) {
+		return stamped
+	}
+	return strings.TrimPrefix(info.Main.Version, "v")
 }
 
 func newRootCmd() *cobra.Command {
