@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,65 +17,86 @@ import (
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
+	"github.com/alirezaudev/ttype/internal/storage"
 )
 
 const (
-	releasesAPI    = "https://api.github.com/repos/alirezaudev/ttype/releases/latest"
+	releasesURL    = "https://github.com/alirezaudev/ttype/releases"
+	checkInterval  = 24 * time.Hour
+	checkTimeout   = 10 * time.Second
 	updateTimeout  = 30 * time.Second
 	maxDownloadMiB = 64
 )
 
 var updateHTTPClient = &http.Client{Timeout: updateTimeout}
 
-type release struct {
-	TagName string `json:"tag_name"`
-	Assets  []struct {
-		Name string `json:"name"`
-		URL  string `json:"browser_download_url"`
-	} `json:"assets"`
+// The redirect is the answer, so it must not be followed.
+var checkHTTPClient = &http.Client{
+	Timeout: checkTimeout,
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
 }
 
-// LatestRelease resolves the newest published version.
-func LatestRelease() (string, error) {
-	rel, err := fetchLatestRelease()
+// CheckVersion compares the running binary against the latest release, asking
+// the network at most once a day. It is best effort: a failure just means no
+// update notice.
+func CheckVersion(local string) domain.VersionInfo {
+	dirs, err := storage.DefaultDirs()
+	if err != nil {
+		return domain.VersionInfo{Local: local}
+	}
+	fetch := func() (string, error) { return latestRelease(checkHTTPClient, releasesURL) }
+	return checkVersion(local, updateStatePath(dirs.Data), time.Now(), fetch)
+}
+
+func checkVersion(local, statePath string, now time.Time, fetch func() (string, error)) domain.VersionInfo {
+	state := loadUpdateState(statePath)
+	// A clock set back must not postpone the next check forever.
+	if now.Sub(state.LastCheck) >= checkInterval || now.Before(state.LastCheck) {
+		// Record the attempt before asking, so being offline still waits a day.
+		state.LastCheck = now
+		_ = saveUpdateState(statePath, state)
+		if latest, err := fetch(); err == nil {
+			state.Latest = latest
+			_ = saveUpdateState(statePath, state)
+		}
+	}
+	return domain.VersionInfo{
+		Local:           local,
+		Latest:          state.Latest,
+		UpdateAvailable: newerVersion(state.Latest, local),
+	}
+}
+
+// latestRelease reads the newest tag from the releases/latest redirect, which,
+// unlike the API, has no per-IP rate limit.
+func latestRelease(client *http.Client, base string) (string, error) {
+	req, err := http.NewRequest(http.MethodHead, base+"/latest", nil)
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimPrefix(rel.TagName, "v"), nil
-}
+	req.Header.Set("User-Agent", "ttype")
 
-// CheckVersion compares the running binary against the latest release. It is
-// best effort: a network failure just means no update notice.
-func CheckVersion(local string) domain.VersionInfo {
-	info := domain.VersionInfo{Local: local}
-	latest, err := LatestRelease()
+	resp, err := client.Do(req)
 	if err != nil {
-		return info
-	}
-	info.Latest = latest
-	info.UpdateAvailable = newerVersion(latest, local)
-	return info
-}
-
-func fetchLatestRelease() (release, error) {
-	resp, err := updateHTTPClient.Get(releasesAPI)
-	if err != nil {
-		return release{}, fmt.Errorf("check releases: %w", err)
+		return "", fmt.Errorf("check releases: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return release{}, fmt.Errorf("check releases: %s", resp.Status)
+	if resp.StatusCode < 300 || resp.StatusCode > 399 {
+		return "", fmt.Errorf("check releases: %s", resp.Status)
 	}
+	_, tag, _ := strings.Cut(resp.Header.Get("Location"), "/releases/tag/")
+	version := strings.TrimPrefix(tag, "v")
+	if versionParts(version) == nil {
+		return "", fmt.Errorf("no release published yet")
+	}
+	return version, nil
+}
 
-	var rel release
-	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return release{}, fmt.Errorf("parse release: %w", err)
-	}
-	if rel.TagName == "" {
-		return release{}, fmt.Errorf("no release published yet")
-	}
-	return rel, nil
+func releaseAssetURL(base, version, name string) string {
+	return fmt.Sprintf("%s/download/v%s/%s", base, version, name)
 }
 
 // newerVersion compares dotted versions numerically, so 1.10.0 beats 1.9.0.
@@ -124,41 +144,25 @@ func assetName(version string) string {
 }
 
 func RunUpdate(out io.Writer, local string) error {
-	rel, err := fetchLatestRelease()
+	latest, err := latestRelease(checkHTTPClient, releasesURL)
 	if err != nil {
 		return err
 	}
 
-	latest := strings.TrimPrefix(rel.TagName, "v")
 	if !newerVersion(latest, local) {
 		fmt.Fprintf(out, "ttype %s is already the latest version.\n", local)
 		return nil
 	}
 
 	name := assetName(latest)
-	var assetURL, checksumURL string
-	for _, asset := range rel.Assets {
-		switch asset.Name {
-		case name:
-			assetURL = asset.URL
-		case "checksums.txt":
-			checksumURL = asset.URL
-		}
-	}
-	if assetURL == "" {
-		return fmt.Errorf("release %s has no build for %s/%s", latest, runtime.GOOS, runtime.GOARCH)
-	}
-
 	fmt.Fprintf(out, "Downloading ttype %s...\n", latest)
-	archive, err := download(assetURL)
+	archive, err := download(releaseAssetURL(releasesURL, latest, name))
 	if err != nil {
-		return err
+		return fmt.Errorf("release %s for %s/%s: %w", latest, runtime.GOOS, runtime.GOARCH, err)
 	}
 
-	if checksumURL != "" {
-		if err := verifyChecksum(archive, name, checksumURL); err != nil {
-			return err
-		}
+	if err := verifyChecksum(archive, name, releaseAssetURL(releasesURL, latest, "checksums.txt")); err != nil {
+		return err
 	}
 
 	binary, err := extractBinary(archive)

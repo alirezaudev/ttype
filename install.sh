@@ -30,10 +30,10 @@ need mktemp
 
 if command -v curl >/dev/null 2>&1; then
 	fetch() { curl -fsSL "$1" -o "$2"; }
-	fetch_stdout() { curl -fsSL "$1"; }
+	fetch_headers() { curl -fsSI "$1"; }
 elif command -v wget >/dev/null 2>&1; then
 	fetch() { wget -qO "$2" "$1"; }
-	fetch_stdout() { wget -qO- "$1"; }
+	fetch_headers() { wget -S --spider "$1" 2>&1; }
 else
 	die "curl or wget is required"
 fi
@@ -52,8 +52,9 @@ esac
 
 version="${TTYPE_VERSION:-}"
 if [ -z "$version" ]; then
-	version=$(fetch_stdout "https://api.github.com/repos/$REPO/releases/latest" |
-		sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1)
+	# The releases/latest redirect names the tag, without the API's rate limit.
+	version=$(fetch_headers "https://github.com/$REPO/releases/latest" |
+		sed -n 's#^ *[Ll]ocation: .*/releases/tag/v\{0,1\}\([^[:space:]]*\).*#\1#p' | head -n 1)
 	[ -n "$version" ] || die "could not resolve the latest release"
 fi
 

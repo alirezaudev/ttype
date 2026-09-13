@@ -44,11 +44,17 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, outputJ
 		return fmt.Errorf("load settings: %w", err)
 	}
 
+	var checkVersion func() domain.VersionInfo
+	// Scripts and CI get a quiet run that never touches the network.
+	if !outputJSON && os.Getenv("CI") == "" {
+		checkVersion = func() domain.VersionInfo { return CheckVersion(version) }
+	}
+
 	model := tui.NewAppModel(tui.Options{
 		Welcome:      !settings.Onboarded && !outputJSON,
 		QuitOnFinish: outputJSON,
 		Version:      domain.VersionInfo{Local: version},
-		CheckVersion: func() domain.VersionInfo { return CheckVersion(version) },
+		CheckVersion: checkVersion,
 		Config:       cfg,
 		Provider:     provider,
 		Cache:        provider.LanguageCache(),
