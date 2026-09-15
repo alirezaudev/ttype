@@ -48,8 +48,7 @@ the same thing in place. It leaves copies installed by a package manager or
 
 Download `ttype_<version>_windows_amd64.tar.gz` (or `_arm64`) from the
 [latest release](https://github.com/alirezaudev/ttype/releases/latest), unpack
-it, and put `ttype.exe` somewhere on your `PATH`. A Scoop manifest lives in
-[`contrib/scoop/ttype.json`](contrib/scoop/ttype.json).
+it, and put `ttype.exe` somewhere on your `PATH`.
 
 ### With Go
 
@@ -69,14 +68,6 @@ cd ttype
 make build
 ./bin/ttype
 ```
-
-### Package managers
-
-| | |
-| --- | --- |
-| Homebrew | [`contrib/homebrew/ttype.rb`](contrib/homebrew/ttype.rb) |
-| AUR | [`contrib/aur/PKGBUILD`](contrib/aur/PKGBUILD) |
-| Scoop | [`contrib/scoop/ttype.json`](contrib/scoop/ttype.json) |
 
 ### Uninstall
 
