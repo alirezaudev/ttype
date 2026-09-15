@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -151,5 +152,68 @@ func TestLanguageWindowKeepsTheMarkInOneColumn(t *testing.T) {
 	}
 	if marked != 1 {
 		t.Fatalf("marked rows = %d, want 1:\n%s", marked, strings.Join(rows, "\n"))
+	}
+}
+
+func pickerCache(t *testing.T, installed ...string) *langcache.Cache {
+	t.Helper()
+
+	cache := langcache.New(t.TempDir())
+	if err := os.MkdirAll(cache.Dir(), 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	for _, id := range installed {
+		path := filepath.Join(cache.Dir(), id+".json")
+		if err := os.WriteFile(path, []byte(`{"words":["one"]}`), 0o600); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+	return cache
+}
+
+// Offline, the picker must not wait for the network to show what is on disk.
+func TestLanguagePickerOpensOnDownloadedLanguagesAtOnce(t *testing.T) {
+	t.Parallel()
+
+	p := NewLanguagePicker(pickerCache(t, "french"), "french", defaultTheme())
+	if got := strings.Join(p.filtered, ","); got != ",french" {
+		t.Fatalf("filtered = %q, want the built-in list and french", got)
+	}
+	if got := p.Selected(); got != "french" {
+		t.Fatalf("selected = %q, want french", got)
+	}
+	if p.Init() == nil {
+		t.Fatal("with no saved list, the picker should fetch one in the background")
+	}
+
+	p, _, _, _ = p.Update(LanguagesLoadedMsg{Err: errors.New("offline")})
+	if got := strings.Join(p.filtered, ","); got != ",french" {
+		t.Fatalf("filtered after a failed fetch = %q", got)
+	}
+	if !strings.Contains(p.View(), "offline") {
+		t.Error("the fetch error should be shown")
+	}
+}
+
+func TestLanguagePickerPutsDownloadedLanguagesFirst(t *testing.T) {
+	t.Parallel()
+
+	p := NewLanguagePicker(pickerCache(t, "spanish"), "", defaultTheme())
+	p, _, _, _ = p.Update(LanguagesLoadedMsg{IDs: []string{"arabic", "french", "spanish"}})
+
+	if got := strings.Join(p.filtered, ","); got != ",spanish,arabic,french" {
+		t.Fatalf("filtered = %q, want built-in, spanish, then the rest", got)
+	}
+}
+
+func TestLanguagePickerKeepsTheChoiceWhenTheListArrives(t *testing.T) {
+	t.Parallel()
+
+	p := NewLanguagePicker(pickerCache(t, "french", "spanish"), "french", defaultTheme())
+	p, _, _, _ = p.Update(tea.KeyMsg{Type: tea.KeyDown})
+	p, _, _, _ = p.Update(LanguagesLoadedMsg{IDs: []string{"arabic", "french", "spanish"}})
+
+	if got := p.Selected(); got != "spanish" {
+		t.Fatalf("selected = %q, want spanish", got)
 	}
 }

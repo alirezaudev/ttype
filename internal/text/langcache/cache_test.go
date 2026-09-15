@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -104,6 +105,62 @@ func TestWordsDownloadsOnceAndThenReadsFromDisk(t *testing.T) {
 	}
 	if downloads != 1 {
 		t.Fatalf("downloads = %d, want 1", downloads)
+	}
+}
+
+// Restarting a test asks for the words again; that must not re-read the file.
+func TestWordsKeepsTheListInMemory(t *testing.T) {
+	t.Parallel()
+
+	list := `{"words":["uno","dos","tres"]}`
+	downloads := 0
+	c := newTestCache(t, func(w http.ResponseWriter, r *http.Request) {
+		downloads++
+		w.Write([]byte(list))
+	})
+
+	if _, err := c.Words("spanish"); err != nil {
+		t.Fatalf("Words: %v", err)
+	}
+	if err := os.Remove(c.languagePath("spanish")); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	words, err := c.Words("spanish")
+	if err != nil || len(words) != 3 {
+		t.Fatalf("second Words = %v, %v; want the list from memory", words, err)
+	}
+	if downloads != 1 {
+		t.Fatalf("downloads = %d, want 1", downloads)
+	}
+
+	// A fresh download replaces what is in memory.
+	list = `{"words":["cuatro"]}`
+	if err := c.download("spanish"); err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	if words, _ := c.Words("spanish"); len(words) != 1 || words[0] != "cuatro" {
+		t.Fatalf("words after download = %v, want [cuatro]", words)
+	}
+}
+
+func TestInstalledListsOnlyDownloadedLanguages(t *testing.T) {
+	t.Parallel()
+
+	c := New(t.TempDir())
+	if err := os.MkdirAll(c.Dir(), 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	for _, name := range []string{"spanish.json", manifestFile, "french.json.tmp"} {
+		if err := os.WriteFile(filepath.Join(c.Dir(), name), []byte("{}"), 0o600); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+
+	if got := c.Installed(); len(got) != 1 || got[0] != "spanish" {
+		t.Fatalf("Installed = %v, want [spanish]", got)
+	}
+	if got := New(t.TempDir()).Installed(); len(got) != 0 {
+		t.Fatalf("Installed with no cache dir = %v, want none", got)
 	}
 }
 

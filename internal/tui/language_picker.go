@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/text/langcache"
@@ -30,20 +31,54 @@ type LanguagePicker struct {
 	filtered []string
 	filter   string
 	idx      int
-	loading  bool
-	err      error
-	theme    Theme
-	width    int
-	height   int
+	// refreshing is set while the full list is fetched in the background.
+	refreshing bool
+	// partial is set when only the downloaded languages are known.
+	partial bool
+	// moved is set once the user picks something, so a late list keeps it.
+	moved  bool
+	err    error
+	theme  Theme
+	width  int
+	height int
 }
 
+// NewLanguagePicker opens on what is already on disk, so it shows at once
+// even offline; an old list is refreshed in the background.
 func NewLanguagePicker(cache *langcache.Cache, current string, theme Theme) LanguagePicker {
-	return LanguagePicker{
-		cache:   cache,
-		current: current,
-		theme:   theme,
-		loading: cache != nil,
+	m := LanguagePicker{cache: cache, current: current, theme: theme}
+	if cache != nil {
+		saved := cache.SavedList()
+		m.partial = len(saved) == 0
+		m.refreshing = cache.ListStale()
+		m.ids = m.order(saved)
+	} else {
+		m.ids = prependBuiltIn(nil)
 	}
+	m.setSelection(current)
+	return m
+}
+
+// order puts the downloaded languages right after the built-in one, since
+// those are the ones people switch between.
+func (m LanguagePicker) order(ids []string) []string {
+	var installed []string
+	if m.cache != nil {
+		installed = m.cache.Installed()
+	}
+	sort.Strings(installed)
+
+	seen := make(map[string]bool, len(installed))
+	out := prependBuiltIn(installed)
+	for _, id := range installed {
+		seen[id] = true
+	}
+	for _, id := range ids {
+		if !seen[id] {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func (m *LanguagePicker) setSize(width, height int) { m.width, m.height = width, height }
@@ -60,7 +95,7 @@ func (m *LanguagePicker) setSelection(id string) {
 }
 
 func (m LanguagePicker) Init() tea.Cmd {
-	if m.cache == nil {
+	if m.cache == nil || !m.refreshing {
 		return nil
 	}
 	return loadLanguagesCmd(m.cache)
@@ -69,38 +104,48 @@ func (m LanguagePicker) Init() tea.Cmd {
 func (m LanguagePicker) Update(msg tea.Msg) (LanguagePicker, tea.Cmd, bool, bool) {
 	switch msg := msg.(type) {
 	case LanguagesLoadedMsg:
-		m.loading = false
-		m.err = msg.Err
-		m.ids = prependBuiltIn(msg.IDs)
-		m.setSelection(m.current)
-		return m, nil, false, false
-	case tea.KeyMsg:
-		if m.loading {
-			if msg.String() == "esc" {
-				return m, nil, true, false
+		m.refreshing = false
+		if len(msg.IDs) == 0 {
+			// Offline with no saved list: the downloaded ones still work.
+			if m.partial {
+				m.err = msg.Err
 			}
 			return m, nil, false, false
 		}
+		m.partial = false
+		m.err = nil
+		selected := m.current
+		if m.moved {
+			selected = m.Selected()
+		}
+		m.ids = m.order(msg.IDs)
+		m.setSelection(selected)
+		return m, nil, false, false
+	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
 			return m, nil, true, false
 		case "enter":
 			return m, nil, true, true
 		case "up":
+			m.moved = true
 			if m.idx > 0 {
 				m.idx--
 			}
 		case "down":
+			m.moved = true
 			if m.idx < len(m.filtered)-1 {
 				m.idx++
 			}
 		case "backspace", "ctrl+h":
+			m.moved = true
 			if len(m.filter) > 0 {
 				m.filter = m.filter[:len(m.filter)-1]
 				m.setSelection(m.Selected())
 			}
 		default:
 			if msg.Type == tea.KeyRunes {
+				m.moved = true
 				for _, r := range msg.Runes {
 					if r >= ' ' {
 						m.filter += string(r)
@@ -156,13 +201,11 @@ func (m LanguagePicker) Selected() string {
 func (m LanguagePicker) View() string {
 	lines := []string{m.theme.Finished.Render("Pick a language"), ""}
 
-	if m.loading {
-		lines = append(lines, m.theme.Help.Render("loading languages..."))
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, strings.Join(lines, "\n"))
-	}
-
-	if m.err != nil {
-		lines = append(lines, m.theme.Incorrect.Render(m.err.Error()), "")
+	switch {
+	case m.err != nil:
+		lines = append(lines, m.theme.Incorrect.Render("could not list more languages: "+m.err.Error()), "")
+	case m.partial && m.refreshing:
+		lines = append(lines, m.theme.Help.Render("looking for more languages..."), "")
 	}
 
 	filterLine := "filter: " + m.filter

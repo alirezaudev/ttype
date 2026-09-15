@@ -45,6 +45,11 @@ type Cache struct {
 	rawBase    string
 	apiBase    string
 	httpClient *http.Client
+
+	// The last list read, so restarting a test doesn't parse megabytes again.
+	mu      sync.Mutex
+	wordsID string
+	words   []string
 }
 
 func New(dataDir string) *Cache {
@@ -94,6 +99,15 @@ func (c *Cache) Words(id string) ([]string, error) {
 	if id == "" {
 		return nil, fmt.Errorf("built-in language has no cache entry")
 	}
+
+	c.mu.Lock()
+	if c.wordsID == id {
+		words := c.words
+		c.mu.Unlock()
+		return words, nil
+	}
+	c.mu.Unlock()
+
 	if err := c.Ensure(id); err != nil {
 		return nil, err
 	}
@@ -102,7 +116,15 @@ func (c *Cache) Words(id string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseWords(data)
+	words, err := parseWords(data)
+	if err != nil {
+		return nil, err
+	}
+
+	c.mu.Lock()
+	c.wordsID, c.words = id, words
+	c.mu.Unlock()
+	return words, nil
 }
 
 func (c *Cache) Ensure(id string) error {
@@ -110,6 +132,37 @@ func (c *Cache) Ensure(id string) error {
 		return nil
 	}
 	return c.download(id)
+}
+
+// Installed lists the languages already downloaded, without the network.
+func (c *Cache) Installed() []string {
+	entries, err := os.ReadDir(c.dir)
+	if err != nil {
+		return nil
+	}
+	var ids []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.Type().IsRegular() && strings.HasSuffix(name, ".json") && name != manifestFile {
+			ids = append(ids, strings.TrimSuffix(name, ".json"))
+		}
+	}
+	return ids
+}
+
+// SavedList returns the last list fetched, however old, without the network.
+func (c *Cache) SavedList() []string {
+	entries, _ := c.loadManifest()
+	ids := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		ids = append(ids, entry.ID)
+	}
+	return ids
+}
+
+// ListStale reports whether List would ask the network.
+func (c *Cache) ListStale() bool {
+	return c.manifestStale()
 }
 
 func (c *Cache) List() ([]string, error) {
@@ -335,7 +388,16 @@ func (c *Cache) download(id string) error {
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return err
 	}
-	return os.Rename(tmp, c.languagePath(id))
+	if err := os.Rename(tmp, c.languagePath(id)); err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	if c.wordsID == id {
+		c.wordsID, c.words = "", nil
+	}
+	c.mu.Unlock()
+	return nil
 }
 
 func snippet(r io.Reader) string {
