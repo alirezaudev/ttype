@@ -22,6 +22,13 @@ remove() {
 	target="$1"
 	[ -e "$target" ] || return 0
 
+	# Homebrew links into /usr/local; brew uninstall owns those.
+	if [ -L "$target" ]; then
+		case "$(readlink "$target")" in
+			*/Cellar/*) echo "  skipped $target (installed with Homebrew)"; return 0 ;;
+		esac
+	fi
+
 	if rm -rf "$target" 2>/dev/null; then
 		echo "  removed $target"
 		return 0
@@ -34,7 +41,7 @@ remove() {
 	echo "  could not remove $target" >&2
 }
 
-for prefix in "/usr/local" "$HOME/.local" "/usr"; do
+for prefix in "/usr/local" "$HOME/.local"; do
 	remove "$prefix/bin/$BINARY"
 	remove "$prefix/share/man/man1/$BINARY.1"
 done

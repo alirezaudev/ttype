@@ -89,3 +89,35 @@ func TestUninstallStopsWhenDeclined(t *testing.T) {
 		t.Errorf("output = %q", out.String())
 	}
 }
+
+func TestUninstallLeavesPackageManagerFilesAlone(t *testing.T) {
+	t.Parallel()
+
+	homebrew := detectInstall("/opt/homebrew/Cellar/ttype/1.0.1/bin/ttype", Build{Version: "1.0.1", Release: true}, nil, "darwin")
+	targets, err := resolveUninstallTargets(homebrew, "/opt/homebrew/Cellar/ttype/1.0.1/bin/ttype")
+	if err != nil {
+		t.Fatalf("resolveUninstallTargets: %v", err)
+	}
+	if targets.binary != "" || len(targets.manPages) != 0 {
+		t.Fatalf("targets = %+v, want no binary or man pages", targets)
+	}
+
+	fixture := uninstallFixture(t)
+	targets.dirs = fixture.dirs
+	var out bytes.Buffer
+	if err := uninstall(targets, &out, strings.NewReader(""), false, true); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+	if !strings.Contains(out.String(), "brew uninstall ttype") {
+		t.Errorf("output = %q, want the brew command", out.String())
+	}
+
+	if err := uninstall(targets, &out, strings.NewReader(""), true, true); err != nil {
+		t.Fatalf("uninstall --purge: %v", err)
+	}
+	for _, dir := range targets.dirs {
+		if _, err := os.Stat(dir[1]); !os.IsNotExist(err) {
+			t.Errorf("%s survived --purge", dir[0])
+		}
+	}
+}

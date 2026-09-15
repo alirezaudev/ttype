@@ -95,6 +95,9 @@ directory, with a hint for anything that fails.
 .TP
 .B update
 Download and install the latest release, verifying its checksum first.
+A copy installed by Homebrew, Scoop, a system package manager or
+.B go install
+is left alone, and the command to update it is printed instead.
 .TP
 .B completion [bash|zsh|fish|powershell]
 Print a completion script for the given shell.

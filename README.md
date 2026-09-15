@@ -41,7 +41,8 @@ wget -qO- https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | 
 The script picks the right build for your machine, checks it against
 `checksums.txt`, and installs the binary and the man page under `/usr/local` —
 or `~/.local`, if that is where it can write. After that, `ttype update` does
-the same thing in place.
+the same thing in place. It leaves copies installed by a package manager or
+`go install` alone and tells you the command to use instead.
 
 ### Windows
 

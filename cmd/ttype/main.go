@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"runtime/debug"
 	"strings"
 
@@ -12,12 +13,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "dev"
+var (
+	version = "dev"
+	// Only the release pipeline stamps a bare version; make stamps git describe.
+	release bool
+)
 
 // Pseudo-versions and "(devel)" are not releases, so they stay "dev".
 var releaseVersion = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
 
 func main() {
+	if runtime.GOOS == "windows" {
+		app.RemoveOldBinary()
+	}
+	release = releaseVersion.MatchString("v" + version)
 	version = resolveVersion(version, debug.ReadBuildInfo)
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -256,8 +265,11 @@ func newUninstallCmd() *cobra.Command {
 		Use:               "uninstall",
 		Short:             "Remove ttype from this machine",
 		ValidArgsFunction: cobra.NoFileCompletions,
+		// The error says what to do; usage would bury it, and main prints it.
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return app.RunUninstall(os.Stdout, os.Stdin, purge, yes)
+			return app.RunUninstall(os.Stdout, os.Stdin, app.Build{Version: version, Release: release}, purge, yes)
 		},
 	}
 	cmd.Flags().BoolVar(&purge, "purge", false, "Also delete your settings and history")
@@ -271,8 +283,10 @@ func newUpdateCmd() *cobra.Command {
 		Use:               "update",
 		Short:             "Update ttype to the latest release",
 		ValidArgsFunction: cobra.NoFileCompletions,
+		SilenceUsage:      true,
+		SilenceErrors:     true,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return app.RunUpdate(os.Stdout, version)
+			return app.RunUpdate(os.Stdout, app.Build{Version: version, Release: release})
 		},
 	}
 }

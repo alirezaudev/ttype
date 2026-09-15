@@ -4,14 +4,18 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -218,5 +222,136 @@ func TestCheckVersionRecoversFromABrokenStateOrClock(t *testing.T) {
 	}
 	if info := checkVersion("1.0.0", future, now, fetch); !info.UpdateAvailable {
 		t.Fatalf("a check stamped in the future blocked the check: %+v", info)
+	}
+}
+
+// releaseServer serves one release the way GitHub lays it out, sending the
+// archive in chunks with a pause between each.
+func releaseServer(t *testing.T, version string, binary []byte, pause time.Duration) (*httptest.Server, *atomic.Int32) {
+	t.Helper()
+
+	archive := tarball(t, "ttype_"+version+"/"+binaryName(), binary)
+	sum := sha256.Sum256(archive)
+	name := assetName(version)
+	var requests atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		switch r.URL.Path {
+		case "/latest":
+			w.Header().Set("Location", "https://github.com/alirezaudev/ttype/releases/tag/v"+version)
+			w.WriteHeader(http.StatusFound)
+		case "/download/v" + version + "/checksums.txt":
+			fmt.Fprintf(w, "%s  %s\n", hex.EncodeToString(sum[:]), name)
+		case "/download/v" + version + "/" + name:
+			for i := 0; i < len(archive); i += 64 {
+				w.Write(archive[i:min(i+64, len(archive))])
+				w.(http.Flusher).Flush()
+				select {
+				case <-time.After(pause):
+				case <-r.Context().Done():
+					return
+				}
+			}
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server, &requests
+}
+
+func TestRunUpdateLeavesOtherInstallsAlone(t *testing.T) {
+	t.Parallel()
+
+	server, requests := releaseServer(t, "9.0.0", []byte("new"), 0)
+	exe := filepath.Join(t.TempDir(), "ttype")
+	if err := os.WriteFile(exe, []byte("old"), 0o755); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	homebrew := detectInstall("/opt/homebrew/Cellar/ttype/1.0.0/bin/ttype", Build{Version: "1.0.0", Release: true}, nil, "darwin")
+	var out strings.Builder
+	err := runUpdate(&out, "1.0.0", homebrew, exe, server.URL, runtime.GOOS)
+	if err == nil || !strings.Contains(err.Error(), "brew upgrade ttype") {
+		t.Fatalf("runUpdate = %v, want the brew command", err)
+	}
+	if requests.Load() != 0 {
+		t.Errorf("made %d requests for an install it does not own", requests.Load())
+	}
+	if got, _ := os.ReadFile(exe); string(got) != "old" {
+		t.Errorf("binary = %q, want it untouched", got)
+	}
+}
+
+// A slow link must not fail a download that is still moving.
+func TestRunUpdateOutlastsASlowDownload(t *testing.T) {
+	stallTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { stallTimeout = 30 * time.Second })
+
+	// Random bytes, so gzip cannot shrink the archive to a single chunk.
+	binary := make([]byte, 2048)
+	rand.Read(binary)
+	server, _ := releaseServer(t, "9.0.0", binary, 20*time.Millisecond)
+	exe := filepath.Join(t.TempDir(), "ttype")
+	if err := os.WriteFile(exe, []byte("old"), 0o755); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	start := time.Now()
+	var out strings.Builder
+	if err := runUpdate(&out, "1.0.0", install{method: installScript}, exe, server.URL, runtime.GOOS); err != nil {
+		t.Fatalf("runUpdate: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed < 2*stallTimeout {
+		t.Fatalf("download took %s; the test needs it slower than %s", elapsed, stallTimeout)
+	}
+	if got, _ := os.ReadFile(exe); !bytes.Equal(got, binary) {
+		t.Error("the binary was not replaced")
+	}
+}
+
+func TestDownloadGivesUpWhenNothingArrives(t *testing.T) {
+	stallTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { stallTimeout = 30 * time.Second })
+
+	server, _ := releaseServer(t, "9.0.0", bytes.Repeat([]byte("x"), 4096), time.Minute)
+	start := time.Now()
+	_, err := download(releaseAssetURL(server.URL, "9.0.0", assetName("9.0.0")))
+	if err == nil {
+		t.Fatal("a stalled download should fail")
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("gave up after %s", elapsed)
+	}
+}
+
+func TestReplaceBinarySwapsARunningWindowsExe(t *testing.T) {
+	t.Parallel()
+
+	exe := filepath.Join(t.TempDir(), "ttype.exe")
+	if err := os.WriteFile(exe, []byte("old"), 0o755); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := replaceBinary(exe, []byte("new"), "windows"); err != nil {
+		t.Fatalf("replaceBinary: %v", err)
+	}
+	if got, _ := os.ReadFile(exe); string(got) != "new" {
+		t.Errorf("binary = %q, want new", got)
+	}
+	if got, _ := os.ReadFile(oldBinaryPath(exe)); string(got) != "old" {
+		t.Errorf("old copy = %q, want old", got)
+	}
+
+	// A second update replaces the copy the first one set aside.
+	if err := replaceBinary(exe, []byte("newer"), "windows"); err != nil {
+		t.Fatalf("second replaceBinary: %v", err)
+	}
+	if got, _ := os.ReadFile(oldBinaryPath(exe)); string(got) != "new" {
+		t.Errorf("old copy = %q, want new", got)
+	}
+	entries, _ := os.ReadDir(filepath.Dir(exe))
+	if len(entries) != 2 {
+		t.Errorf("left %d files behind, want the binary and one old copy", len(entries))
 	}
 }

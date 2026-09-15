@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -24,11 +25,16 @@ const (
 	releasesURL    = "https://github.com/alirezaudev/ttype/releases"
 	checkInterval  = 24 * time.Hour
 	checkTimeout   = 10 * time.Second
-	updateTimeout  = 30 * time.Second
 	maxDownloadMiB = 64
+	// A slow link can take minutes over the archive; this only stops a
+	// download that trickles forever.
+	maxDownloadTime = 15 * time.Minute
 )
 
-var updateHTTPClient = &http.Client{Timeout: updateTimeout}
+// stallTimeout abandons a download that stops moving.
+var stallTimeout = 30 * time.Second
+
+var updateHTTPClient = &http.Client{Timeout: maxDownloadTime}
 
 // The redirect is the answer, so it must not be followed.
 var checkHTTPClient = &http.Client{
@@ -143,8 +149,21 @@ func assetName(version string) string {
 	return fmt.Sprintf("ttype_%s_%s_%s.tar.gz", version, runtime.GOOS, runtime.GOARCH)
 }
 
-func RunUpdate(out io.Writer, local string) error {
-	latest, err := latestRelease(checkHTTPClient, releasesURL)
+func RunUpdate(out io.Writer, build Build) error {
+	inst, exe, err := currentInstall(build)
+	if err != nil {
+		return err
+	}
+	return runUpdate(out, build.Version, inst, exe, releasesURL, runtime.GOOS)
+}
+
+func runUpdate(out io.Writer, local string, inst install, exe, base, goos string) error {
+	// A package manager would lose track of a binary replaced behind its back.
+	if !inst.owned() {
+		return inst.updateRefusal()
+	}
+
+	latest, err := latestRelease(checkHTTPClient, base)
 	if err != nil {
 		return err
 	}
@@ -156,12 +175,12 @@ func RunUpdate(out io.Writer, local string) error {
 
 	name := assetName(latest)
 	fmt.Fprintf(out, "Downloading ttype %s...\n", latest)
-	archive, err := download(releaseAssetURL(releasesURL, latest, name))
+	archive, err := download(releaseAssetURL(base, latest, name))
 	if err != nil {
 		return fmt.Errorf("release %s for %s/%s: %w", latest, runtime.GOOS, runtime.GOARCH, err)
 	}
 
-	if err := verifyChecksum(archive, name, releaseAssetURL(releasesURL, latest, "checksums.txt")); err != nil {
+	if err := verifyChecksum(archive, name, releaseAssetURL(base, latest, "checksums.txt")); err != nil {
 		return err
 	}
 
@@ -169,7 +188,7 @@ func RunUpdate(out io.Writer, local string) error {
 	if err != nil {
 		return err
 	}
-	if err := replaceRunningBinary(binary); err != nil {
+	if err := replaceBinary(exe, binary, goos); err != nil {
 		return err
 	}
 
@@ -178,16 +197,54 @@ func RunUpdate(out io.Writer, local string) error {
 }
 
 func download(url string) ([]byte, error) {
-	resp, err := updateHTTPClient.Get(url)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stalled := time.AfterFunc(stallTimeout, cancel)
+	defer stalled.Stop()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("download: %w", err)
+	}
+	resp, err := updateHTTPClient.Do(req)
+	if err != nil {
+		return nil, downloadError(ctx, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("download: %s", resp.Status)
 	}
-	return io.ReadAll(io.LimitReader(resp.Body, maxDownloadMiB<<20))
+
+	body := progressReader{
+		r:        io.LimitReader(resp.Body, maxDownloadMiB<<20),
+		progress: func() { stalled.Reset(stallTimeout) },
+	}
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return nil, downloadError(ctx, err)
+	}
+	return data, nil
+}
+
+func downloadError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return fmt.Errorf("download: nothing received for %s", stallTimeout)
+	}
+	return fmt.Errorf("download: %w", err)
+}
+
+type progressReader struct {
+	r        io.Reader
+	progress func()
+}
+
+func (p progressReader) Read(b []byte) (int, error) {
+	n, err := p.r.Read(b)
+	if n > 0 {
+		p.progress()
+	}
+	return n, err
 }
 
 func verifyChecksum(archive []byte, name, checksumURL string) error {
@@ -249,18 +306,9 @@ func binaryName() string {
 	return "ttype"
 }
 
-// replaceRunningBinary writes next to the current binary and renames over it,
-// so a failed write never leaves a half-written executable behind.
-func replaceRunningBinary(binary []byte) error {
-	current, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("locate binary: %w", err)
-	}
-	current, err = filepath.EvalSymlinks(current)
-	if err != nil {
-		return fmt.Errorf("resolve binary: %w", err)
-	}
-
+// replaceBinary writes next to the current binary and renames over it, so a
+// failed write never leaves a half-written executable behind.
+func replaceBinary(current string, binary []byte, goos string) error {
 	tmp, err := os.CreateTemp(filepath.Dir(current), ".ttype-update-")
 	if err != nil {
 		return fmt.Errorf("write update: %w (is the install dir writable?)", err)
@@ -278,8 +326,39 @@ func replaceRunningBinary(binary []byte) error {
 	if err := os.Chmod(tmp.Name(), 0o755); err != nil {
 		return fmt.Errorf("write update: %w", err)
 	}
+
+	if goos == "windows" {
+		return swapRunningExe(tmp.Name(), current)
+	}
 	if err := os.Rename(tmp.Name(), current); err != nil {
 		return fmt.Errorf("replace binary: %w", err)
 	}
 	return nil
+}
+
+// Windows refuses to overwrite a running .exe but lets it be renamed, so the
+// old one steps aside and is deleted on the next start.
+func swapRunningExe(next, current string) error {
+	old := oldBinaryPath(current)
+	_ = os.Remove(old)
+	if err := os.Rename(current, old); err != nil {
+		return fmt.Errorf("replace binary: %w", err)
+	}
+	if err := os.Rename(next, current); err != nil {
+		_ = os.Rename(old, current)
+		return fmt.Errorf("replace binary: %w", err)
+	}
+	return nil
+}
+
+func oldBinaryPath(current string) string {
+	return current + ".old"
+}
+
+// RemoveOldBinary deletes the copy a Windows update left behind. It is still
+// running during the update, so this waits for the next start.
+func RemoveOldBinary() {
+	if exe, err := os.Executable(); err == nil {
+		_ = os.Remove(oldBinaryPath(exe))
+	}
 }
