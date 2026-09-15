@@ -174,7 +174,9 @@ func (m TestModel) renderWords() string {
 			if j == cursor {
 				flush()
 				text := string(r)
-				if m.cfg.Blind {
+				// A word's first letter is never typed yet, and before the
+				// first keystroke nothing has shown it, so it stays visible.
+				if m.cfg.Blind && cursor > revealed {
 					text = "·"
 				}
 				out.WriteString(m.theme.Cursor.Render(text))

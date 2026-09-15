@@ -172,6 +172,28 @@ func TestBlindModeHidesTheWordInProgress(t *testing.T) {
 	}
 }
 
+func TestBlindModeShowsTheLetterAWordStartsWith(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60, Blind: true}
+	m := newTestModelFor(t, "the cat sat", cfg)
+	if view := stripANSI(m.View()); !strings.Contains(view, "the cat") {
+		t.Fatalf("view = %q, want the first word whole before typing", view)
+	}
+
+	for _, r := range "the " {
+		m.session.InputRune(r)
+	}
+	if view := stripANSI(m.View()); !strings.Contains(view, "cat") {
+		t.Fatalf("view = %q, want the next word whole", view)
+	}
+
+	m.session.InputRune('c')
+	if view := stripANSI(m.View()); strings.Contains(view, "cat") || !strings.Contains(view, "t sat") {
+		t.Fatalf("view = %q, want the word in progress hidden", view)
+	}
+}
+
 func TestToggleLiveStatsHidesTheLiveLine(t *testing.T) {
 	t.Parallel()
 
