@@ -126,7 +126,7 @@ func (m HelpOverlay) withoutFlags() []string {
 	lines := m.duringTestOnly()
 	lines = append(lines, "", m.theme.HUDTitle.Render("Results"))
 	for _, b := range []key.Binding{
-		resultsKeys.Restart, resultsKeys.Copy, resultsKeys.Settings,
+		resultsKeys.Restart, resultsKeys.Replay, resultsKeys.Copy, resultsKeys.Settings,
 		resultsKeys.Mode, resultsKeys.Language,
 	} {
 		lines = append(lines, m.theme.Help.Render(overlayRow(b.Help().Key, b.Help().Desc)))

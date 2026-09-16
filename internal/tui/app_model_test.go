@@ -374,3 +374,34 @@ func TestCtrlSStillOpensSettingsFromResults(t *testing.T) {
 		t.Fatalf("phase = %v, want phaseSettings", m.phase)
 	}
 }
+
+func TestReplayFromTheResultScreen(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m = finishTest(m, clock)
+
+	next, cmd := m.Update(runeKey('p'))
+	m = next.(AppModel)
+	if m.phase != phaseReplay || cmd == nil {
+		t.Fatalf("phase = %v, cmd nil = %v; want the replay playing", m.phase, cmd == nil)
+	}
+
+	// The run's only keystroke came at its first instant.
+	for range 3 {
+		next, _ = m.Update(replayTickMsg(time.Now()))
+		m = next.(AppModel)
+	}
+	if !m.replay.done() {
+		t.Fatal("the replay did not reach the end")
+	}
+	if view := stripANSI(m.View()); !strings.Contains(view, "replay") {
+		t.Fatalf("view = %q, want the replay screen", view)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(AppModel)
+	if m.phase != phaseResult {
+		t.Fatalf("phase = %v after esc, want back on the result screen", m.phase)
+	}
+}

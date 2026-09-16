@@ -34,6 +34,7 @@ type testKeymap struct {
 
 type resultsKeymap struct {
 	Restart  key.Binding
+	Replay   key.Binding
 	Copy     key.Binding
 	Settings key.Binding
 	Mode     key.Binding
@@ -77,6 +78,7 @@ var testKeys = testKeymap{
 
 var resultsKeys = resultsKeymap{
 	Restart:  key.NewBinding(key.WithKeys("tab", "enter", "r", "R"), key.WithHelp("tab/enter", "restart")),
+	Replay:   key.NewBinding(key.WithKeys("p", "P"), key.WithHelp("p", "replay")),
 	Copy:     key.NewBinding(key.WithKeys("C"), key.WithHelp("C", "copy result")),
 	Settings: key.NewBinding(key.WithKeys("S"), key.WithHelp("S", "settings")),
 	Mode:     key.NewBinding(key.WithKeys("M"), key.WithHelp("M", "mode picker")),
@@ -113,6 +115,7 @@ func testHelpLine() string {
 func resultsHelpLine(width int) string {
 	bindings := []key.Binding{
 		resultsKeys.Restart,
+		resultsKeys.Replay,
 		appKeys.Quit,
 		resultsKeys.Copy,
 		resultsKeys.Settings,

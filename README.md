@@ -173,6 +173,7 @@ becomes the default for next time, so the flags are for one-offs.
 | Key | Action |
 | --- | --- |
 | `tab` `enter` `r` | Restart |
+| `p` | Watch the replay |
 | `C` | Copy the result line |
 | `S` | Settings |
 | `M` | Mode picker |
@@ -180,7 +181,7 @@ becomes the default for next time, so the flags are for one-offs.
 | `u` | Releases page, when there is a newer version |
 | `esc` `q` | Quit |
 
-**Watching a replay** (`enter` on a row in `ttype history`)
+**Watching a replay** (`p` on the result screen, or `enter` on a row in `ttype history`)
 
 | Key | Action |
 | --- | --- |

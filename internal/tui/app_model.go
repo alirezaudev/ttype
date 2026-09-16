@@ -24,6 +24,7 @@ const (
 	phaseLanguagePicker
 	phaseModePicker
 	phaseHelp
+	phaseReplay
 )
 
 type sizable interface {
@@ -40,6 +41,8 @@ type AppModel struct {
 	test           TestModel
 	result         domain.Result
 	pbUpdate       storage.PBUpdate
+	recording      domain.Replay
+	replay         ReplayModel
 	finishedAt     time.Time
 	notice         statusNotice
 	settings       SettingsPanel
@@ -103,7 +106,7 @@ func (m *AppModel) setSize(width, height int) {
 }
 
 func (m *AppModel) sizables() []sizable {
-	return []sizable{&m.test, &m.settings, &m.languagePicker, &m.modePicker, &m.welcome, &m.help}
+	return []sizable{&m.test, &m.settings, &m.languagePicker, &m.modePicker, &m.welcome, &m.help, &m.replay}
 }
 
 func (m *AppModel) pushPhase(next appPhase) {
@@ -212,6 +215,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, resultsKeys.Restart):
 				return m, m.restartTest()
+			case key.Matches(msg, resultsKeys.Replay):
+				return m, m.openReplay()
 			case key.Matches(msg, resultsKeys.Copy):
 				return m, copyResultCmd(m.result)
 			case key.Matches(msg, resultsKeys.Settings):
@@ -241,6 +246,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateModePicker(msg)
 	case phaseHelp:
 		return m.updateHelp(msg)
+	case phaseReplay:
+		next, cmd, done := m.replay.Update(msg)
+		m.replay = next
+		if done {
+			return m, m.popPhase()
+		}
+		return m, cmd
 	}
 
 	return m, nil
@@ -265,6 +277,24 @@ func (m *AppModel) openModePicker() tea.Cmd {
 	m.modePicker.setSize(m.width, m.height)
 	m.pushPhase(phaseModePicker)
 	return nil
+}
+
+// openReplay plays the run that just finished, straight from memory, so it
+// works even when replays are not saved.
+func (m *AppModel) openReplay() tea.Cmd {
+	if len(m.recording.Events) == 0 {
+		m.notice = errorNotice("nothing to replay")
+		return nil
+	}
+	replay, err := NewReplayModel(m.result, m.recording, m.theme)
+	if err != nil {
+		m.notice = errorNotice(err.Error())
+		return nil
+	}
+	m.replay = replay
+	m.replay.setSize(m.width, m.height)
+	m.pushPhase(phaseReplay)
+	return m.replay.Init()
 }
 
 func (m *AppModel) openLanguagePicker() tea.Cmd {
@@ -341,6 +371,7 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.test = next.(TestModel)
 	if m.test.session.State() == domain.SessionFinished {
 		m.result, m.pbUpdate, m.notice = m.finishResult()
+		m.recording = domain.Replay{Target: m.test.session.Target(), Events: m.test.session.Events()}
 		m.finished = true
 		if m.quitOnFinish {
 			return m, tea.Quit
@@ -460,6 +491,8 @@ func (m AppModel) View() string {
 		return m.modePicker.View()
 	case phaseHelp:
 		return m.help.View()
+	case phaseReplay:
+		return m.replay.View()
 	case phaseResult:
 		return renderResult(m.result, m.pbUpdate, m.theme, m.width, m.height, m.version, m.notice)
 	default:
