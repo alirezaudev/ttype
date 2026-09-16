@@ -192,8 +192,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Keystrokes still in flight when the timer fires must not press
-		// anything on the screen that just appeared.
-		if m.phase == phaseResult && m.inResultsGrace() {
+		// anything on the screen that just appeared. Tab and enter are never
+		// typed into the text, so they restart at once.
+		inFlight := msg.Type != tea.KeyTab && msg.Type != tea.KeyEnter
+		if m.phase == phaseResult && m.inResultsGrace() && inFlight {
 			return m, nil
 		}
 		m.notice = statusNotice{}

@@ -152,17 +152,37 @@ func TestResultsGraceSwallowsKeysThenReleases(t *testing.T) {
 	next, _ := m.Update(tickMsg(time.Now()))
 	m = next.(AppModel)
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m = next.(AppModel)
-	if m.phase != phaseResult {
-		t.Fatal("enter within the grace window restarted the test")
+	for _, r := range "rL " {
+		next, _ = m.Update(runeKey(r))
+		m = next.(AppModel)
+		if m.phase != phaseResult {
+			t.Fatalf("%q within the grace window left the result screen", r)
+		}
 	}
 
 	m.finishedAt = m.finishedAt.Add(-resultsKeyGrace)
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ = m.Update(runeKey('r'))
 	m = next.(AppModel)
 	if m.phase != phaseTest {
 		t.Fatalf("phase = %v after the grace window, want phaseTest", m.phase)
+	}
+}
+
+// Nobody types tab or enter into the text, so they need no grace.
+func TestResultsRestartKeysSkipTheGrace(t *testing.T) {
+	t.Parallel()
+
+	for _, keyType := range []tea.KeyType{tea.KeyTab, tea.KeyEnter} {
+		m, clock := newAppModel(t)
+		m.test.session.InputRune('a')
+		clock.Advance(16 * time.Second)
+		next, _ := m.Update(tickMsg(time.Now()))
+		m = next.(AppModel)
+
+		next, _ = m.Update(tea.KeyMsg{Type: keyType})
+		if m = next.(AppModel); m.phase != phaseTest {
+			t.Fatalf("%v right after the result: phase = %v, want a new test", keyType, m.phase)
+		}
 	}
 }
 
