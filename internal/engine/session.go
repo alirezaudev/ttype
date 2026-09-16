@@ -17,6 +17,11 @@ const skipRune = '\x00'
 
 const partialSecondFloor = 500 * time.Millisecond
 
+// A run is rated over at least this long. Keys that all land in one read (an
+// input method, a burst over SSH) finish a short test in microseconds, which
+// works out to millions of wpm.
+const minRatedTime = time.Second
+
 // Grace before --min-wpm can fail a run.
 const minWPMGrace = 5 * time.Second
 
@@ -512,7 +517,7 @@ func (s *Session) recordWPMSnapshot() {
 	}
 
 	s.growSeries(sec)
-	s.wpmHistory[sec] = stats.WPM(s.counts.Correct, elapsed)
+	s.wpmHistory[sec] = stats.WPM(s.counts.Correct, max(elapsed, minRatedTime))
 }
 
 func (s *Session) bucketKeystroke(correct bool) {
@@ -571,7 +576,8 @@ func (s *Session) Result() (domain.Result, error) {
 	}
 
 	counts := s.Counts()
-	live := s.LiveStats()
+	live := stats.Live(counts, max(s.Elapsed(), minRatedTime))
+	live.Accuracy = stats.Accuracy(s.keystrokesCorrect, s.keystrokesIncorrect)
 	rawHistory, errHistory := s.perSecondSamples()
 
 	return domain.Result{

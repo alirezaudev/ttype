@@ -253,6 +253,32 @@ func TestSessionWPMResult(t *testing.T) {
 	}
 }
 
+func TestInstantRunIsRatedOverASecond(t *testing.T) {
+	t.Parallel()
+
+	s, clock := newWordsSession(t, "maximum")
+	typeString(s, "m")
+	clock.Advance(time.Millisecond)
+	typeString(s, "aximum")
+
+	result, err := s.Result()
+	if err != nil {
+		t.Fatalf("Result: %v", err)
+	}
+	// Seven correct characters over one second.
+	if result.WPM != 84 || result.RawWPM != 84 {
+		t.Fatalf("wpm = %v, raw = %v; want 84 for both", result.WPM, result.RawWPM)
+	}
+	for _, wpm := range result.WPMHistory {
+		if wpm > 84 {
+			t.Fatalf("WPMHistory = %v, want nothing above 84", result.WPMHistory)
+		}
+	}
+	if result.Duration != time.Millisecond {
+		t.Fatalf("Duration = %v, want the real 1ms", result.Duration)
+	}
+}
+
 func TestBackspaceRewindsCounts(t *testing.T) {
 	t.Parallel()
 
