@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 // wrapCache memoizes the word wrap, which only changes on restart or resize.
@@ -38,19 +39,22 @@ type TestModel struct {
 	version   domain.VersionInfo
 	capsProbe func() bool
 	wrap      *wrapCache
-	hideLive  bool
-	width     int
-	height    int
+	// reorderRTL sends right-to-left text in display order.
+	reorderRTL bool
+	hideLive   bool
+	width      int
+	height     int
 }
 
 func NewTestModel(session *engine.Session, cfg domain.TestConfig, theme Theme, ver domain.VersionInfo) TestModel {
 	return TestModel{
-		session:   session,
-		cfg:       cfg,
-		theme:     theme,
-		version:   ver,
-		capsProbe: newCapsLockMonitor().on,
-		wrap:      &wrapCache{},
+		session:    session,
+		cfg:        cfg,
+		theme:      theme,
+		version:    ver,
+		capsProbe:  newCapsLockMonitor().on,
+		wrap:       &wrapCache{},
+		reorderRTL: reorderRTL,
 	}
 }
 
@@ -151,8 +155,10 @@ func (m TestModel) renderWords() string {
 		revealed = blindRevealEnd(target, cursor)
 	}
 
-	lines := m.wrap.wrap(target, m.session.Target(), m.typingWidth())
+	width := m.typingWidth()
+	lines := m.wrap.wrap(target, m.session.Target(), width)
 	from, to := visibleLineWindow(lines, cursor, 3)
+	rtl := m.reorderRTL && rightToLeft(target)
 
 	var out, run strings.Builder
 	runKind := cellPending
@@ -166,8 +172,23 @@ func (m TestModel) renderWords() string {
 
 	for i := from; i < to; i++ {
 		line := lines[i]
-		for j := line.start; j < line.end; j++ {
+		var order []int
+		if rtl {
+			order = visualOrder(target, line.start, line.end)
+			// Right-aligned, so each line starts where the reader looks.
+			if m.width > 0 {
+				pad := width - runewidth.StringWidth(string(target[line.start:line.end]))
+				out.WriteString(strings.Repeat(" ", max(pad, 0)))
+			}
+		}
+
+		for k := 0; k < line.end-line.start; k++ {
+			j := line.start + k
 			r := target[j]
+			if rtl {
+				j = order[k]
+				r = mirrorRune(target[j])
+			}
 
 			// The cursor keeps its own call: it is a single cell and its style
 			// never matches the run around it.

@@ -230,4 +230,8 @@ never measured against a 15 second Spanish one with punctuation on.
 | `~/.local/share/ttype/languages/` | Downloaded word lists |
 
 `XDG_CONFIG_HOME` and `XDG_DATA_HOME` are honoured; `NO_COLOR` turns the colour
-off. `man ttype` has the long version of all of this.
+off. Persian, Arabic and Hebrew are drawn right to left by ttype, except in
+terminals that do it themselves (GNOME Terminal and other VTE ones, Konsole,
+mlterm); if the words still come out backwards, set `TTYPE_BIDI=ttype`, or
+`TTYPE_BIDI=terminal` if they are reversed twice. `man ttype` has the long
+version of all of this.

@@ -203,6 +203,14 @@ Overrides the data directory.
 .TP
 .B NO_COLOR
 Disables colour output.
+.TP
+.B TTYPE_BIDI
+Who puts right-to-left text (Persian, Arabic, Hebrew) in display order:
+.B ttype
+or the
+.BR terminal .
+By default ttype does it, unless the terminal is built on VTE, or is Konsole
+or mlterm, which reorder text themselves.
 .SH EXAMPLES
 .TP
 A quick sprint:
