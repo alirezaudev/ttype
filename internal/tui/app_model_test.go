@@ -565,6 +565,127 @@ func TestCustomTextIsNotSavedAsTheDefault(t *testing.T) {
 	}
 }
 
+type fakeInstaller struct {
+	calls []bool
+	err   error
+}
+
+func (f *fakeInstaller) install(_ string, asked bool) error {
+	f.calls = append(f.calls, asked)
+	return f.err
+}
+
+func appModelWithInstaller(t *testing.T, f *fakeInstaller) (AppModel, *engine.FakeClock) {
+	t.Helper()
+	m, clock := newAppModel(t)
+	m.installUpdate = f.install
+	return m, clock
+}
+
+func TestNewReleaseInstallsInTheBackground(t *testing.T) {
+	t.Parallel()
+
+	f := &fakeInstaller{}
+	m, clock := appModelWithInstaller(t, f)
+	info := domain.VersionInfo{Local: "1.1.0", Latest: "1.2.0", UpdateAvailable: true, CanInstall: true, AutoInstall: true}
+
+	next, cmd := m.Update(VersionCheckedMsg{Info: info})
+	m = next.(AppModel)
+	if cmd == nil {
+		t.Fatal("an update that can install itself did not start")
+	}
+	next, _ = m.Update(cmd())
+	m = next.(AppModel)
+	if len(f.calls) != 1 || f.calls[0] {
+		t.Fatalf("install calls = %v, want one that nobody asked for", f.calls)
+	}
+	if got := versionLabel(m.version); !strings.Contains(got, "1.2.0") {
+		t.Fatalf("footer label = %q, want it to show 1.2.0 is installed", got)
+	}
+
+	m = finishTest(m, clock)
+	if view := stripANSI(m.View()); !strings.Contains(view, "1.2.0 is installed") {
+		t.Fatalf("result screen does not say 1.2.0 was installed:\n%s", view)
+	}
+}
+
+func TestNotifyOnlyDoesNotInstall(t *testing.T) {
+	t.Parallel()
+
+	f := &fakeInstaller{}
+	m, _ := appModelWithInstaller(t, f)
+	info := domain.VersionInfo{Local: "1.1.0", Latest: "1.2.0", UpdateAvailable: true, CanInstall: true}
+
+	if _, cmd := m.Update(VersionCheckedMsg{Info: info}); cmd != nil {
+		t.Fatal("notify mode started an install")
+	}
+}
+
+func TestUpdateKeyOnTheResultScreen(t *testing.T) {
+	t.Parallel()
+
+	press := func(m AppModel) (AppModel, tea.Cmd) {
+		next, cmd := m.Update(runeKey('u'))
+		return next.(AppModel), cmd
+	}
+
+	t.Run("installs when ttype can", func(t *testing.T) {
+		f := &fakeInstaller{err: errors.New("offline")}
+		m, clock := appModelWithInstaller(t, f)
+		m.version = domain.VersionInfo{Local: "1.1.0", Latest: "1.2.0", UpdateAvailable: true, CanInstall: true}
+		m = finishTest(m, clock)
+
+		m, cmd := press(m)
+		if cmd == nil || !strings.Contains(m.notice.text, "downloading") {
+			t.Fatalf("u: notice %q, cmd nil = %v", m.notice.text, cmd == nil)
+		}
+		next, _ := m.Update(cmd())
+		m = next.(AppModel)
+		if len(f.calls) != 1 || !f.calls[0] {
+			t.Fatalf("install calls = %v, want one the user asked for", f.calls)
+		}
+		if m.notice.kind != noticeError || !strings.Contains(m.notice.text, "offline") {
+			t.Fatalf("notice = %+v, want the failure shown", m.notice)
+		}
+	})
+
+	t.Run("names the command otherwise", func(t *testing.T) {
+		f := &fakeInstaller{}
+		m, clock := appModelWithInstaller(t, f)
+		m.version = domain.VersionInfo{Local: "1.1.0", Latest: "1.2.0", UpdateAvailable: true, Command: "brew upgrade ttype"}
+		m = finishTest(m, clock)
+
+		m, cmd := press(m)
+		if cmd != nil || len(f.calls) != 0 || !strings.Contains(m.notice.text, "brew upgrade ttype") {
+			t.Fatalf("u: notice %q, cmd nil = %v, installs %v", m.notice.text, cmd == nil, f.calls)
+		}
+	})
+}
+
+func TestFirstLaunchAfterAnUpdateSaysSo(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	next, _ := m.Update(VersionCheckedMsg{Info: domain.VersionInfo{Local: "1.2.0", Latest: "1.2.0", JustUpdated: true}})
+	m = next.(AppModel)
+	if got := versionLabel(m.version); !strings.Contains(got, "updated") {
+		t.Fatalf("footer label = %q, want it to say updated", got)
+	}
+	m = finishTest(m, clock)
+	if !strings.Contains(m.notice.text, "Updated to ttype 1.2.0") {
+		t.Fatalf("notice = %q, want the update announced", m.notice.text)
+	}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m = next.(AppModel)
+	m.test.session.InputRune('a')
+	m.test.session.Finish()
+	next, _ = m.Update(tickMsg{loop: m.test.tickLoop})
+	if m = next.(AppModel); m.phase != phaseResult || strings.Contains(m.notice.text, "Updated") {
+		t.Fatalf("second result: phase %v, notice %q; want no second announcement", m.phase, m.notice.text)
+	}
+}
+
 type offlineSource struct{}
 
 func (offlineSource) Generate(opts domain.GenerateOptions) (string, error) {

@@ -24,6 +24,7 @@ type ConfigChanges struct {
 	Numbers     *bool
 	Blind       *bool
 	Zen         *bool
+	Update      *string
 }
 
 func (c ConfigChanges) empty() bool {
@@ -105,6 +106,13 @@ func applyConfigChanges(settings domain.Settings, c ConfigChanges) (domain.Setti
 	if c.Zen != nil {
 		settings.Zen = *c.Zen
 	}
+	if c.Update != nil {
+		mode, err := domain.ParseUpdateMode(*c.Update)
+		if err != nil {
+			return settings, err
+		}
+		settings.Update = mode
+	}
 	return settings, nil
 }
 
@@ -142,6 +150,7 @@ func printSettings(out io.Writer, settings domain.Settings, dirs storage.Dirs) {
 		{"numbers", onOff(settings.Numbers)},
 		{"blind", onOff(settings.Blind)},
 		{"zen", onOff(settings.Zen)},
+		{"update", string(UpdateModeFor(settings.Update, ""))},
 	}
 	for _, row := range rows {
 		fmt.Fprintf(out, "  %-12s %s\n", row[0], row[1])

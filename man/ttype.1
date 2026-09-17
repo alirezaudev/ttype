@@ -112,8 +112,16 @@ Averages, personal bests and an optional sparkline of wpm over time.
 .B \-\-export csv
 writes the history to standard output instead.
 .TP
-.B config [\-\-default\-* ...]
+.B config [\-\-default\-* ...] [\-\-update auto|notify|off]
 Print the saved defaults, or change the ones you name.
+.B \-\-update
+sets what happens with new releases:
+.B auto
+installs them in the background (the default),
+.B notify
+only marks them in the footer, and
+.B off
+never checks.
 .TP
 .B languages [download]
 List cached word lists, or fetch every available list.
@@ -128,10 +136,23 @@ Check the terminal size, colour support, locale, clipboard tool and data
 directory, with a hint for anything that fails.
 .TP
 .B update
-Download and install the latest release, verifying its checksum first.
+Download and install the latest release now, verifying its checksum first.
 A copy installed by Homebrew, Scoop, a system package manager or
 .B go install
 is left alone, and the command to update it is printed instead.
+.IP
+Without it, ttype looks for a new release at most once a day, in the
+background. When it finds one it can install, it downloads it, verifies the
+checksum, runs the new binary with
+.B \-\-version
+and swaps it in; the new version runs from the next launch. It does not
+install a new major version, into a directory it cannot write, or on Windows;
+the footer marks those and
+.B u
+on the result screen names the command. See
+.B config \-\-update
+and
+.BR TTYPE_UPDATE .
 .TP
 .B completion [bash|zsh|fish|powershell]
 Print a completion script for the given shell.
@@ -183,7 +204,7 @@ Mode picker.
 Language picker.
 .TP
 .B u
-Open the releases page when a newer version exists.
+Install a newer version now, or say what to run when ttype cannot.
 .TP
 .B q, esc
 Quit.
@@ -248,6 +269,19 @@ or the
 .BR terminal .
 By default ttype does it, unless the terminal is built on VTE, or is Konsole
 or mlterm, which reorder text themselves.
+.TP
+.B TTYPE_UPDATE
+.BR auto ,
+.B notify
+or
+.BR off ;
+overrides
+.B config \-\-update
+for this run. With
+.B CI
+set, or with
+.BR "\-\-output json" ,
+ttype never checks for updates.
 .SH EXAMPLES
 .TP
 A quick sprint:

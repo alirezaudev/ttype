@@ -117,8 +117,17 @@ func versionLabel(ver domain.VersionInfo) string {
 	if !unicodeCapable() {
 		label = "v" + local
 	}
-	if ver.UpdateAvailable {
+	switch {
+	case ver.Installed != "":
+		arrow := " → "
+		if !unicodeCapable() {
+			arrow = " -> "
+		}
+		label += arrow + ver.Installed
+	case ver.UpdateAvailable:
 		label += " new"
+	case ver.JustUpdated:
+		label += " updated"
 	}
 	return label
 }
@@ -144,7 +153,7 @@ func renderFooter(theme Theme, cfg domain.TestConfig, ver domain.VersionInfo, wi
 	}
 
 	versionStyle := theme.Footer.Underline(true)
-	if ver.UpdateAvailable {
+	if ver.UpdateAvailable || ver.Installed != "" || ver.JustUpdated {
 		versionStyle = theme.Finished.Underline(true)
 	}
 	right := hyperlink(GitHubURL+"/releases", versionStyle.Render(versionLabel(ver)))

@@ -53,6 +53,10 @@ type AppModel struct {
 	theme          Theme
 	version        domain.VersionInfo
 	checkVersion   func() domain.VersionInfo
+	installUpdate  func(latest string, asked bool) error
+	updating       bool
+	updateAsked    bool
+	updateTold     bool
 	quitOnFinish   bool
 	noSave         bool
 	finished       bool
@@ -75,6 +79,9 @@ type Options struct {
 	QuitOnFinish bool
 	// CheckVersion runs once in the background; nil skips the check.
 	CheckVersion func() domain.VersionInfo
+	// InstallUpdate puts a release in place of the running binary. asked is
+	// set when the user pressed u rather than it starting on its own.
+	InstallUpdate func(latest string, asked bool) error
 	// NoSave keeps finished runs out of history, bests and replays.
 	NoSave bool
 	// Warning is shown under the text until the first run starts.
@@ -84,16 +91,17 @@ type Options struct {
 func NewAppModel(opts Options) AppModel {
 	theme := ResolveTheme(opts.Config.Theme)
 	m := AppModel{
-		cfg:          opts.Config,
-		provider:     opts.Provider,
-		langCache:    opts.Cache,
-		store:        opts.Store,
-		version:      opts.Version,
-		checkVersion: opts.CheckVersion,
-		quitOnFinish: opts.QuitOnFinish,
-		noSave:       opts.NoSave,
-		theme:        theme,
-		test:         NewTestModel(opts.Session, opts.Config, theme, opts.Version),
+		cfg:           opts.Config,
+		provider:      opts.Provider,
+		langCache:     opts.Cache,
+		store:         opts.Store,
+		version:       opts.Version,
+		checkVersion:  opts.CheckVersion,
+		installUpdate: opts.InstallUpdate,
+		quitOnFinish:  opts.QuitOnFinish,
+		noSave:        opts.NoSave,
+		theme:         theme,
+		test:          NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
 	m.test.warning = opts.Warning
 	if opts.Welcome {
@@ -152,6 +160,56 @@ func (m AppModel) Init() tea.Cmd {
 	return tea.Batch(m.test.Init(), checkVersionCmd(m.checkVersion))
 }
 
+// UpdateInstalledMsg reports how installing a release went.
+type UpdateInstalledMsg struct {
+	Version string
+	Err     error
+}
+
+func installUpdateCmd(install func(string, bool) error, latest string, asked bool) tea.Cmd {
+	return func() tea.Msg {
+		return UpdateInstalledMsg{Version: latest, Err: install(latest, asked)}
+	}
+}
+
+// updateNotice says, once, that ttype was updated or is about to be.
+func (m AppModel) updateNotice() statusNotice {
+	switch {
+	case m.version.Installed != "":
+		return infoNotice(fmt.Sprintf("ttype %s is installed and runs from the next launch", m.version.Installed))
+	case m.version.JustUpdated:
+		return infoNotice(fmt.Sprintf("Updated to ttype %s", m.version.Local))
+	}
+	return statusNotice{}
+}
+
+// updateNow is u on the result screen: install now when ttype can, or say
+// what to run instead.
+func (m *AppModel) updateNow() tea.Cmd {
+	v := m.version
+	switch {
+	case v.Installed != "":
+		m.notice = m.updateNotice()
+	case !v.UpdateAvailable:
+		if v.Latest != "" {
+			m.notice = infoNotice(fmt.Sprintf("ttype %s is the latest version", v.Local))
+		}
+	case m.updating:
+		m.updateAsked = true
+		m.notice = infoNotice(fmt.Sprintf("downloading ttype %s…", v.Latest))
+	case v.CanInstall && m.installUpdate != nil:
+		m.updating = true
+		m.updateAsked = true
+		m.notice = infoNotice(fmt.Sprintf("downloading ttype %s…", v.Latest))
+		return installUpdateCmd(m.installUpdate, v.Latest, true)
+	case v.Command != "":
+		m.notice = infoNotice("update with: " + v.Command)
+	default:
+		return openURLCmd(GitHubURL + "/releases")
+	}
+	return nil
+}
+
 // VersionCheckedMsg carries the result of the background release check.
 type VersionCheckedMsg struct{ Info domain.VersionInfo }
 
@@ -167,6 +225,28 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case VersionCheckedMsg:
 		m.version = msg.Info
 		m.test.version = msg.Info
+		if msg.Info.UpdateAvailable && msg.Info.AutoInstall && m.installUpdate != nil {
+			m.updating = true
+			return m, installUpdateCmd(m.installUpdate, msg.Info.Latest, false)
+		}
+		return m, nil
+	case UpdateInstalledMsg:
+		m.updating = false
+		asked := m.updateAsked
+		m.updateAsked = false
+		if msg.Err != nil {
+			// A background install fails quietly; the footer still says new.
+			if asked {
+				m.notice = errorNotice("update failed: " + msg.Err.Error())
+			}
+			return m, nil
+		}
+		m.version.Installed = msg.Version
+		m.test.version = m.version
+		if asked || m.phase == phaseResult {
+			m.notice = m.updateNotice()
+			m.updateTold = true
+		}
 		return m, nil
 	case OpenLanguagePickerMsg:
 		return m, m.openLanguagePicker()
@@ -237,8 +317,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.openModePicker()
 			case key.Matches(msg, resultsKeys.Language):
 				return m, m.openLanguagePicker()
-			case key.Matches(msg, resultsKeys.Update) && m.version.UpdateAvailable:
-				return m, openURLCmd(GitHubURL + "/releases")
+			case key.Matches(msg, resultsKeys.Update):
+				return m, m.updateNow()
 			}
 		}
 	}
@@ -391,6 +471,11 @@ func (m AppModel) updateTest(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.test = next.(TestModel)
 	if m.test.session.State() == domain.SessionFinished {
 		m.result, m.pbUpdate, m.notice = m.finishResult()
+		if m.notice.empty() && !m.updateTold {
+			if m.notice = m.updateNotice(); !m.notice.empty() {
+				m.updateTold = true
+			}
+		}
 		m.recording = domain.Replay{Target: m.test.session.Target(), Events: m.test.session.Events()}
 		m.finished = true
 		if m.quitOnFinish {

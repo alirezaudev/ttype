@@ -40,9 +40,20 @@ wget -qO- https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | 
 
 The script picks the right build for your machine, checks it against
 `checksums.txt`, and installs the binary and the man page under `/usr/local` —
-or `~/.local`, if that is where it can write. After that, `ttype update` does
-the same thing in place. It leaves copies installed by a package manager or
-`go install` alone and tells you the command to use instead.
+or `~/.local`, if that is where it can write.
+
+After that, ttype keeps itself up to date. Once a day it looks for a new
+release in the background, and when there is one it downloads it, checks it
+against `checksums.txt`, makes sure it runs, and swaps it in; the new version
+starts the next time you open ttype. Nothing waits on the network, so it works
+the same offline. `ttype update` does it on the spot.
+
+It never touches a copy installed by a package manager or `go install`, and it
+won't jump to a new major version, install into a folder you can't write to,
+or replace itself on Windows yet — in those cases the footer marks the update
+and `u` on the result screen tells you what to run. `ttype config --update
+notify` keeps the notice without installing, `--update off` stops checking,
+and `TTYPE_UPDATE` does the same for one run.
 
 ### Windows
 
@@ -197,7 +208,7 @@ replay stores the text.
 | `S` | Settings |
 | `M` | Mode picker |
 | `L` | Language picker |
-| `u` | Releases page, when there is a newer version |
+| `u` | Update now, or say what to run when ttype can't |
 | `esc` `q` | Quit |
 
 **Watching a replay** (`p` on the result screen, or `enter` on a row in `ttype history`)
@@ -219,7 +230,7 @@ replay stores the text.
 | `ttype languages` | List cached word lists; `languages download` fetches every one |
 | `ttype clear` | Delete history, languages, or both |
 | `ttype doctor` | Check the terminal, locale, clipboard and data directory |
-| `ttype update` | Update to the latest release |
+| `ttype update` | Update to the latest release right now |
 | `ttype uninstall` | Remove the binary and man page; `--purge` takes your data too |
 | `ttype completion` | Completion script for bash, zsh, fish or powershell |
 

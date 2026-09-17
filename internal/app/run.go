@@ -35,7 +35,7 @@ type RunOptions struct {
 }
 
 // RunTest starts an interactive typing test in the terminal.
-func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts RunOptions) error {
+func RunTest(cfg domain.TestConfig, store storage.Store, build Build, opts RunOptions) error {
 	outputJSON := opts.OutputJSON
 	dirs, err := storage.DefaultDirs()
 	if err != nil {
@@ -70,25 +70,31 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts Ru
 		return fmt.Errorf("load settings: %w", err)
 	}
 
-	var checkVersion func() domain.VersionInfo
+	var (
+		checkVersion  func() domain.VersionInfo
+		installUpdate func(latest string, asked bool) error
+	)
 	// Scripts and CI get a quiet run that never touches the network.
-	if !outputJSON && os.Getenv("CI") == "" {
-		checkVersion = func() domain.VersionInfo { return CheckVersion(version) }
+	mode := UpdateModeFor(settings.Update, os.Getenv("TTYPE_UPDATE"))
+	if !outputJSON && os.Getenv("CI") == "" && mode != domain.UpdateOff {
+		checkVersion = func() domain.VersionInfo { return CheckVersion(build, mode) }
+		installUpdate = func(latest string, asked bool) error { return InstallUpdate(build, latest, asked) }
 	}
 
 	model := tui.NewAppModel(tui.Options{
 		// The welcome screen picks a mode, and custom text already has one.
-		Welcome:      !settings.Onboarded && !outputJSON && opts.CustomText == "",
-		QuitOnFinish: outputJSON,
-		NoSave:       opts.NoSave,
-		Version:      domain.VersionInfo{Local: version},
-		CheckVersion: checkVersion,
-		Config:       cfg,
-		Provider:     source,
-		Cache:        provider.LanguageCache(),
-		Store:        store,
-		Session:      session,
-		Warning:      warning,
+		Welcome:       !settings.Onboarded && !outputJSON && opts.CustomText == "",
+		QuitOnFinish:  outputJSON,
+		NoSave:        opts.NoSave,
+		Version:       domain.VersionInfo{Local: build.Version},
+		CheckVersion:  checkVersion,
+		InstallUpdate: installUpdate,
+		Config:        cfg,
+		Provider:      source,
+		Cache:         provider.LanguageCache(),
+		Store:         store,
+		Session:       session,
+		Warning:       warning,
 	})
 	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion()}
 	// With stdout redirected (--output json > run.json), the test is drawn on

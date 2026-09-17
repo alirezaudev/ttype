@@ -8,8 +8,10 @@ import (
 )
 
 type updateState struct {
-	LastCheck time.Time `json:"last_check"`
-	Latest    string    `json:"latest,omitempty"`
+	LastCheck   time.Time `json:"last_check"`
+	Latest      string    `json:"latest,omitempty"`
+	LastInstall time.Time `json:"last_install,omitzero"`
+	Installed   string    `json:"installed,omitempty"`
 }
 
 func updateStatePath(dataDir string) string {

@@ -225,6 +225,12 @@ func TestCheckVersionRecoversFromABrokenStateOrClock(t *testing.T) {
 	}
 }
 
+// testUpdater points at a fake release server, and stands in for running the
+// new binary, which in tests is not a real one.
+func testUpdater(base, exe string) updater {
+	return updater{base: base, exe: exe, goos: runtime.GOOS, verify: func(string, string) error { return nil }}
+}
+
 // releaseServer serves one release the way GitHub lays it out, sending the
 // archive in chunks with a pause between each.
 func releaseServer(t *testing.T, version string, binary []byte, pause time.Duration) (*httptest.Server, *atomic.Int32) {
@@ -272,7 +278,7 @@ func TestRunUpdateLeavesOtherInstallsAlone(t *testing.T) {
 
 	homebrew := detectInstall("/opt/homebrew/Cellar/ttype/1.0.0/bin/ttype", Build{Version: "1.0.0", Release: true}, nil, "darwin")
 	var out strings.Builder
-	err := runUpdate(&out, "1.0.0", homebrew, exe, server.URL, runtime.GOOS)
+	err := runUpdate(&out, "1.0.0", homebrew, testUpdater(server.URL, exe))
 	if err == nil || !strings.Contains(err.Error(), "brew upgrade ttype") {
 		t.Fatalf("runUpdate = %v, want the brew command", err)
 	}
@@ -300,7 +306,7 @@ func TestRunUpdateOutlastsASlowDownload(t *testing.T) {
 
 	start := time.Now()
 	var out strings.Builder
-	if err := runUpdate(&out, "1.0.0", install{method: installScript}, exe, server.URL, runtime.GOOS); err != nil {
+	if err := runUpdate(&out, "1.0.0", install{method: installScript}, testUpdater(server.URL, exe)); err != nil {
 		t.Fatalf("runUpdate: %v", err)
 	}
 	if elapsed := time.Since(start); elapsed < 2*stallTimeout {
@@ -333,7 +339,7 @@ func TestReplaceBinarySwapsARunningWindowsExe(t *testing.T) {
 	if err := os.WriteFile(exe, []byte("old"), 0o755); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	if err := replaceBinary(exe, []byte("new"), "windows"); err != nil {
+	if err := replaceBinary(exe, []byte("new"), "windows", nil); err != nil {
 		t.Fatalf("replaceBinary: %v", err)
 	}
 	if got, _ := os.ReadFile(exe); string(got) != "new" {
@@ -344,7 +350,7 @@ func TestReplaceBinarySwapsARunningWindowsExe(t *testing.T) {
 	}
 
 	// A second update replaces the copy the first one set aside.
-	if err := replaceBinary(exe, []byte("newer"), "windows"); err != nil {
+	if err := replaceBinary(exe, []byte("newer"), "windows", nil); err != nil {
 		t.Fatalf("second replaceBinary: %v", err)
 	}
 	if got, _ := os.ReadFile(oldBinaryPath(exe)); string(got) != "new" {

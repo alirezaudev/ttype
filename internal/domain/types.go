@@ -97,18 +97,19 @@ type StatsSummary struct {
 }
 
 type Settings struct {
-	DefaultDuration  Duration `json:"default_duration"`
-	DefaultWordCount int      `json:"default_word_count,omitempty"`
-	DefaultWidth     int      `json:"default_width,omitempty"`
-	Theme            string   `json:"theme"`
-	Language         string   `json:"language,omitempty"`
-	DefaultMode      TextMode `json:"default_mode,omitempty"`
-	Punctuation      bool     `json:"default_punctuation,omitempty"`
-	Numbers          bool     `json:"default_numbers,omitempty"`
-	Blind            bool     `json:"default_blind,omitempty"`
-	Zen              bool     `json:"default_zen,omitempty"`
-	DefaultMinWPM    int      `json:"default_min_wpm,omitempty"`
-	Onboarded        bool     `json:"onboarded,omitempty"`
+	DefaultDuration  Duration   `json:"default_duration"`
+	DefaultWordCount int        `json:"default_word_count,omitempty"`
+	DefaultWidth     int        `json:"default_width,omitempty"`
+	Theme            string     `json:"theme"`
+	Language         string     `json:"language,omitempty"`
+	DefaultMode      TextMode   `json:"default_mode,omitempty"`
+	Punctuation      bool       `json:"default_punctuation,omitempty"`
+	Numbers          bool       `json:"default_numbers,omitempty"`
+	Blind            bool       `json:"default_blind,omitempty"`
+	Zen              bool       `json:"default_zen,omitempty"`
+	DefaultMinWPM    int        `json:"default_min_wpm,omitempty"`
+	Onboarded        bool       `json:"onboarded,omitempty"`
+	Update           UpdateMode `json:"update,omitempty"`
 }
 
 func DefaultSettings() Settings {

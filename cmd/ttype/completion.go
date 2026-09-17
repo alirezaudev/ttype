@@ -30,6 +30,7 @@ func registerCompletions(root *cobra.Command) {
 		_ = config.RegisterFlagCompletionFunc("default-time", suggestValues("15", "30", "60", "120"))
 		_ = config.RegisterFlagCompletionFunc("default-words", suggestValues("10", "25", "50", "100"))
 		_ = config.RegisterFlagCompletionFunc("default-language", suggestLanguages)
+		_ = config.RegisterFlagCompletionFunc("update", suggestValues("auto", "notify", "off"))
 	}
 	_ = root.RegisterFlagCompletionFunc("output", suggestValues("json"))
 	_ = root.RegisterFlagCompletionFunc("text", cobra.NoFileCompletions)

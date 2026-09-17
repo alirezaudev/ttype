@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -45,19 +46,36 @@ var checkHTTPClient = &http.Client{
 }
 
 // CheckVersion compares the running binary against the latest release, asking
-// the network at most once a day. It is best effort: a failure just means no
-// update notice.
-func CheckVersion(local string) domain.VersionInfo {
+// the network at most once a day, and says whether ttype can install it
+// itself. It is best effort: a failure just means no update notice.
+func CheckVersion(build Build, mode domain.UpdateMode) domain.VersionInfo {
 	dirs, err := storage.DefaultDirs()
 	if err != nil {
-		return domain.VersionInfo{Local: local}
+		return domain.VersionInfo{Local: build.Version}
 	}
 	fetch := func() (string, error) { return latestRelease(checkHTTPClient, releasesURL) }
-	return checkVersion(local, updateStatePath(dirs.Data), time.Now(), fetch)
+	info := checkVersion(build.Version, updateStatePath(dirs.Data), time.Now(), fetch)
+	if !info.UpdateAvailable {
+		return info
+	}
+	inst, exe, err := currentInstall(build)
+	if err != nil {
+		return info
+	}
+	return installPlan(info, inst, exe, runtime.GOOS, mode, dirWritable)
 }
 
 func checkVersion(local, statePath string, now time.Time, fetch func() (string, error)) domain.VersionInfo {
 	state := loadUpdateState(statePath)
+
+	// A background install is announced on the first launch that runs it.
+	justUpdated := false
+	if state.Installed != "" && !newerVersion(state.Installed, local) {
+		justUpdated = state.Installed == local
+		state.Installed = ""
+		_ = saveUpdateState(statePath, state)
+	}
+
 	// A clock set back must not postpone the next check forever.
 	if now.Sub(state.LastCheck) >= checkInterval || now.Before(state.LastCheck) {
 		// Record the attempt before asking, so being offline still waits a day.
@@ -72,6 +90,7 @@ func checkVersion(local, statePath string, now time.Time, fetch func() (string, 
 		Local:           local,
 		Latest:          state.Latest,
 		UpdateAvailable: newerVersion(state.Latest, local),
+		JustUpdated:     justUpdated,
 	}
 }
 
@@ -154,16 +173,16 @@ func RunUpdate(out io.Writer, build Build) error {
 	if err != nil {
 		return err
 	}
-	return runUpdate(out, build.Version, inst, exe, releasesURL, runtime.GOOS)
+	return runUpdate(out, build.Version, inst, newUpdater(exe))
 }
 
-func runUpdate(out io.Writer, local string, inst install, exe, base, goos string) error {
+func runUpdate(out io.Writer, local string, inst install, u updater) error {
 	// A package manager would lose track of a binary replaced behind its back.
 	if !inst.owned() {
 		return inst.updateRefusal()
 	}
 
-	latest, err := latestRelease(checkHTTPClient, base)
+	latest, err := latestRelease(checkHTTPClient, u.base)
 	if err != nil {
 		return err
 	}
@@ -173,26 +192,60 @@ func runUpdate(out io.Writer, local string, inst install, exe, base, goos string
 		return nil
 	}
 
-	name := assetName(latest)
 	fmt.Fprintf(out, "Downloading ttype %s...\n", latest)
-	archive, err := download(releaseAssetURL(base, latest, name))
-	if err != nil {
-		return fmt.Errorf("release %s for %s/%s: %w", latest, runtime.GOOS, runtime.GOARCH, err)
-	}
-
-	if err := verifyChecksum(archive, name, releaseAssetURL(base, latest, "checksums.txt")); err != nil {
+	if err := u.install(latest); err != nil {
 		return err
 	}
+	fmt.Fprintf(out, "Updated to ttype %s.\n", latest)
+	return nil
+}
 
+// updater installs a release over one binary.
+type updater struct {
+	base string
+	exe  string
+	goos string
+	// verify runs the new binary before it replaces the old one.
+	verify func(path, version string) error
+}
+
+func newUpdater(exe string) updater {
+	return updater{base: releasesURL, exe: exe, goos: runtime.GOOS, verify: runsAsVersion}
+}
+
+func (u updater) install(version string) error {
+	name := assetName(version)
+	archive, err := download(releaseAssetURL(u.base, version, name))
+	if err != nil {
+		return fmt.Errorf("release %s for %s/%s: %w", version, runtime.GOOS, runtime.GOARCH, err)
+	}
+	if err := verifyChecksum(archive, name, releaseAssetURL(u.base, version, "checksums.txt")); err != nil {
+		return err
+	}
 	binary, err := extractBinary(archive)
 	if err != nil {
 		return err
 	}
-	if err := replaceBinary(exe, binary, goos); err != nil {
-		return err
-	}
 
-	fmt.Fprintf(out, "Updated to ttype %s.\n", latest)
+	var check func(string) error
+	if u.verify != nil {
+		check = func(path string) error { return u.verify(path, version) }
+	}
+	return replaceBinary(u.exe, binary, u.goos, check)
+}
+
+// runsAsVersion starts the new binary with --version, so a build that can't
+// run here (a wrong architecture, a noexec mount) never replaces one that can.
+func runsAsVersion(path, version string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "--version").Output()
+	if err != nil {
+		return fmt.Errorf("new binary did not run: %w", err)
+	}
+	if !strings.Contains(string(out), version) {
+		return fmt.Errorf("new binary reports %q, want %s", strings.TrimSpace(string(out)), version)
+	}
 	return nil
 }
 
@@ -306,10 +359,15 @@ func binaryName() string {
 	return "ttype"
 }
 
+const tempPrefix = ".ttype-update-"
+
 // replaceBinary writes next to the current binary and renames over it, so a
 // failed write never leaves a half-written executable behind.
-func replaceBinary(current string, binary []byte, goos string) error {
-	tmp, err := os.CreateTemp(filepath.Dir(current), ".ttype-update-")
+func replaceBinary(current string, binary []byte, goos string, check func(string) error) error {
+	removeStaleTemps(filepath.Dir(current))
+
+	// Windows only runs a file that ends in .exe
+	tmp, err := os.CreateTemp(filepath.Dir(current), tempPrefix+"*"+filepath.Ext(current))
 	if err != nil {
 		return fmt.Errorf("write update: %w (is the install dir writable?)", err)
 	}
@@ -326,6 +384,11 @@ func replaceBinary(current string, binary []byte, goos string) error {
 	if err := os.Chmod(tmp.Name(), 0o755); err != nil {
 		return fmt.Errorf("write update: %w", err)
 	}
+	if check != nil {
+		if err := check(tmp.Name()); err != nil {
+			return err
+		}
+	}
 
 	if goos == "windows" {
 		return swapRunningExe(tmp.Name(), current)
@@ -334,6 +397,17 @@ func replaceBinary(current string, binary []byte, goos string) error {
 		return fmt.Errorf("replace binary: %w", err)
 	}
 	return nil
+}
+
+// A run killed mid-update can leave its temp file behind. Only old ones go, so
+// another ttype updating right now keeps its own.
+func removeStaleTemps(dir string) {
+	matches, _ := filepath.Glob(filepath.Join(dir, tempPrefix+"*"))
+	for _, path := range matches {
+		if info, err := os.Stat(path); err == nil && time.Since(info.ModTime()) > time.Hour {
+			_ = os.Remove(path)
+		}
+	}
 }
 
 // Windows refuses to overwrite a running .exe but lets it be renamed, so the

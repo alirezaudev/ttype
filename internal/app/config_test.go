@@ -54,6 +54,15 @@ func TestApplyConfigChangesRejectsBadValues(t *testing.T) {
 		t.Fatal("an unknown mode should be rejected")
 	}
 
+	update := "sometimes"
+	if _, err := applyConfigChanges(domain.Settings{}, ConfigChanges{Update: &update}); err == nil {
+		t.Fatal("an unknown update mode should be rejected")
+	}
+	update = "notify"
+	if settings, err := applyConfigChanges(domain.Settings{}, ConfigChanges{Update: &update}); err != nil || settings.Update != domain.UpdateNotify {
+		t.Fatalf("--update notify: %+v, %v", settings, err)
+	}
+
 	theme := "neon"
 	if _, err := applyConfigChanges(domain.Settings{}, ConfigChanges{Theme: &theme}); err == nil {
 		t.Fatal("an unknown theme should be rejected")

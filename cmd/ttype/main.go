@@ -81,7 +81,7 @@ func newRootCmd() *cobra.Command {
 				cfg = app.CustomConfig(cfg, text, cmd.Flags().Changed("words"), cmd.Flags().Changed("time"))
 			}
 
-			return app.RunTest(cfg, store, version, app.RunOptions{
+			return app.RunTest(cfg, store, app.Build{Version: version, Release: release}, app.RunOptions{
 				OutputJSON: flags.output == "json",
 				CustomText: text,
 				NoSave:     flags.noSave,
@@ -109,7 +109,7 @@ func newRootCmd() *cobra.Command {
 func newConfigCmd() *cobra.Command {
 	var (
 		duration, wordCount, width, minWPM int
-		mode, language, theme              string
+		mode, language, theme, update      string
 		punctuation, numbers, blind, zen   bool
 	)
 
@@ -158,6 +158,9 @@ func newConfigCmd() *cobra.Command {
 			if flags.Changed("default-zen") {
 				changes.Zen = &zen
 			}
+			if flags.Changed("update") {
+				changes.Update = &update
+			}
 			return app.RunConfig(store, changes)
 		},
 	}
@@ -173,6 +176,7 @@ func newConfigCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&numbers, "default-numbers", false, "Inject numbers by default")
 	cmd.Flags().BoolVar(&blind, "default-blind", false, "Start in blind mode by default")
 	cmd.Flags().BoolVar(&zen, "default-zen", false, "Start in zen mode by default")
+	cmd.Flags().StringVar(&update, "update", "", "New releases: auto installs them in the background, notify only tells you, off never checks")
 
 	return cmd
 }
