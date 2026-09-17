@@ -13,6 +13,9 @@ const (
 	TextModePython    TextMode = "python"
 	TextModeShell     TextMode = "shell"
 	TextModeRegex     TextMode = "regex"
+	// TextModeCustom is text the user brought. It is not in AllTextModes: it
+	// can't be picked or saved as a default, since there would be no text.
+	TextModeCustom TextMode = "custom"
 )
 
 func AllTextModes() []TextMode {
@@ -23,11 +26,11 @@ func AllTextModes() []TextMode {
 }
 
 func (m TextMode) CommitsWordsOnSpace() bool {
-	return m == "" || m == TextModeWords || m == TextModeSentences
+	return m == "" || m == TextModeWords || m == TextModeSentences || m == TextModeCustom
 }
 
 func ParseTextMode(s string) (TextMode, error) {
-	for _, mode := range AllTextModes() {
+	for _, mode := range append(AllTextModes(), TextModeCustom) {
 		if TextMode(s) == mode {
 			return mode, nil
 		}

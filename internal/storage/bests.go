@@ -34,8 +34,13 @@ func (s *JSONStore) LoadBests() (domain.PersonalBests, error) {
 
 // A run that stopped early because it dropped under --min-wpm is kept in
 // history but never counts as a best.
+// Custom text can be anything, so a run on it is not a record to beat.
+func countsForBests(result domain.Result) bool {
+	return !result.Failed && result.Config.TextMode != domain.TextModeCustom
+}
+
 func (s *JSONStore) updateBests(result domain.Result) error {
-	if result.Failed {
+	if !countsForBests(result) {
 		return nil
 	}
 

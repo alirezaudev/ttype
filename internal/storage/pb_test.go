@@ -144,6 +144,50 @@ func TestBestsFileTracksAllTimeRecords(t *testing.T) {
 	}
 }
 
+// Custom text can be anything, so it can't set a record for real tests.
+func TestCustomRunsAreNotPersonalBests(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
+	custom := domain.TestConfig{Kind: domain.TestKindWords, WordCount: 3, TextMode: domain.TextModeCustom}
+	words := domain.TestConfig{Kind: domain.TestKindWords, WordCount: 10, TextMode: domain.TextModeWords}
+
+	pb, err := s.SaveResult(domain.Result{ID: "a", Timestamp: time.Now().UTC(), Config: custom, WPM: 150, Accuracy: 100})
+	if err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	if pb.IsNew {
+		t.Fatal("a custom run was announced as a personal best")
+	}
+	if _, err := s.SaveResult(domain.Result{ID: "b", Timestamp: time.Now().UTC(), Config: words, WPM: 60, Accuracy: 95}); err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+
+	bests, err := s.LoadBests()
+	if err != nil {
+		t.Fatalf("LoadBests: %v", err)
+	}
+	if bests.BestWPM != 60 {
+		t.Fatalf("all-time best = %.2f, want 60 from the word test", bests.BestWPM)
+	}
+
+	all, err := s.Summary(domain.StatsFilter{})
+	if err != nil {
+		t.Fatalf("Summary: %v", err)
+	}
+	if all.TotalTests != 2 || all.BestWPM != 60 {
+		t.Fatalf("summary = %+v, want both runs counted and a best of 60", all)
+	}
+	mode := domain.TextModeCustom
+	onlyCustom, err := s.Summary(domain.StatsFilter{TextMode: &mode})
+	if err != nil {
+		t.Fatalf("Summary: %v", err)
+	}
+	if onlyCustom.TotalTests != 1 || onlyCustom.BestWPM != 150 {
+		t.Fatalf("custom summary = %+v, want the custom run and its 150", onlyCustom)
+	}
+}
+
 // A run that ended because it dropped under --min-wpm is a failure, and
 // failures were being announced as personal bests on the result screen.
 func TestFailedRunsAreNotPersonalBests(t *testing.T) {

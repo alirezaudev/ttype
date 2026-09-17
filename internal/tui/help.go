@@ -114,6 +114,7 @@ func (m HelpOverlay) full() []string {
 		{"--time 30", "30 second test"},
 		{"--words 25", "finish 25 words"},
 		{"--mode go", "type Go snippets"},
+		{"--file notes.txt", "type your own text"},
 		{"--blind", "no feedback while typing"},
 		{"--zen", "words only"},
 	} {

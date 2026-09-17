@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/tui"
 )
@@ -39,6 +41,9 @@ func ConfigFromFlags(f TestFlags) (domain.TestConfig, error) {
 	textMode, err := domain.ParseTextMode(mode)
 	if err != nil {
 		return domain.TestConfig{}, err
+	}
+	if textMode == domain.TextModeCustom {
+		return domain.TestConfig{}, fmt.Errorf("custom text is piped in or given with --file or --text, not --mode")
 	}
 
 	cfg := domain.TestConfig{

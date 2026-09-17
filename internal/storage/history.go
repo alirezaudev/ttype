@@ -154,7 +154,7 @@ func (s *JSONStore) SaveResult(result domain.Result) (PBUpdate, error) {
 		NewWPM:  result.WPM,
 		PrevWPM: bestWPMForConfig(history, result.Config),
 	}
-	update.IsNew = !result.Failed && result.WPM > update.PrevWPM
+	update.IsNew = countsForBests(result) && result.WPM > update.PrevWPM
 
 	history = append(history, marshalResult(result))
 	if limit := s.historyLimit(); len(history) > limit {

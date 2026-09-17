@@ -8,6 +8,7 @@ import (
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
+	"github.com/alirezaudev/ttype/internal/storage"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -423,5 +424,69 @@ func TestReplayFromTheResultScreen(t *testing.T) {
 	m = next.(AppModel)
 	if m.phase != phaseResult {
 		t.Fatalf("phase = %v after esc, want back on the result screen", m.phase)
+	}
+}
+
+func appModelWithStore(t *testing.T, cfg domain.TestConfig, noSave bool) (AppModel, *engine.FakeClock, *storage.JSONStore) {
+	t.Helper()
+
+	dir := t.TempDir()
+	store, err := storage.NewJSONStore(storage.Dirs{Data: dir + "/data", Config: dir + "/config"})
+	if err != nil {
+		t.Fatalf("NewJSONStore: %v", err)
+	}
+	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	source := fixedSource("abc def")
+	session, err := engine.NewSession(cfg, source, clock)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	m := NewAppModel(Options{Config: cfg, Provider: source, Session: session, Store: store, NoSave: noSave})
+	return m, clock, store
+}
+
+func TestNoSaveKeepsTheRunOutOfHistory(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 15}
+	for _, noSave := range []bool{false, true} {
+		m, clock, store := appModelWithStore(t, cfg, noSave)
+		m = finishTest(m, clock)
+
+		results, err := store.ListResults(10)
+		if err != nil {
+			t.Fatalf("ListResults: %v", err)
+		}
+		if want := map[bool]int{false: 1, true: 0}[noSave]; len(results) != want {
+			t.Fatalf("noSave=%v: %d results saved, want %d", noSave, len(results), want)
+		}
+		if _, err := store.LoadReplay(m.result.ID); noSave && err == nil {
+			t.Fatal("--no-save still wrote a replay")
+		}
+	}
+}
+
+// The next plain ttype would have no text, so custom must never become the
+// saved mode, and neither must the length of the text.
+func TestCustomTextIsNotSavedAsTheDefault(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindWords, WordCount: 2, TextMode: domain.TextModeCustom, Theme: "dracula"}
+	m, _, store := appModelWithStore(t, cfg, false)
+	if err := store.SaveSettings(domain.Settings{DefaultMode: domain.TextModeGo, DefaultDuration: 30, Language: "spanish"}); err != nil {
+		t.Fatalf("SaveSettings: %v", err)
+	}
+
+	m.persistConfigDefaults()
+
+	settings, err := store.LoadSettings()
+	if err != nil {
+		t.Fatalf("LoadSettings: %v", err)
+	}
+	if settings.DefaultMode != domain.TextModeGo || settings.DefaultWordCount != 0 || settings.Language != "spanish" {
+		t.Fatalf("settings = %+v, want mode, length and language untouched", settings)
+	}
+	if settings.Theme != "dracula" {
+		t.Fatalf("theme = %q, want the theme still saved", settings.Theme)
 	}
 }

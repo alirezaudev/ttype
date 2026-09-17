@@ -354,7 +354,9 @@ func (s *Session) InputRune(r rune) {
 	if s.state == domain.SessionFinished {
 		return
 	}
-	if s.config.Kind == domain.TestKindWords && len(s.input) >= len(s.targetRunes) {
+	// Your own text ends where it ends, even against the clock.
+	textDone := s.config.Kind == domain.TestKindWords || s.config.TextMode == domain.TextModeCustom
+	if textDone && len(s.input) >= len(s.targetRunes) {
 		s.finish()
 	}
 }

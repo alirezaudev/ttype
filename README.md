@@ -102,6 +102,25 @@ because indentation is part of what you are practising.
 Whatever you set in the settings panel (`ctrl+s`, or `S` on the result screen)
 becomes the default for next time, so the flags are for one-offs.
 
+### Your own text
+
+```sh
+cat "the quick brown fox" | ttype  # anything piped in
+ttype --file notes.txt             # a file (--file - reads stdin)
+ttype --text "the quick brown fox"
+ttype --file notes.txt --words 50  # just the first 50 words
+ttype --file notes.txt --time 60   # the clock or the end of the text, whichever comes first
+```
+
+The whole text is typed by default. Newlines and tabs become spaces, colour
+codes are stripped, and curly quotes and dashes turn into ones a keyboard has.
+`--mode`, `--language`, `--punctuation` and `--numbers` don't mix with it.
+
+Custom runs show up in `ttype history` and `ttype stats --mode custom`, but
+never count as personal bests. Add `--no-save` to keep a run out of history
+and replays altogether — worth it before piping in anything private, since a
+replay stores the text.
+
 ## More of it
 
 <details>

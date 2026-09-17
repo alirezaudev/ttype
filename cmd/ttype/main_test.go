@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"runtime/debug"
+	"strings"
 	"testing"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -113,5 +114,36 @@ func TestResolveVersion(t *testing.T) {
 		if got := resolveVersion(test.stamped, test.read); got != test.want {
 			t.Errorf("%s: resolveVersion(%q) = %q, want %q", test.name, test.stamped, got, test.want)
 		}
+	}
+}
+
+func TestCustomTextRefusesFlagsThatGenerateText(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{
+		{"--text", "hello", "--mode", "go"},
+		{"--text", "hello", "--language", "spanish"},
+		{"--text", "hello", "--punctuation"},
+		{"--text", "hello", "--numbers"},
+	} {
+		cmd := &cobra.Command{}
+		flags := &testCLIFlags{}
+		bindTestFlags(cmd, flags)
+		if err := cmd.ParseFlags(args); err != nil {
+			t.Fatalf("ParseFlags(%v): %v", args, err)
+		}
+		if _, err := readCustomText(cmd, flags, false); err == nil || !strings.Contains(err.Error(), args[2]) {
+			t.Errorf("%v: err = %v, want it to name %s", args, err, args[2])
+		}
+	}
+
+	cmd := &cobra.Command{}
+	flags := &testCLIFlags{}
+	bindTestFlags(cmd, flags)
+	if err := cmd.ParseFlags([]string{"--text", "hello  world", "--blind", "--words", "1"}); err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	if text, err := readCustomText(cmd, flags, false); err != nil || text != "hello world" {
+		t.Fatalf("readCustomText = %q, %v; want the text, with --blind and --words allowed", text, err)
 	}
 }

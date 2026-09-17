@@ -35,10 +35,14 @@ func (s *JSONStore) Summary(filter domain.StatsFilter) (domain.StatsSummary, err
 		return summary, nil
 	}
 
+	onlyCustom := filter.TextMode != nil && *filter.TextMode == domain.TextModeCustom
 	var wpmSum, accSum float64
 	for _, item := range history {
 		wpmSum += item.WPM
 		accSum += item.Accuracy
+		if domain.TextMode(item.TextMode) == domain.TextModeCustom && !onlyCustom {
+			continue
+		}
 		if item.WPM > summary.BestWPM {
 			summary.BestWPM = item.WPM
 		}

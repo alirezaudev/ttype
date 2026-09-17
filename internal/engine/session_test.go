@@ -253,6 +253,27 @@ func TestSessionWPMResult(t *testing.T) {
 	}
 }
 
+func TestCustomTextEndsWithTheTextEvenOnTheClock(t *testing.T) {
+	t.Parallel()
+
+	clock := engine.NewFakeClock(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60, TextMode: domain.TextModeCustom}
+	s, err := engine.NewSession(cfg, fixedSource("go fast"), clock)
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+
+	typeString(s, "go fas")
+	clock.Advance(5 * time.Second)
+	if s.State() == domain.SessionFinished {
+		t.Fatal("finished before the text ran out")
+	}
+	typeString(s, "t")
+	if s.State() != domain.SessionFinished {
+		t.Fatal("a custom text should end with its last character, not the timer")
+	}
+}
+
 func TestInstantRunIsRatedOverASecond(t *testing.T) {
 	t.Parallel()
 

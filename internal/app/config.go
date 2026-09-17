@@ -72,6 +72,9 @@ func applyConfigChanges(settings domain.Settings, c ConfigChanges) (domain.Setti
 		if err != nil {
 			return settings, err
 		}
+		if mode == domain.TextModeCustom {
+			return settings, fmt.Errorf("custom needs text each time, so it can't be the default mode")
+		}
 		settings.DefaultMode = mode
 	}
 	if c.Theme != nil {

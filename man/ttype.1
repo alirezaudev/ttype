@@ -62,8 +62,42 @@ Seed the generator, so the same seed always produces the same text.
 .BI \-\-output " json"
 Print the finished result as JSON instead of showing the result screen.
 .TP
+.BI \-\-file " PATH"
+Type the text of a file instead of generated text;
+.B \-
+reads standard input. Text piped into
+.B ttype
+is used the same way.
+.TP
+.BI \-\-text " TEXT"
+Type the given text.
+.TP
+.B \-\-no\-save
+Keep the run out of history, personal bests and replays.
+.TP
 .B \-\-allow\-skip
 Deprecated and ignored. Space already commits the word.
+.SH CUSTOM TEXT
+Text given with
+.BR \-\-file ,
+.B \-\-text
+or a pipe is typed whole, unless
+.B \-\-words
+or
+.B \-\-time
+shortens it; a timed test also ends when the text does. Newlines and tabs
+become spaces, colour codes are removed, and typographic quotes, dashes and
+ellipses become ASCII. It cannot be combined with
+.BR \-\-mode ,
+.BR \-\-language ,
+.B \-\-punctuation
+or
+.BR \-\-numbers .
+Custom runs are listed under the mode
+.B custom
+and never count as personal bests. A replay stores the text, so use
+.B \-\-no\-save
+for anything private.
 .SH COMMANDS
 .TP
 .B history [\-\-last N] [\-\-plain]
@@ -224,6 +258,9 @@ Fifty words of Go with the numbers on:
 .TP
 The same text as a friend:
 .B ttype \-\-seed 4242
+.TP
+Practise on your own notes without saving them:
+.B ttype \-\-file notes.txt \-\-no\-save
 .TP
 Export everything to a spreadsheet:
 .B ttype stats \-\-export csv > runs.csv

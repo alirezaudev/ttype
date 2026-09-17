@@ -54,6 +54,7 @@ type AppModel struct {
 	version        domain.VersionInfo
 	checkVersion   func() domain.VersionInfo
 	quitOnFinish   bool
+	noSave         bool
 	finished       bool
 	width          int
 	height         int
@@ -74,6 +75,8 @@ type Options struct {
 	QuitOnFinish bool
 	// CheckVersion runs once in the background; nil skips the check.
 	CheckVersion func() domain.VersionInfo
+	// NoSave keeps finished runs out of history, bests and replays.
+	NoSave bool
 }
 
 func NewAppModel(opts Options) AppModel {
@@ -86,6 +89,7 @@ func NewAppModel(opts Options) AppModel {
 		version:      opts.Version,
 		checkVersion: opts.CheckVersion,
 		quitOnFinish: opts.QuitOnFinish,
+		noSave:       opts.NoSave,
 		theme:        theme,
 		test:         NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
@@ -397,6 +401,9 @@ func (m AppModel) finishResult() (domain.Result, storage.PBUpdate, statusNotice)
 	if err != nil {
 		return result, storage.PBUpdate{}, errorNotice(fmt.Sprintf("result not saved: %s", err))
 	}
+	if m.noSave {
+		return result, storage.PBUpdate{}, infoNotice("not saved")
+	}
 	if m.store == nil {
 		return result, storage.PBUpdate{}, statusNotice{}
 	}
@@ -447,13 +454,19 @@ func (m *AppModel) persistConfigDefaults() {
 	}
 	settings.Theme = m.cfg.Theme
 	settings.DefaultWidth = m.cfg.Width
+	settings.Blind = m.cfg.Blind
+	settings.Zen = m.cfg.Zen
+	settings.DefaultMinWPM = m.cfg.MinWPM
+	// Custom text sets the mode and length for this run only; the next plain
+	// ttype would have no text to type.
+	if m.cfg.TextMode == domain.TextModeCustom {
+		_ = m.store.SaveSettings(settings)
+		return
+	}
 	settings.Language = m.cfg.Language
 	settings.DefaultMode = m.cfg.TextMode
 	settings.Punctuation = m.cfg.Punctuation
 	settings.Numbers = m.cfg.Numbers
-	settings.Blind = m.cfg.Blind
-	settings.Zen = m.cfg.Zen
-	settings.DefaultMinWPM = m.cfg.MinWPM
 	if m.cfg.IsWordsMode() {
 		settings.DefaultWordCount = m.cfg.WordCount
 	} else {

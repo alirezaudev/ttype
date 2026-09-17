@@ -22,8 +22,18 @@ func OpenStore() (storage.Store, error) {
 	return store, nil
 }
 
+// RunOptions are the choices that shape a run beyond its test config.
+type RunOptions struct {
+	OutputJSON bool
+	// CustomText, when set, is what gets typed instead of generated text.
+	CustomText string
+	// NoSave keeps the run out of history, bests and replays.
+	NoSave bool
+}
+
 // RunTest starts an interactive typing test in the terminal.
-func RunTest(cfg domain.TestConfig, store storage.Store, version string, outputJSON bool) error {
+func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts RunOptions) error {
+	outputJSON := opts.OutputJSON
 	dirs, err := storage.DefaultDirs()
 	if err != nil {
 		return fmt.Errorf("resolve data dir: %w", err)
@@ -34,7 +44,12 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, outputJ
 		return fmt.Errorf("load text: %w", err)
 	}
 
-	session, err := engine.NewSession(cfg, provider, nil)
+	var source engine.TextSource = provider
+	if opts.CustomText != "" {
+		source = newCustomSource(opts.CustomText, provider)
+	}
+
+	session, err := engine.NewSession(cfg, source, nil)
 	if err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}
@@ -51,12 +66,14 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, outputJ
 	}
 
 	model := tui.NewAppModel(tui.Options{
-		Welcome:      !settings.Onboarded && !outputJSON,
+		// The welcome screen picks a mode, and custom text already has one.
+		Welcome:      !settings.Onboarded && !outputJSON && opts.CustomText == "",
 		QuitOnFinish: outputJSON,
+		NoSave:       opts.NoSave,
 		Version:      domain.VersionInfo{Local: version},
 		CheckVersion: checkVersion,
 		Config:       cfg,
-		Provider:     provider,
+		Provider:     source,
 		Cache:        provider.LanguageCache(),
 		Store:        store,
 		Session:      session,

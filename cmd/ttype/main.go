@@ -54,6 +54,11 @@ func newRootCmd() *cobra.Command {
 		Short: "Terminal typing practice",
 		Long:  "A terminal-first typing test. Use --time for timed tests or --words for word count tests.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Flags parsed fine, so the usage text would only bury the error;
+			// main prints it once.
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
+
 			store, err := app.OpenStore()
 			if err != nil {
 				return err
@@ -67,7 +72,20 @@ func newRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return app.RunTest(cfg, store, version, flags.output == "json")
+
+			text, err := readCustomText(cmd, flags, stdinPiped())
+			if err != nil {
+				return err
+			}
+			if text != "" {
+				cfg = app.CustomConfig(cfg, text, cmd.Flags().Changed("words"), cmd.Flags().Changed("time"))
+			}
+
+			return app.RunTest(cfg, store, version, app.RunOptions{
+				OutputJSON: flags.output == "json",
+				CustomText: text,
+				NoSave:     flags.noSave,
+			})
 		},
 	}
 
@@ -337,6 +355,37 @@ func newDoctorCmd() *cobra.Command {
 	}
 }
 
+// readCustomText reads text piped in, from --file or from --text. The flags
+// that generate text make no sense next to it, so they are refused rather
+// than quietly ignored.
+func readCustomText(cmd *cobra.Command, f *testCLIFlags, piped bool) (string, error) {
+	text, err := app.ReadCustomText(app.CustomInput{
+		Stdin:      os.Stdin,
+		StdinPiped: piped,
+		File:       f.file,
+		Text:       f.text,
+		TextSet:    cmd.Flags().Changed("text"),
+	})
+	if err != nil || text == "" {
+		return "", err
+	}
+	for _, name := range []string{"mode", "language", "punctuation", "numbers"} {
+		if cmd.Flags().Changed(name) {
+			return "", fmt.Errorf("--%s generates text, so it can't be used with your own", name)
+		}
+	}
+	return text, nil
+}
+
+// A terminal, /dev/null or no stdin at all is not text to type.
+func stdinPiped() bool {
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeNamedPipe != 0 || info.Mode().IsRegular()
+}
+
 type testCLIFlags struct {
 	timeSec     int
 	wordCount   int
@@ -351,6 +400,9 @@ type testCLIFlags struct {
 	minWPM      int
 	seed        int64
 	output      string
+	file        string
+	text        string
+	noSave      bool
 	allowSkip   bool
 }
 
@@ -368,6 +420,9 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().IntVar(&f.minWPM, "min-wpm", 0, "Fail the test if WPM drops below this")
 	cmd.Flags().Int64Var(&f.seed, "seed", 0, "Random seed for word generation")
 	cmd.Flags().StringVar(&f.output, "output", "", "Print the result instead of showing it (json)")
+	cmd.Flags().StringVar(&f.file, "file", "", "Type the text of a file (- for stdin)")
+	cmd.Flags().StringVar(&f.text, "text", "", "Type this text")
+	cmd.Flags().BoolVar(&f.noSave, "no-save", false, "Keep this run out of history, bests and replays")
 
 	// Skipping is part of how space works now, so the old flag does nothing.
 	cmd.Flags().BoolVar(&f.allowSkip, "allow-skip", false, "Deprecated, has no effect")
