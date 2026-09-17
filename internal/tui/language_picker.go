@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -107,8 +108,8 @@ func (m LanguagePicker) Update(msg tea.Msg) (LanguagePicker, tea.Cmd, bool, bool
 		m.refreshing = false
 		if len(msg.IDs) == 0 {
 			// Offline with no saved list: the downloaded ones still work.
-			if m.partial {
-				m.err = msg.Err
+			if m.partial && msg.Err != nil {
+				m.err = fmt.Errorf("could not list more languages: %w", msg.Err)
 			}
 			return m, nil, false, false
 		}
@@ -203,7 +204,7 @@ func (m LanguagePicker) View() string {
 
 	switch {
 	case m.err != nil:
-		lines = append(lines, m.theme.Incorrect.Render("could not list more languages: "+m.err.Error()), "")
+		lines = append(lines, m.theme.Incorrect.Render(m.err.Error()), "")
 	case m.partial && m.refreshing:
 		lines = append(lines, m.theme.Help.Render("looking for more languages..."), "")
 	}

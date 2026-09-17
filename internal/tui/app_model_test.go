@@ -564,3 +564,34 @@ func TestCustomTextIsNotSavedAsTheDefault(t *testing.T) {
 		t.Fatalf("theme = %q, want the theme still saved", settings.Theme)
 	}
 }
+
+type offlineSource struct{}
+
+func (offlineSource) Generate(opts domain.GenerateOptions) (string, error) {
+	if opts.Language != "" {
+		return "", errors.New("offline")
+	}
+	return "abc def", nil
+}
+
+func TestPickingALanguageThatCannotLoad(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m.provider = offlineSource{}
+	m = finishTest(m, clock)
+
+	next, _ := m.Update(runeKey('L'))
+	m = next.(AppModel)
+	m.languagePicker, _, _, _ = m.languagePicker.Update(LanguagesLoadedMsg{IDs: []string{"french"}})
+	m.languagePicker, _, _, _ = m.languagePicker.Update(tea.KeyMsg{Type: tea.KeyDown})
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+
+	if m.phase != phaseLanguagePicker || m.cfg.Language != "" {
+		t.Fatalf("phase %v, language %q: want the picker still open and nothing chosen", m.phase, m.cfg.Language)
+	}
+	if !strings.Contains(m.languagePicker.View(), "french isn't downloaded") {
+		t.Fatal("the picker doesn't say why")
+	}
+}

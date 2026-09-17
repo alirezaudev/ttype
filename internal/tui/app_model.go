@@ -77,6 +77,8 @@ type Options struct {
 	CheckVersion func() domain.VersionInfo
 	// NoSave keeps finished runs out of history, bests and replays.
 	NoSave bool
+	// Warning is shown under the text until the first run starts.
+	Warning string
 }
 
 func NewAppModel(opts Options) AppModel {
@@ -93,6 +95,7 @@ func NewAppModel(opts Options) AppModel {
 		theme:        theme,
 		test:         NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
+	m.test.warning = opts.Warning
 	if opts.Welcome {
 		m.phase = phaseWelcome
 		m.welcome = NewWelcome(opts.Config, theme)
@@ -320,7 +323,15 @@ func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	if apply {
-		m.cfg.Language = m.languagePicker.Selected()
+		cfg := m.cfg
+		cfg.Language = m.languagePicker.Selected()
+		// A language that can't load must not be picked: saved as the default,
+		// it would stop ttype from starting offline.
+		if _, err := engine.NewSession(cfg, m.provider, nil); err != nil {
+			m.languagePicker.err = languageError(cfg.Language)
+			return m, cmd
+		}
+		m.cfg.Language = cfg.Language
 		m.settings.cfg.Language = m.cfg.Language
 	}
 	return m, tea.Batch(cmd, m.popPhase())
@@ -483,9 +494,14 @@ func (m *AppModel) persistConfigDefaults() {
 	_ = m.store.SaveSettings(settings)
 }
 
+func languageError(id string) error {
+	return fmt.Errorf("%s isn't downloaded, and downloading it failed", langcache.DisplayName(id))
+}
+
 func (m *AppModel) restartTest() tea.Cmd {
 	session, err := engine.NewSession(m.cfg, m.provider, nil)
 	if err != nil {
+		m.notice = errorNotice(languageError(m.cfg.Language).Error())
 		return nil
 	}
 	m.test = NewTestModel(session, m.cfg, m.theme, m.version)

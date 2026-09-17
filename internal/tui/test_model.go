@@ -44,6 +44,7 @@ type TestModel struct {
 	// reorderRTL sends right-to-left text in display order.
 	reorderRTL bool
 	hideLive   bool
+	warning    string
 	width      int
 	height     int
 }
@@ -275,6 +276,9 @@ func (m TestModel) hintLine() string {
 		return renderCapsWarn(m.theme)
 	}
 	if !m.cfg.Zen && m.session.State() == domain.SessionReady {
+		if m.warning != "" {
+			return m.theme.Incorrect.Render(m.warning)
+		}
 		return m.theme.Help.Render("start typing to begin")
 	}
 	return ""

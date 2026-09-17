@@ -9,6 +9,7 @@ import (
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
 	"github.com/alirezaudev/ttype/internal/text"
+	"github.com/alirezaudev/ttype/internal/text/langcache"
 	"github.com/alirezaudev/ttype/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -50,6 +51,14 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts Ru
 	}
 
 	session, err := engine.NewSession(cfg, source, nil)
+	warning := ""
+	// A saved language whose list is gone can't come back offline, and that
+	// must not stop ttype from starting. Scripts get the error instead.
+	if err != nil && cfg.Language != "" && !outputJSON {
+		warning = fmt.Sprintf("couldn't load %s, so this is english", langcache.DisplayName(cfg.Language))
+		cfg.Language = ""
+		session, err = engine.NewSession(cfg, source, nil)
+	}
 	if err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}
@@ -77,6 +86,7 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts Ru
 		Cache:        provider.LanguageCache(),
 		Store:        store,
 		Session:      session,
+		Warning:      warning,
 	})
 	final, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
 	if err != nil {
