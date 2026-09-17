@@ -32,6 +32,7 @@ archives:
     formats: [tar.gz]
     files:
       - README.md
+      - LICENSE
       - src: man/ttype.1
         info:
           mode: 0644
