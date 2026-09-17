@@ -131,6 +131,9 @@ func (m *AppModel) popPhase() tea.Cmd {
 	}
 
 	m.phase = prev
+	if prev == phaseTest {
+		return m.test.resumeTick()
+	}
 	return nil
 }
 

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -39,6 +40,7 @@ type TestModel struct {
 	version   domain.VersionInfo
 	capsProbe func() bool
 	wrap      *wrapCache
+	tickLoop  int64
 	// reorderRTL sends right-to-left text in display order.
 	reorderRTL bool
 	hideLive   bool
@@ -54,6 +56,7 @@ func NewTestModel(session *engine.Session, cfg domain.TestConfig, theme Theme, v
 		version:    ver,
 		capsProbe:  newCapsLockMonitor().on,
 		wrap:       &wrapCache{},
+		tickLoop:   tickLoops.Add(1),
 		reorderRTL: reorderRTL,
 	}
 }
@@ -63,7 +66,13 @@ func (m *TestModel) setSize(width, height int) {
 }
 
 func (m TestModel) Init() tea.Cmd {
-	return tick()
+	return tick(m.tickLoop)
+}
+
+// resumeTick restarts the clock for a test that is back on screen.
+func (m *TestModel) resumeTick() tea.Cmd {
+	m.tickLoop = tickLoops.Add(1)
+	return tick(m.tickLoop)
 }
 
 func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -73,8 +82,11 @@ func (m TestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 	case tickMsg:
+		if msg.loop != m.tickLoop {
+			return m, nil
+		}
 		m.session.Tick()
-		return m, tick()
+		return m, tick(m.tickLoop)
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, testKeys.Restart):
@@ -275,10 +287,15 @@ func (m TestModel) capsWarnActive() bool {
 	return m.session.CapsLockSuspected()
 }
 
-type tickMsg time.Time
+// tickMsg names the loop that scheduled it. A screen opened over the test
+// drops its ticks, so coming back starts a new loop, and a tick from any older
+// one is ignored rather than keeping a second loop alive.
+type tickMsg struct{ loop int64 }
 
-func tick() tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
-		return tickMsg{}
+var tickLoops atomic.Int64
+
+func tick(loop int64) tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg {
+		return tickMsg{loop: loop}
 	})
 }

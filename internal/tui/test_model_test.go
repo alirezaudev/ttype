@@ -122,7 +122,7 @@ func TestTickAlwaysReschedules(t *testing.T) {
 	session.InputRune('a')
 	clock.Advance(16 * time.Second)
 
-	_, cmd := m.Update(tickMsg(time.Now()))
+	_, cmd := m.Update(tickMsg{loop: m.tickLoop})
 	if cmd == nil {
 		t.Fatal("tick should always schedule the next tick")
 	}

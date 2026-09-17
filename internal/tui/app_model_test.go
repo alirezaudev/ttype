@@ -31,7 +31,7 @@ func newAppModel(t *testing.T) (AppModel, *engine.FakeClock) {
 func finishTest(m AppModel, clock *engine.FakeClock) AppModel {
 	m.test.session.InputRune('a')
 	clock.Advance(16 * time.Second)
-	next, _ := m.Update(tickMsg(time.Now()))
+	next, _ := m.Update(tickMsg{loop: m.test.tickLoop})
 	m = next.(AppModel)
 	m.finishedAt = m.finishedAt.Add(-resultsKeyGrace)
 	return m
@@ -92,7 +92,7 @@ func TestSettingsCancelReturnsToTest(t *testing.T) {
 
 	m, _ := newAppModel(t)
 	m.test.session.InputRune('a')
-	next, _ := m.Update(tickMsg(time.Now().Add(1 * time.Second)))
+	next, _ := m.Update(tickMsg{loop: m.test.tickLoop})
 	m = next.(AppModel)
 
 	next, _ = m.Update(runeKey('S')) // settings
@@ -123,6 +123,80 @@ func TestSettingsCancelReturnsToResult(t *testing.T) {
 	}
 }
 
+// The tick in flight lands on the settings panel and is dropped, so closing it
+// has to start the clock again or a timed run never ends.
+func TestTimedRunEndsAfterSettingsMidRun(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	next, _ := m.Update(runeKey('a'))
+	m = next.(AppModel)
+	inFlight := tickMsg{loop: m.test.tickLoop}
+
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+	next, _ = m.Update(inFlight)
+	m = next.(AppModel)
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(AppModel)
+	if m.phase != phaseTest || cmd == nil {
+		t.Fatalf("esc from settings: phase = %v, tick scheduled = %v", m.phase, cmd != nil)
+	}
+
+	clock.Advance(16 * time.Second)
+	next, _ = m.Update(cmd())
+	if m = next.(AppModel); m.phase != phaseResult {
+		t.Fatalf("phase = %v once time is up, want phaseResult", m.phase)
+	}
+}
+
+func TestTimedRunEndsAfterHelp(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	inFlight := tickMsg{loop: m.test.tickLoop}
+	next, _ := m.Update(runeKey('?'))
+	m = next.(AppModel)
+	if m.phase != phaseHelp {
+		t.Fatalf("phase = %v after ?, want phaseHelp", m.phase)
+	}
+	next, _ = m.Update(inFlight)
+	m = next.(AppModel)
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(AppModel)
+	if cmd == nil {
+		t.Fatal("closing help scheduled no tick")
+	}
+
+	next, _ = m.Update(runeKey('a'))
+	m = next.(AppModel)
+	clock.Advance(16 * time.Second)
+	next, _ = m.Update(cmd())
+	if m = next.(AppModel); m.phase != phaseResult {
+		t.Fatalf("phase = %v once time is up, want phaseResult", m.phase)
+	}
+}
+
+// Settings closed before its tick landed: that tick reaches the test, and must
+// not keep a second loop going next to the new one.
+func TestTickFromAnOldLoopStops(t *testing.T) {
+	t.Parallel()
+
+	m, _ := newAppModel(t)
+	old := tickMsg{loop: m.test.tickLoop}
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	m = next.(AppModel)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(AppModel)
+
+	if _, cmd := m.Update(old); cmd != nil {
+		t.Fatal("a tick from before settings scheduled another")
+	}
+	if _, cmd := m.Update(tickMsg{loop: m.test.tickLoop}); cmd == nil {
+		t.Fatal("the current loop stopped ticking")
+	}
+}
+
 func TestRestartAfterFinishTransitionsToTest(t *testing.T) {
 	t.Parallel()
 
@@ -150,7 +224,7 @@ func TestResultsGraceSwallowsKeysThenReleases(t *testing.T) {
 	m, clock := newAppModel(t)
 	m.test.session.InputRune('a')
 	clock.Advance(16 * time.Second)
-	next, _ := m.Update(tickMsg(time.Now()))
+	next, _ := m.Update(tickMsg{loop: m.test.tickLoop})
 	m = next.(AppModel)
 
 	for _, r := range "rL " {
@@ -177,7 +251,7 @@ func TestResultsRestartKeysSkipTheGrace(t *testing.T) {
 		m, clock := newAppModel(t)
 		m.test.session.InputRune('a')
 		clock.Advance(16 * time.Second)
-		next, _ := m.Update(tickMsg(time.Now()))
+		next, _ := m.Update(tickMsg{loop: m.test.tickLoop})
 		m = next.(AppModel)
 
 		next, _ = m.Update(tea.KeyMsg{Type: keyType})
@@ -193,7 +267,7 @@ func TestResultsGraceLetsEscapeThrough(t *testing.T) {
 	m, clock := newAppModel(t)
 	m.test.session.InputRune('a')
 	clock.Advance(16 * time.Second)
-	next, _ := m.Update(tickMsg(time.Now()))
+	next, _ := m.Update(tickMsg{loop: m.test.tickLoop})
 	m = next.(AppModel)
 
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
