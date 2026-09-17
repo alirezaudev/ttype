@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
@@ -12,6 +13,7 @@ import (
 	"github.com/alirezaudev/ttype/internal/text/langcache"
 	"github.com/alirezaudev/ttype/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
+	"golang.org/x/term"
 )
 
 // OpenStore opens the default JSON store.
@@ -88,7 +90,16 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts Ru
 		Session:      session,
 		Warning:      warning,
 	})
-	final, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion()}
+	// With stdout redirected (--output json > run.json), the test is drawn on
+	// the terminal itself, so stdout only gets the JSON.
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		if tty, err := os.OpenFile(terminalPath(), os.O_WRONLY, 0); err == nil {
+			defer tty.Close()
+			options = append(options, tea.WithOutput(tty))
+		}
+	}
+	final, err := tea.NewProgram(model, options...).Run()
 	if err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}
@@ -104,4 +115,11 @@ func RunTest(cfg domain.TestConfig, store storage.Store, version string, opts Ru
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(result)
+}
+
+func terminalPath() string {
+	if runtime.GOOS == "windows" {
+		return "CONOUT$"
+	}
+	return "/dev/tty"
 }
