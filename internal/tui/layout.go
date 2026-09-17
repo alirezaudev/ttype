@@ -3,6 +3,8 @@ package tui
 import (
 	"fmt"
 	"time"
+
+	"github.com/mattn/go-runewidth"
 )
 
 type lineSpan struct {
@@ -22,13 +24,21 @@ func wordWrapIndices(text []rune, width int) []lineSpan {
 	var lines []lineSpan
 	start := 0
 	for start < len(text) {
-		if len(text)-start <= width {
+		// Chinese, Japanese and Korean take two cells each, so the line ends
+		// where the cells run out, not after width characters.
+		end, cells := start, 0
+		for end < len(text) && cells+runewidth.RuneWidth(text[end]) <= width {
+			cells += runewidth.RuneWidth(text[end])
+			end++
+		}
+		if end == len(text) {
 			// Last line, or the only line if the text fits on a single line.
 			lines = append(lines, lineSpan{start: start, end: len(text)})
 			break
 		}
-
-		end := start + width
+		if end == start {
+			end++ // A character wider than the whole line still has to go somewhere.
+		}
 		breakAt := end
 		space := false
 		for i := end; i > start; i-- {

@@ -1,6 +1,10 @@
 package tui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mattn/go-runewidth"
+)
 
 func TestCursorLine(t *testing.T) {
 	t.Parallel()
@@ -58,6 +62,17 @@ func TestVisibleLineWindow(t *testing.T) {
 		if from != test.wantFrom || to != test.wantTo {
 			t.Errorf("%s: visibleLineWindow(cursor=%d, maxLines=%d) = (%d, %d), want (%d, %d)",
 				test.name, test.cursor, test.maxLines, from, to, test.wantFrom, test.wantTo)
+		}
+	}
+}
+
+func TestWrapCountsWideCharactersTwice(t *testing.T) {
+	t.Parallel()
+
+	text := []rune("你好 世界 我们 学习 中文 今天")
+	for _, line := range wordWrapIndices(text, 10) {
+		if w := runewidth.StringWidth(string(text[line.start:line.end])); w > 10 {
+			t.Fatalf("line %q is %d cells wide, want at most 10", string(text[line.start:line.end]), w)
 		}
 	}
 }
