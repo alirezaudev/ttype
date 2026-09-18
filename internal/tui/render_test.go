@@ -187,18 +187,48 @@ func TestWrapCacheRecomputesOnResize(t *testing.T) {
 	target := []rune("the quick brown fox jumps over the lazy dog")
 	cache := &wrapCache{}
 
-	wide := cache.wrap(target, string(target), 60)
-	if len(cache.wrap(target, string(target), 60)) != len(wide) {
+	wide := cache.wrap(target, string(target), 60, 0, nil)
+	if len(cache.wrap(target, string(target), 60, 0, nil)) != len(wide) {
 		t.Fatal("a repeat wrap at the same width should reuse the cache")
 	}
 
-	narrow := cache.wrap(target, string(target), 20)
+	narrow := cache.wrap(target, string(target), 20, 0, nil)
 	if len(narrow) <= len(wide) {
 		t.Fatalf("narrow wrap = %d lines, wide = %d; expected more lines", len(narrow), len(wide))
 	}
 
 	other := []rune("a different target entirely")
-	if got := cache.wrap(other, string(other), 20); string(other[got[0].start:got[0].end]) == "" {
+	if got := cache.wrap(other, string(other), 20, 0, nil); string(other[got[0].start:got[0].end]) == "" {
 		t.Fatal("a new target should be re-wrapped")
+	}
+}
+
+func TestExtraLettersAreDrawnAfterTheWord(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60}
+	m := newTestModelFor(t, "cat dog", cfg)
+	for _, r := range "catxx" {
+		m.session.InputRune(r)
+	}
+	if got := stripANSI(m.renderWords()); got != "catxx dog" {
+		t.Fatalf("rendered %q, want %q", got, "catxx dog")
+	}
+
+	m.cfg.Blind = true
+	if got := stripANSI(m.renderWords()); got != "······dog" {
+		t.Fatalf("blind rendered %q, want %q", got, "······dog")
+	}
+}
+
+func TestExtraLettersWrapTheWord(t *testing.T) {
+	t.Parallel()
+
+	text := []rune("aaaa bbbb cccc")
+	extras := map[int]int{9: 3}
+	lines := wrapWithExtras(text, 10, func(i int) int { return extras[i] })
+
+	if got := string(text[lines[0].start:lines[0].end]); got != "aaaa " {
+		t.Fatalf("first line = %q, want %q", got, "aaaa ")
 	}
 }

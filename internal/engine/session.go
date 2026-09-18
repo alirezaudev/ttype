@@ -25,6 +25,9 @@ const minRatedTime = time.Second
 // Grace before --min-wpm can fail a run.
 const minWPMGrace = 5 * time.Second
 
+// Most extra letters kept per word.
+const maxExtras = 20
+
 type TextSource interface {
 	Generate(opts domain.GenerateOptions) (string, error)
 }
@@ -56,6 +59,9 @@ type Session struct {
 	failed              bool
 	failureReason       string
 	events              []domain.ReplayEvent
+	// Letters typed past a word's end, keyed by the space after it.
+	extras    map[int][]rune
+	extrasRev int
 }
 
 func resolveSeed(config domain.TestConfig) int64 {
@@ -82,6 +88,7 @@ func NewSession(config domain.TestConfig, source TextSource, clock Clock) (*Sess
 		state:      domain.SessionReady,
 		seed:       resolveSeed(config),
 		charErrors: make(map[string]int),
+		extras:     make(map[int][]rune),
 	}
 	if err := s.loadTarget(); err != nil {
 		return nil, err
@@ -124,6 +131,11 @@ func (s *Session) StatusAt(i int) KeystrokeStatus {
 		return KeystrokeIncorrect
 	}
 }
+
+func (s *Session) ExtrasAt(pos int) []rune { return s.extras[pos] }
+
+// ExtrasRevision changes whenever the extras do.
+func (s *Session) ExtrasRevision() int { return s.extrasRev }
 
 // CharErrors counts, per expected character, how often it was mistyped.
 func (s *Session) CharErrors() map[string]int {
@@ -264,6 +276,8 @@ func (s *Session) Restart() error {
 	s.failed = false
 	s.failureReason = ""
 	s.events = s.events[:0]
+	s.extras = make(map[int][]rune)
+	s.extrasRev++
 	s.seed = resolveSeed(s.config)
 	return s.loadTarget()
 }
@@ -313,6 +327,11 @@ func (s *Session) InputRune(r rune) {
 		s.recordEvent(domain.ReplayRune, r)
 		s.keystrokesIncorrect++
 		s.bucketKeystroke(false)
+		if len(s.extras[pos]) < maxExtras {
+			s.extras[pos] = append(s.extras[pos], r)
+			s.extrasRev++
+			s.counts.Extra++
+		}
 		s.recordWPMSnapshot()
 		return
 	}
@@ -391,6 +410,10 @@ func (s *Session) backspace() bool {
 	}
 
 	pos := len(s.input)
+	if extra := s.extras[pos]; len(extra) > 0 {
+		s.dropExtras(pos, len(extra)-1)
+		return true
+	}
 	if s.input[pos-1] == skipRune {
 		start := pos
 		for start > 0 && s.input[start-1] == skipRune {
@@ -418,6 +441,7 @@ func (s *Session) deleteWord() bool {
 	}
 
 	pos := len(s.input)
+	s.dropExtras(pos, 0)
 	start := wordStart(pos, s.input)
 	if start != pos {
 		s.truncateInput(start)
@@ -433,7 +457,24 @@ func (s *Session) deleteWord() bool {
 	return true
 }
 
+func (s *Session) dropExtras(pos, keep int) {
+	extra := s.extras[pos]
+	if len(extra) <= keep {
+		return
+	}
+	s.counts.Extra -= len(extra) - keep
+	if keep == 0 {
+		delete(s.extras, pos)
+	} else {
+		s.extras[pos] = extra[:keep]
+	}
+	s.extrasRev++
+}
+
 func (s *Session) truncateInput(n int) {
+	for i := n + 1; i <= len(s.input); i++ {
+		s.dropExtras(i, 0)
+	}
 	for i := n; i < len(s.input); i++ {
 		switch {
 		case s.input[i] == skipRune:

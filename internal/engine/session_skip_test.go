@@ -159,6 +159,75 @@ func TestExtraCharsAtWordEndDontSpill(t *testing.T) {
 	}
 }
 
+func TestExtraLettersAreKeptAfterTheWord(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "cat dog", 60*time.Second)
+	typeString(s, "catxx")
+
+	if got := string(s.ExtrasAt(3)); got != "xx" {
+		t.Fatalf("extras = %q, want %q", got, "xx")
+	}
+	if got := s.Counts().Extra; got != 2 {
+		t.Fatalf("extra = %d, want 2", got)
+	}
+
+	// Space keeps the extras.
+	typeString(s, " d")
+	if got := string(s.ExtrasAt(3)); got != "xx" {
+		t.Fatalf("extras after space = %q, want %q", got, "xx")
+	}
+
+	// d, the space, then the extras.
+	s.Backspace()
+	s.Backspace()
+	s.Backspace()
+	if got := string(s.ExtrasAt(3)); got != "x" {
+		t.Fatalf("extras = %q, want %q", got, "x")
+	}
+	if got := string(s.Input()); got != "cat" {
+		t.Fatalf("input = %q, want %q", got, "cat")
+	}
+	s.Backspace()
+	s.Backspace()
+	if got := string(s.Input()); got != "ca" {
+		t.Fatalf("input = %q, want %q", got, "ca")
+	}
+	if got := s.Counts().Extra; got != 0 {
+		t.Fatalf("extra = %d, want 0", got)
+	}
+}
+
+func TestDeleteWordTakesTheExtrasWithIt(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "cat dog", 60*time.Second)
+	typeString(s, "catxx")
+	s.DeleteWord()
+
+	if s.Cursor() != 0 || len(s.ExtrasAt(3)) != 0 || s.Counts().Extra != 0 {
+		t.Fatalf("cursor=%d extras=%q extra=%d", s.Cursor(), string(s.ExtrasAt(3)), s.Counts().Extra)
+	}
+}
+
+func TestExtraLettersAreCapped(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "cat dog", 60*time.Second)
+	typeString(s, "cat")
+	for range 50 {
+		s.InputRune('x')
+	}
+
+	if got := len(s.ExtrasAt(3)); got != 20 {
+		t.Fatalf("extras = %d, want 20", got)
+	}
+	// Still wrong keys past the cap.
+	if _, incorrect := s.Keystrokes(); incorrect != 50 {
+		t.Fatalf("incorrect keystrokes = %d, want 50", incorrect)
+	}
+}
+
 func TestRestartClearsSkip(t *testing.T) {
 	t.Parallel()
 

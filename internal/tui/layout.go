@@ -13,6 +13,11 @@ type lineSpan struct {
 }
 
 func wordWrapIndices(text []rune, width int) []lineSpan {
+	return wrapWithExtras(text, width, nil)
+}
+
+// extraCells(i) is the width of the extras drawn before position i.
+func wrapWithExtras(text []rune, width int, extraCells func(int) int) []lineSpan {
 	if len(text) == 0 {
 		return nil
 	}
@@ -27,8 +32,15 @@ func wordWrapIndices(text []rune, width int) []lineSpan {
 		// Chinese, Japanese and Korean take two cells each, so the line ends
 		// where the cells run out, not after width characters.
 		end, cells := start, 0
-		for end < len(text) && cells+runewidth.RuneWidth(text[end]) <= width {
-			cells += runewidth.RuneWidth(text[end])
+		for end < len(text) {
+			w := runewidth.RuneWidth(text[end])
+			if extraCells != nil {
+				w += extraCells(end)
+			}
+			if cells+w > width {
+				break
+			}
+			cells += w
 			end++
 		}
 		if end == len(text) {

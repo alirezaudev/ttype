@@ -13,22 +13,25 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-// wrapCache memoizes the word wrap, which only changes on restart or resize.
+// wrapCache memoizes the word wrap, which only changes on restart, resize or
+// new extras.
 // It hangs off the model by pointer so Bubble Tea's value copies share it.
 type wrapCache struct {
 	target string
 	width  int
+	extras int
 	lines  []lineSpan
 }
 
-func (c *wrapCache) wrap(target []rune, text string, width int) []lineSpan {
+func (c *wrapCache) wrap(target []rune, text string, width, extrasRev int, extraCells func(int) int) []lineSpan {
 	if c == nil {
-		return wordWrapIndices(target, width)
+		return wrapWithExtras(target, width, extraCells)
 	}
-	if c.target != text || c.width != width || c.lines == nil {
+	if c.target != text || c.width != width || c.extras != extrasRev || c.lines == nil {
 		c.target = text
 		c.width = width
-		c.lines = wordWrapIndices(target, width)
+		c.extras = extrasRev
+		c.lines = wrapWithExtras(target, width, extraCells)
 	}
 	return c.lines
 }
@@ -169,7 +172,8 @@ func (m TestModel) renderWords() string {
 	}
 
 	width := m.typingWidth()
-	lines := m.wrap.wrap(target, m.session.Target(), width)
+	extraCells := func(i int) int { return runewidth.StringWidth(string(m.session.ExtrasAt(i))) }
+	lines := m.wrap.wrap(target, m.session.Target(), width, m.session.ExtrasRevision(), extraCells)
 	from, to := visibleLineWindow(lines, cursor, 3)
 	rtl := m.reorderRTL && rightToLeft(target)
 
@@ -183,6 +187,42 @@ func (m TestModel) renderWords() string {
 		run.Reset()
 	}
 
+	cell := func(j int, r rune) {
+		// The cursor keeps its own call: it is a single cell and its style
+		// never matches the run around it.
+		if j == cursor {
+			flush()
+			text := string(r)
+			// A word's first letter is never typed yet, and before the
+			// first keystroke nothing has shown it, so it stays visible.
+			if m.cfg.Blind && cursor > revealed {
+				text = "·"
+			}
+			out.WriteString(m.theme.Cursor.Render(text))
+			return
+		}
+
+		kind := cellPending
+		text := string(r)
+		switch {
+		case j < cursor && j >= revealed:
+			text = "·"
+		case j < cursor:
+			switch m.session.StatusAt(j) {
+			case engine.KeystrokeCorrect:
+				kind = cellCorrect
+			case engine.KeystrokeIncorrect:
+				kind = cellIncorrect
+			}
+		}
+
+		if kind != runKind {
+			flush()
+			runKind = kind
+		}
+		run.WriteString(text)
+	}
+
 	for i := from; i < to; i++ {
 		line := lines[i]
 		var order []int
@@ -191,6 +231,9 @@ func (m TestModel) renderWords() string {
 			// Right-aligned, so each line starts where the reader looks.
 			if m.width > 0 {
 				pad := width - runewidth.StringWidth(string(target[line.start:line.end]))
+				for j := line.start; j < line.end; j++ {
+					pad -= runewidth.StringWidth(string(m.session.ExtrasAt(j)))
+				}
 				out.WriteString(strings.Repeat(" ", max(pad, 0)))
 			}
 		}
@@ -203,39 +246,17 @@ func (m TestModel) renderWords() string {
 				r = mirrorRune(target[j])
 			}
 
-			// The cursor keeps its own call: it is a single cell and its style
-			// never matches the run around it.
-			if j == cursor {
+			// Extras go before the space, or after it right to left.
+			extras := m.session.ExtrasAt(j)
+			if len(extras) > 0 && !rtl {
 				flush()
-				text := string(r)
-				// A word's first letter is never typed yet, and before the
-				// first keystroke nothing has shown it, so it stays visible.
-				if m.cfg.Blind && cursor > revealed {
-					text = "·"
-				}
-				out.WriteString(m.theme.Cursor.Render(text))
-				continue
+				out.WriteString(m.renderExtras(extras, m.cfg.Blind && j >= revealed, false))
 			}
-
-			kind := cellPending
-			text := string(r)
-			switch {
-			case j < cursor && j >= revealed:
-				text = "·"
-			case j < cursor:
-				switch m.session.StatusAt(j) {
-				case engine.KeystrokeCorrect:
-					kind = cellCorrect
-				case engine.KeystrokeIncorrect:
-					kind = cellIncorrect
-				}
-			}
-
-			if kind != runKind {
+			cell(j, r)
+			if len(extras) > 0 && rtl {
 				flush()
-				runKind = kind
+				out.WriteString(m.renderExtras(extras, m.cfg.Blind && j >= revealed, true))
 			}
-			run.WriteString(text)
 		}
 		flush()
 		if i < to-1 {
@@ -243,6 +264,20 @@ func (m TestModel) renderWords() string {
 		}
 	}
 	return out.String()
+}
+
+func (m TestModel) renderExtras(extras []rune, hidden, reverse bool) string {
+	if hidden {
+		return m.styleFor(cellPending).Render(strings.Repeat("·", len(extras)))
+	}
+	text := extras
+	if reverse {
+		text = make([]rune, len(extras))
+		for i, r := range extras {
+			text[len(extras)-1-i] = mirrorRune(r)
+		}
+	}
+	return m.styleFor(cellIncorrect).Render(string(text))
 }
 
 func (m TestModel) typingWidth() int {

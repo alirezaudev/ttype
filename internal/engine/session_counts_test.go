@@ -45,7 +45,15 @@ func TestIncrementalCountsMatchARecount(t *testing.T) {
 			s.DeleteWord()
 		}
 
-		if got, want := s.Counts(), recount(s.Input(), []rune(target)); got != want {
+		// Extras aren't in the input, so add them.
+		want := recount(s.Input(), []rune(target))
+		for pos := 0; pos <= len(target); pos++ {
+			if pos > s.Cursor() && len(s.ExtrasAt(pos)) > 0 {
+				t.Fatalf("after %d ops extras %q at %d, past the cursor %d", i+1, string(s.ExtrasAt(pos)), pos, s.Cursor())
+			}
+			want.Extra += len(s.ExtrasAt(pos))
+		}
+		if got := s.Counts(); got != want {
 			t.Fatalf("after %d ops counts = %+v, want %+v (input %q)", i+1, got, want, string(s.Input()))
 		}
 	}
