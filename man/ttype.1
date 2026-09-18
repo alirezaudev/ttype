@@ -75,6 +75,13 @@ Type the given text.
 .B \-\-no\-save
 Keep the run out of history, personal bests and replays.
 .TP
+.BI \-\-tag " TAG"
+Label the run, so
+.B history
+and
+.B stats
+can filter by it.
+.TP
 .BI \-\-result\-file " PATH"
 When ttype exits, write the last run to PATH as JSON: its status
 .RB ( completed ,
@@ -109,14 +116,16 @@ and never count as personal bests. A replay stores the text, so use
 for anything private.
 .SH COMMANDS
 .TP
-.B history [\-\-last N] [\-\-plain]
+.B history [\-\-last N] [\-\-plain] [\-\-tag T]
 List past results. On a terminal this is an interactive table where
 .B enter
 plays the selected run back;
 .B \-\-plain
 prints a plain table instead.
+.B \-\-tag
+lists only runs with that tag.
 .TP
-.B stats [\-\-mode M] [\-\-exclude\-failed] [\-\-trend] [\-\-export csv]
+.B stats [\-\-mode M] [\-\-tag T] [\-\-exclude\-failed] [\-\-trend] [\-\-export csv]
 Averages, personal bests and an optional sparkline of wpm over time.
 .B \-\-export csv
 writes the history to standard output instead.

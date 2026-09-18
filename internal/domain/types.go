@@ -96,12 +96,14 @@ type PersonalBests struct {
 
 type StatsFilter struct {
 	TextMode      *TextMode
+	Tag           string
 	ExcludeFailed bool
 }
 
 type StatsSummary struct {
 	TotalTests       int
 	FilterMode       string
+	FilterTag        string
 	AverageWPM       float64
 	AverageAccuracy  float64
 	BestWPM          float64

@@ -29,6 +29,7 @@ type storedResult struct {
 	Width               int     `json:"width,omitempty"`
 	MinWPM              int     `json:"min_wpm,omitempty"`
 	Seed                int64   `json:"seed,omitempty"`
+	Tag                 string  `json:"tag,omitempty"`
 	WPM                 float64 `json:"wpm"`
 	RawWPM              float64 `json:"raw_wpm"`
 	Accuracy            float64 `json:"accuracy"`
@@ -72,6 +73,7 @@ func marshalResult(r domain.Result) storedResult {
 		Width:               r.Config.Width,
 		MinWPM:              r.Config.MinWPM,
 		Seed:                r.Seed,
+		Tag:                 r.Config.Tag,
 		WPM:                 r.WPM,
 		RawWPM:              r.RawWPM,
 		Accuracy:            r.Accuracy,
@@ -118,6 +120,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		Blind:       s.Blind,
 		Zen:         s.Zen,
 		MinWPM:      s.MinWPM,
+		Tag:         s.Tag,
 	}
 
 	elapsed := time.Duration(s.Duration) * time.Second

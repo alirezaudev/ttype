@@ -23,6 +23,10 @@ func registerCompletions(root *cobra.Command) {
 		// Custom runs can be looked up, just not started with --mode.
 		_ = stats.RegisterFlagCompletionFunc("mode", suggestValues(append(textModeNames(), string(domain.TextModeCustom))...))
 		_ = stats.RegisterFlagCompletionFunc("export", suggestValues("csv"))
+		_ = stats.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
+	}
+	if history, _, err := root.Find([]string{"history"}); err == nil {
+		_ = history.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 	}
 	if config, _, err := root.Find([]string{"config"}); err == nil {
 		_ = config.RegisterFlagCompletionFunc("default-mode", suggestValues(textModeNames()...))
@@ -34,6 +38,7 @@ func registerCompletions(root *cobra.Command) {
 	}
 	_ = root.RegisterFlagCompletionFunc("output", suggestValues("json"))
 	_ = root.RegisterFlagCompletionFunc("text", cobra.NoFileCompletions)
+	_ = root.RegisterFlagCompletionFunc("tag", cobra.NoFileCompletions)
 }
 
 // Only languages already on disk are suggested: reaching for the network

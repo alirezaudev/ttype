@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
+	"github.com/alirezaudev/ttype/internal/storage"
 )
 
 func TestPrintHistoryTableEmpty(t *testing.T) {
@@ -80,5 +81,33 @@ func TestHistoryLanguageFitsTheColumn(t *testing.T) {
 		if n := len([]rune(got)); n > languageColumnWidth {
 			t.Errorf("historyLanguage(%q) is %d columns wide, want <= %d", test.id, n, languageColumnWidth)
 		}
+	}
+}
+
+type listStore struct {
+	storage.Store
+	results []domain.Result
+}
+
+func (s listStore) ListResults(limit int) ([]domain.Result, error) {
+	if limit > 0 && limit < len(s.results) {
+		return s.results[:limit], nil
+	}
+	return s.results, nil
+}
+
+// The limit counts tagged runs, not all of them.
+func TestHistoryTagFiltersBeforeTheLimit(t *testing.T) {
+	t.Parallel()
+
+	tagged := func(tag string) domain.Result { return domain.Result{Config: domain.TestConfig{Tag: tag}} }
+	store := listStore{results: []domain.Result{tagged(""), tagged("english"), tagged(""), tagged("english"), tagged("english")}}
+
+	got, err := listResults(store, 2, "english")
+	if err != nil {
+		t.Fatalf("listResults: %v", err)
+	}
+	if len(got) != 2 || got[0].Config.Tag != "english" || got[1].Config.Tag != "english" {
+		t.Fatalf("got %+v, want two english runs", got)
 	}
 }

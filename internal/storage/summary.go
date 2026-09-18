@@ -31,6 +31,7 @@ func (s *JSONStore) Summary(filter domain.StatsFilter) (domain.StatsSummary, err
 	if filter.TextMode != nil {
 		summary.FilterMode = string(*filter.TextMode)
 	}
+	summary.FilterTag = filter.Tag
 	if len(history) == 0 {
 		return summary, nil
 	}
@@ -65,13 +66,16 @@ func (s *JSONStore) Summary(filter domain.StatsFilter) (domain.StatsSummary, err
 }
 
 func applyFilter(history []storedResult, filter domain.StatsFilter) []storedResult {
-	if filter.TextMode == nil && !filter.ExcludeFailed {
+	if filter.TextMode == nil && filter.Tag == "" && !filter.ExcludeFailed {
 		return history
 	}
 
 	out := make([]storedResult, 0, len(history))
 	for _, item := range history {
 		if filter.TextMode != nil && domain.TextMode(item.TextMode) != *filter.TextMode {
+			continue
+		}
+		if filter.Tag != "" && item.Tag != filter.Tag {
 			continue
 		}
 		if filter.ExcludeFailed && item.Failed {
@@ -108,7 +112,7 @@ func (s *JSONStore) ExportCSV(w io.Writer, filter domain.StatsFilter) error {
 	out := csv.NewWriter(w)
 	if err := out.Write([]string{
 		"timestamp", "mode", "language", "test", "wpm", "raw_wpm",
-		"accuracy", "consistency", "errors", "failed",
+		"accuracy", "consistency", "errors", "failed", "tag",
 	}); err != nil {
 		return err
 	}
@@ -129,6 +133,7 @@ func (s *JSONStore) ExportCSV(w io.Writer, filter domain.StatsFilter) error {
 			strconv.FormatFloat(item.Consistency, 'f', 2, 64),
 			strconv.Itoa(item.KeystrokesIncorrect),
 			strconv.FormatBool(item.Failed),
+			item.Tag,
 		}); err != nil {
 			return err
 		}

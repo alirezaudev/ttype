@@ -34,6 +34,7 @@ type resultFile struct {
 	CharErrors  map[string]int      `json:"char_errors,omitempty"`
 	Mode        domain.TextMode     `json:"mode,omitempty"`
 	Language    string              `json:"language,omitempty"`
+	Tag         string              `json:"tag,omitempty"`
 	Source      *resultSource       `json:"source,omitempty"`
 	Words       []domain.WordResult `json:"words,omitempty"`
 }
@@ -77,6 +78,7 @@ func newResultFile(r domain.Result, finished, ran bool, src ResultSource) result
 	out.CharErrors = r.CharErrors
 	out.Mode = r.Config.TextMode
 	out.Language = r.Config.Language
+	out.Tag = r.Config.Tag
 	out.Words = r.Words
 	if src.Text != "" {
 		// A hash, not the text, so private text stays private.

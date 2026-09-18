@@ -72,6 +72,7 @@ func newRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			cfg.Tag = flags.tag
 
 			text, err := readCustomText(cmd, flags, stdinPiped())
 			if err != nil {
@@ -190,6 +191,7 @@ func newConfigCmd() *cobra.Command {
 func newHistoryCmd() *cobra.Command {
 	var last, limit int
 	var plain bool
+	var tag string
 
 	cmd := &cobra.Command{
 		Use:               "history",
@@ -208,18 +210,19 @@ func newHistoryCmd() *cobra.Command {
 			if n <= 0 {
 				n = 10
 			}
-			return app.RunHistory(store, n, plain)
+			return app.RunHistory(store, n, plain, tag)
 		},
 	}
 	cmd.Flags().IntVar(&last, "last", 10, "Number of recent results to show")
 	cmd.Flags().IntVar(&limit, "limit", 0, "Alias for --last")
 	cmd.Flags().BoolVar(&plain, "plain", false, "Print a plain table instead of the interactive list")
+	cmd.Flags().StringVar(&tag, "tag", "", "Only runs with this tag")
 
 	return cmd
 }
 
 func newStatsCmd() *cobra.Command {
-	var mode, export string
+	var mode, export, tag string
 	var excludeFailed, trend bool
 
 	cmd := &cobra.Command{
@@ -232,7 +235,7 @@ func newStatsCmd() *cobra.Command {
 				return err
 			}
 
-			filter := domain.StatsFilter{ExcludeFailed: excludeFailed}
+			filter := domain.StatsFilter{ExcludeFailed: excludeFailed, Tag: tag}
 			if cmd.Flags().Changed("mode") {
 				textMode, err := domain.ParseTextMode(mode)
 				if err != nil {
@@ -252,6 +255,7 @@ func newStatsCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&mode, "mode", "", "Filter stats by text mode")
+	cmd.Flags().StringVar(&tag, "tag", "", "Filter stats by tag")
 	cmd.Flags().BoolVar(&excludeFailed, "exclude-failed", false, "Exclude failed tests from stats")
 	cmd.Flags().BoolVar(&trend, "trend", false, "Show a sparkline of wpm over time")
 	cmd.Flags().StringVar(&export, "export", "", "Export the history instead of printing stats (csv)")
@@ -414,6 +418,7 @@ type testCLIFlags struct {
 	text        string
 	noSave      bool
 	resultFile  string
+	tag         string
 	allowSkip   bool
 }
 
@@ -435,6 +440,7 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().StringVar(&f.text, "text", "", "Type this text")
 	cmd.Flags().BoolVar(&f.noSave, "no-save", false, "Keep this run out of history, bests and replays")
 	cmd.Flags().StringVar(&f.resultFile, "result-file", "", "Write the last run to this file as JSON on exit")
+	cmd.Flags().StringVar(&f.tag, "tag", "", "Label this run, to filter history and stats by it")
 
 	// Skipping is part of how space works now, so the old flag does nothing.
 	cmd.Flags().BoolVar(&f.allowSkip, "allow-skip", false, "Deprecated, has no effect")

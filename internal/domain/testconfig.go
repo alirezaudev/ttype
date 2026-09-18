@@ -21,6 +21,7 @@ type TestConfig struct {
 	Zen         bool     `json:"zen,omitempty"`
 	MinWPM      int      `json:"min_wpm,omitempty"`
 	Seed        int64    `json:"seed,omitempty"`
+	Tag         string   `json:"tag,omitempty"`
 }
 
 type GenerateOptions struct {

@@ -13,8 +13,8 @@ import (
 	"golang.org/x/term"
 )
 
-func RunHistory(store storage.Store, limit int, plain bool) error {
-	results, err := store.ListResults(limit)
+func RunHistory(store storage.Store, limit int, plain bool, tag string) error {
+	results, err := listResults(store, limit, tag)
 	if err != nil {
 		return fmt.Errorf("load history: %w", err)
 	}
@@ -34,6 +34,26 @@ func RunHistory(store storage.Store, limit int, plain bool) error {
 		return fmt.Errorf("tui: %w", err)
 	}
 	return nil
+}
+
+func listResults(store storage.Store, limit int, tag string) ([]domain.Result, error) {
+	if tag == "" {
+		return store.ListResults(limit)
+	}
+	all, err := store.ListResults(0)
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.Result
+	for _, r := range all {
+		if r.Config.Tag == tag {
+			out = append(out, r)
+		}
+		if limit > 0 && len(out) == limit {
+			break
+		}
+	}
+	return out, nil
 }
 
 const languageColumnWidth = 10

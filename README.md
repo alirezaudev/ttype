@@ -135,13 +135,15 @@ replay stores the text.
 ### For scripts
 
 ```sh
-ttype --file drill.txt --result-file run.json
+ttype --file drill.txt --result-file run.json --tag drill
+ttype stats --tag drill --trend
 ```
 
 `--result-file` writes the last run as JSON when ttype exits, with a
 `status` of `completed`, `quit` or `failed_min_wpm`, the numbers, the words you
 missed and what you typed, and for your own text a `sha256` of it and the line
-each word came from. The result
+each word came from. `--tag` labels a run so `history` and `stats` can filter by
+it. The result
 screen still shows as usual; `--output json` skips it and prints to stdout.
 
 ## More of it

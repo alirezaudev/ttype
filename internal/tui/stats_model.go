@@ -10,16 +10,26 @@ import (
 // RenderStats draws the stats page. It is a plain render rather than a Bubble
 // Tea model: the page has nothing to interact with.
 func RenderStats(summary domain.StatsSummary, trend []float64, theme Theme, width int) string {
+	var filters, titles []string
+	if summary.FilterMode != "" {
+		filters = append(filters, fmt.Sprintf("mode %q", summary.FilterMode))
+		titles = append(titles, "Mode: "+summary.FilterMode)
+	}
+	if summary.FilterTag != "" {
+		filters = append(filters, fmt.Sprintf("tag %q", summary.FilterTag))
+		titles = append(titles, "Tag: "+summary.FilterTag)
+	}
+
 	if summary.TotalTests == 0 {
-		if summary.FilterMode != "" {
-			return fmt.Sprintf("No tests recorded for mode %q.\n", summary.FilterMode)
+		if len(filters) > 0 {
+			return fmt.Sprintf("No tests recorded for %s.\n", strings.Join(filters, " and "))
 		}
 		return "No test history yet.\n"
 	}
 
 	title := "All tests"
-	if summary.FilterMode != "" {
-		title = "Mode: " + summary.FilterMode
+	if len(titles) > 0 {
+		title = strings.Join(titles, " · ")
 	}
 
 	rows := [][2]string{
@@ -37,7 +47,7 @@ func RenderStats(summary domain.StatsSummary, trend []float64, theme Theme, widt
 			theme.HUDValue.Render(row[1]))
 	}
 
-	if summary.FilterMode == "" && summary.PersonalBest.BestWPM > 0 {
+	if len(filters) == 0 && summary.PersonalBest.BestWPM > 0 {
 		lines = append(lines, "", "  "+theme.Help.Render("all-time  ")+
 			theme.HUDValue.Render(fmt.Sprintf("%.2f wpm · %.2f%% accuracy",
 				summary.PersonalBest.BestWPM, summary.PersonalBest.BestAccuracy)))
