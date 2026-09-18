@@ -21,6 +21,7 @@ func TestCleanCustomText(t *testing.T) {
 		"  \u00a0padded\u200b\ufeff  ":           "padded",
 		"bell\x07 and nul\x00":                   "bell and nul",
 		"سلام\u200cدنیا":                         "سلام\u200cدنیا",
+		"I think":                                "I think",
 	}
 	for raw, want := range tests {
 		if got := CleanCustomText(raw); got != want {

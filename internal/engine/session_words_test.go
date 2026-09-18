@@ -82,3 +82,17 @@ func TestWordsCarryTheirLine(t *testing.T) {
 		t.Fatalf("words = %+v, want lines 1, 1, 2", got)
 	}
 }
+
+func TestCaseIsNeverFolded(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "I think", 60*time.Second)
+	typeString(s, "i think")
+
+	if got := s.CharErrors()["I"]; got != 1 {
+		t.Fatalf("errors on I = %d, want 1", got)
+	}
+	if got := s.Words()[0]; !got.Missed || got.Typed != "i" {
+		t.Fatalf("first word = %+v, want i for I", got)
+	}
+}
