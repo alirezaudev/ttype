@@ -62,6 +62,9 @@ type Session struct {
 	// Letters typed past a word's end, keyed by the space after it.
 	extras    map[int][]rune
 	extrasRev int
+	// A space belongs to the word before it.
+	wordAt []int
+	missed []bool
 }
 
 func resolveSeed(config domain.TestConfig) int64 {
@@ -301,7 +304,54 @@ func (s *Session) loadTarget() error {
 	}
 	s.target = target
 	s.targetRunes = []rune(target)
+	s.indexWords()
 	return nil
+}
+
+func (s *Session) indexWords() {
+	s.wordAt = make([]int, len(s.targetRunes))
+	word := 0
+	for i, r := range s.targetRunes {
+		if r != ' ' && i > 0 && s.targetRunes[i-1] == ' ' {
+			word++
+		}
+		s.wordAt[i] = word
+	}
+	s.missed = make([]bool, word+1)
+}
+
+func (s *Session) markMissed(pos int) {
+	if len(s.wordAt) == 0 {
+		return
+	}
+	s.missed[s.wordAt[min(pos, len(s.wordAt)-1)]] = true
+}
+
+// Words lists the words reached so far.
+func (s *Session) Words() []domain.WordResult {
+	var out []domain.WordResult
+	for start := 0; start < len(s.targetRunes) && start < len(s.input); {
+		if s.targetRunes[start] == ' ' {
+			start++
+			continue
+		}
+		end := wordEndAt(s.targetRunes, start)
+		word := domain.WordResult{Expected: string(s.targetRunes[start:end])}
+		if s.missed[s.wordAt[start]] {
+			var typed []rune
+			for _, r := range s.input[start:min(end, len(s.input))] {
+				if r != skipRune {
+					typed = append(typed, r)
+				}
+			}
+			word.Typed = string(append(typed, s.extras[end]...))
+			word.Missed = true
+			word.Corrected = word.Typed == word.Expected
+		}
+		out = append(out, word)
+		start = end
+	}
+	return out
 }
 
 func (s *Session) InputRune(r rune) {
@@ -327,6 +377,7 @@ func (s *Session) InputRune(r rune) {
 		s.recordEvent(domain.ReplayRune, r)
 		s.keystrokesIncorrect++
 		s.bucketKeystroke(false)
+		s.markMissed(pos)
 		if len(s.extras[pos]) < maxExtras {
 			s.extras[pos] = append(s.extras[pos], r)
 			s.extrasRev++
@@ -354,6 +405,7 @@ func (s *Session) InputRune(r rune) {
 			s.keystrokesIncorrect++
 			s.counts.Extra++
 			s.bucketKeystroke(false)
+			s.markMissed(pos)
 		case r == s.targetRunes[pos]:
 			s.keystrokesCorrect++
 			s.counts.Correct++
@@ -363,6 +415,7 @@ func (s *Session) InputRune(r rune) {
 			s.counts.Incorrect++
 			s.charErrors[string(s.targetRunes[pos])]++
 			s.bucketKeystroke(false)
+			s.markMissed(pos)
 		}
 		s.input = append(s.input, r)
 	}
@@ -642,6 +695,7 @@ func (s *Session) Result() (domain.Result, error) {
 		CharErrors:          s.CharErrors(),
 		Failed:              s.failed,
 		FailureReason:       s.failureReason,
+		Words:               s.Words(),
 		TotalChars:          counts.TotalTyped(),
 		Duration:            s.Elapsed(),
 		Seed:                s.seed,
@@ -673,6 +727,7 @@ func (s *Session) skipCurrentWord(pos int) {
 	s.keystrokesIncorrect++
 	s.charErrors[string(s.targetRunes[pos])]++
 	s.bucketKeystroke(false)
+	s.markMissed(pos)
 
 	end := wordEndAt(s.targetRunes, pos)
 	for i := pos; i < end; i++ {

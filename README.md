@@ -245,7 +245,10 @@ Shell completions are also generated into `contrib/completions/`, and
   mistake fixes the text, not the accuracy.
 - **consistency** — how even your per-second speed was. Steady beats spiky,
   even at the same average.
-- **chars** — correct / incorrect / extra / skipped.
+- **chars** — correct / incorrect / extra / skipped. Extra letters are the
+  ones typed past the end of a word; they stay on screen in red after it.
+- **words** — `--output json` lists the words you reached, and for each one you
+  missed, what you typed instead. A mistake you fixed still counts as missed.
 
 Personal bests are tracked per configuration, so a 60 second English run is
 never measured against a 15 second Spanish one with punctuation on.

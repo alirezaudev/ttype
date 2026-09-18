@@ -46,6 +46,8 @@ type storedResult struct {
 	CharErrors    map[string]int `json:"char_errors,omitempty"`
 	Failed        bool           `json:"failed,omitempty"`
 	FailureReason string         `json:"failure_reason,omitempty"`
+	// Only missed words; history is read on every start.
+	MissedWords []domain.WordResult `json:"missed_words,omitempty"`
 }
 
 func marshalResult(r domain.Result) storedResult {
@@ -86,7 +88,18 @@ func marshalResult(r domain.Result) storedResult {
 		CharErrors:          r.CharErrors,
 		Failed:              r.Failed,
 		FailureReason:       r.FailureReason,
+		MissedWords:         missedWords(r.Words),
 	}
+}
+
+func missedWords(words []domain.WordResult) []domain.WordResult {
+	var out []domain.WordResult
+	for _, w := range words {
+		if w.Missed {
+			out = append(out, w)
+		}
+	}
+	return out
 }
 
 func unmarshalResult(s storedResult) domain.Result {
@@ -134,6 +147,7 @@ func unmarshalResult(s storedResult) domain.Result {
 		CharErrors:          s.CharErrors,
 		Failed:              s.Failed,
 		FailureReason:       s.FailureReason,
+		Words:               s.MissedWords,
 	}
 }
 

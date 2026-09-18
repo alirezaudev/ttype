@@ -73,6 +73,17 @@ type Result struct {
 	CharErrors    map[string]int `json:"char_errors,omitempty"`
 	Failed        bool           `json:"failed,omitempty"`
 	FailureReason string         `json:"failure_reason,omitempty"`
+	// History keeps only the missed words.
+	Words []WordResult `json:"words,omitempty"`
+}
+
+type WordResult struct {
+	Expected string `json:"expected"`
+	// Set only for missed words.
+	Typed string `json:"typed,omitempty"`
+	// A fixed mistake still counts as missed.
+	Missed    bool `json:"missed,omitempty"`
+	Corrected bool `json:"corrected,omitempty"`
 }
 
 type PersonalBests struct {

@@ -50,6 +50,29 @@ func TestSaveResultRoundTrip(t *testing.T) {
 	}
 }
 
+func TestHistoryKeepsOnlyTheMissedWords(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
+	missed := domain.WordResult{Expected: "letter", Typed: "lettter", Missed: true}
+	result := domain.Result{
+		ID:     "w1",
+		Config: domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration60},
+		Words:  []domain.WordResult{{Expected: "the"}, missed, {Expected: "end"}},
+	}
+	if _, err := s.SaveResult(result); err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+
+	got, err := s.ListResults(0)
+	if err != nil {
+		t.Fatalf("ListResults: %v", err)
+	}
+	if !reflect.DeepEqual(got[0].Words, []domain.WordResult{missed}) {
+		t.Fatalf("words = %+v, want only %+v", got[0].Words, missed)
+	}
+}
+
 func TestListResultsTolerantOfMissingFields(t *testing.T) {
 	t.Parallel()
 
