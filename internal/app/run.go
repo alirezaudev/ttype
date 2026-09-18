@@ -76,12 +76,15 @@ func RunTest(cfg domain.TestConfig, store storage.Store, build Build, opts RunOp
 	var (
 		checkVersion  func() domain.VersionInfo
 		installUpdate func(latest string, asked bool) error
+		pending       pendingInstall
 	)
 	// Scripts and CI get a quiet run that never touches the network.
 	mode := UpdateModeFor(settings.Update, os.Getenv("TTYPE_UPDATE"))
 	if !outputJSON && os.Getenv("CI") == "" && mode != domain.UpdateOff {
 		checkVersion = func() domain.VersionInfo { return CheckVersion(build, mode) }
-		installUpdate = func(latest string, asked bool) error { return InstallUpdate(build, latest, asked) }
+		installUpdate = func(latest string, asked bool) error {
+			return pending.run(latest, func() error { return InstallUpdate(build, latest, asked) })
+		}
 	}
 
 	model := tui.NewAppModel(tui.Options{
@@ -109,6 +112,7 @@ func RunTest(cfg domain.TestConfig, store storage.Store, build Build, opts RunOp
 		}
 	}
 	final, err := tea.NewProgram(model, options...).Run()
+	pending.wait(os.Stderr, installWaitCap)
 	if err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}

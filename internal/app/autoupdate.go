@@ -2,8 +2,11 @@ package app
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -91,15 +94,56 @@ func installUpdate(local, latest string, asked bool, inst install, u updater, st
 	if !asked && now.Sub(state.LastInstall) < installRetry && !now.Before(state.LastInstall) {
 		return errTriedRecently
 	}
-	state.LastInstall = now
-	_ = saveUpdateState(statePath, state)
 
-	if err := u.install(latest); err != nil {
-		return err
-	}
+	err := u.install(latest)
 
-	// The check may have written the file while the download ran.
+	// Recorded after the attempt, so a killed download retries next launch.
 	state = loadUpdateState(statePath)
-	state.Installed = latest
-	return saveUpdateState(statePath, state)
+	state.LastInstall = now
+	if err == nil {
+		state.Installed = latest
+	}
+	if saveErr := saveUpdateState(statePath, state); err == nil {
+		err = saveErr
+	}
+	return err
+}
+
+// How long quitting waits for a running install.
+const installWaitCap = 30 * time.Second
+
+// pendingInstall lets quitting wait for a background install.
+type pendingInstall struct {
+	mu      sync.Mutex
+	version string
+	done    chan struct{}
+}
+
+func (p *pendingInstall) run(version string, install func() error) error {
+	done := make(chan struct{})
+	p.mu.Lock()
+	p.version, p.done = version, done
+	p.mu.Unlock()
+	defer close(done)
+	return install()
+}
+
+func (p *pendingInstall) wait(out io.Writer, limit time.Duration) {
+	p.mu.Lock()
+	version, done := p.version, p.done
+	p.mu.Unlock()
+	if done == nil {
+		return
+	}
+	select {
+	case <-done:
+		return
+	default:
+	}
+	fmt.Fprintf(out, "Finishing the update to ttype %s...\n", version)
+	select {
+	case <-done:
+	case <-time.After(limit):
+		fmt.Fprintln(out, "Update is taking too long; it will try again next time.")
+	}
 }

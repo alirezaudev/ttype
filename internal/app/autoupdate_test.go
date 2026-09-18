@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -262,5 +263,88 @@ func TestReplaceBinaryClearsOldTempFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(fresh); err != nil {
 		t.Error("removed the temp file of an update that may still be running")
+	}
+}
+
+// A download killed by quitting must not hold back the next launch.
+func TestInstallUpdateRecordsTheAttemptAfterIt(t *testing.T) {
+	t.Parallel()
+
+	server, _ := releaseServer(t, "1.2.0", []byte("new"), 0)
+	exe := oldBinary(t)
+	statePath := filepath.Join(t.TempDir(), "update.json")
+	u := testUpdater(server.URL, exe)
+	u.verify = func(string, string) error {
+		if state := loadUpdateState(statePath); !state.LastInstall.IsZero() {
+			t.Errorf("attempt recorded while it was still running: %+v", state)
+		}
+		return nil
+	}
+
+	if err := installUpdate("1.1.0", "1.2.0", false, install{method: installScript}, u, statePath, time.Now(), writableDir); err != nil {
+		t.Fatalf("installUpdate: %v", err)
+	}
+}
+
+func TestQuittingWaitsForAnInstall(t *testing.T) {
+	t.Parallel()
+
+	var p pendingInstall
+	var out strings.Builder
+	p.wait(&out, time.Second)
+	if out.Len() != 0 {
+		t.Fatalf("waited with nothing running: %q", out.String())
+	}
+
+	release := make(chan struct{})
+	finished := make(chan struct{})
+	go func() {
+		_ = p.run("1.2.0", func() error { <-release; return nil })
+		close(finished)
+	}()
+	for {
+		p.mu.Lock()
+		started := p.done != nil
+		p.mu.Unlock()
+		if started {
+			break
+		}
+		runtime.Gosched()
+	}
+
+	go func() { time.Sleep(50 * time.Millisecond); close(release) }()
+	p.wait(&out, 5*time.Second)
+	select {
+	case <-finished:
+	default:
+		t.Fatal("wait returned before the install finished")
+	}
+	if !strings.Contains(out.String(), "1.2.0") {
+		t.Fatalf("out = %q, want it to say what it's waiting for", out.String())
+	}
+}
+
+func TestQuittingGivesUpOnASlowInstall(t *testing.T) {
+	t.Parallel()
+
+	var p pendingInstall
+	block := make(chan struct{})
+	defer close(block)
+	go func() { _ = p.run("1.2.0", func() error { <-block; return nil }) }()
+	for {
+		p.mu.Lock()
+		started := p.done != nil
+		p.mu.Unlock()
+		if started {
+			break
+		}
+		runtime.Gosched()
+	}
+
+	var out strings.Builder
+	start := time.Now()
+	p.wait(&out, 50*time.Millisecond)
+	if time.Since(start) > time.Second || !strings.Contains(out.String(), "next time") {
+		t.Fatalf("waited %v, out = %q", time.Since(start), out.String())
 	}
 }
