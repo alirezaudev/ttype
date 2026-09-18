@@ -153,6 +153,17 @@ func (m AppModel) Result() (domain.Result, bool) {
 	return m.result, m.finished
 }
 
+// LastRun ends a run in progress, or returns the last finished one.
+func (m AppModel) LastRun() (result domain.Result, finished, ran bool) {
+	if s := m.test.session; s != nil && s.State() == domain.SessionActive {
+		s.Finish()
+		if r, err := s.Result(); err == nil {
+			return r, false, true
+		}
+	}
+	return m.result, m.finished, m.finished
+}
+
 func (m AppModel) Init() tea.Cmd {
 	if m.checkVersion == nil {
 		return m.test.Init()

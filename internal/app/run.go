@@ -32,6 +32,9 @@ type RunOptions struct {
 	CustomText string
 	// NoSave keeps the run out of history, bests and replays.
 	NoSave bool
+	// ResultFile gets the last run as JSON when ttype exits.
+	ResultFile string
+	Source     ResultSource
 }
 
 // RunTest starts an interactive typing test in the terminal.
@@ -108,6 +111,13 @@ func RunTest(cfg domain.TestConfig, store storage.Store, build Build, opts RunOp
 	final, err := tea.NewProgram(model, options...).Run()
 	if err != nil {
 		return fmt.Errorf("tui: %w", err)
+	}
+
+	if opts.ResultFile != "" {
+		result, finished, ran := final.(tui.AppModel).LastRun()
+		if err := writeResultFile(opts.ResultFile, newResultFile(result, finished, ran, opts.Source)); err != nil {
+			return err
+		}
 	}
 
 	if !outputJSON {

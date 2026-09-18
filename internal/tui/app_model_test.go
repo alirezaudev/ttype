@@ -716,3 +716,35 @@ func TestPickingALanguageThatCannotLoad(t *testing.T) {
 		t.Fatal("the picker doesn't say why")
 	}
 }
+
+func TestLastRunEndsARunInProgress(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	if _, _, ran := m.LastRun(); ran {
+		t.Fatal("LastRun reported a run before any typing")
+	}
+
+	next, _ := m.Update(runeKey('a'))
+	m = next.(AppModel)
+	clock.Advance(3 * time.Second)
+
+	result, finished, ran := m.LastRun()
+	if !ran || finished {
+		t.Fatalf("ran=%v finished=%v, want a run that was quit", ran, finished)
+	}
+	if result.Correct != 1 || result.Duration != 3*time.Second {
+		t.Fatalf("result = %d correct over %v, want 1 over 3s", result.Correct, result.Duration)
+	}
+}
+
+func TestLastRunKeepsTheFinishedRun(t *testing.T) {
+	t.Parallel()
+
+	m, clock := newAppModel(t)
+	m = finishTest(m, clock)
+
+	if _, finished, ran := m.LastRun(); !ran || !finished {
+		t.Fatalf("ran=%v finished=%v, want the finished run", ran, finished)
+	}
+}

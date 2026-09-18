@@ -81,10 +81,16 @@ func newRootCmd() *cobra.Command {
 				cfg = app.CustomConfig(cfg, text, cmd.Flags().Changed("words"), cmd.Flags().Changed("time"))
 			}
 
+			source := app.ResultSource{Text: text}
+			if flags.file != "-" {
+				source.File = flags.file
+			}
 			return app.RunTest(cfg, store, app.Build{Version: version, Release: release}, app.RunOptions{
 				OutputJSON: flags.output == "json",
 				CustomText: text,
 				NoSave:     flags.noSave,
+				ResultFile: flags.resultFile,
+				Source:     source,
 			})
 		},
 	}
@@ -407,6 +413,7 @@ type testCLIFlags struct {
 	file        string
 	text        string
 	noSave      bool
+	resultFile  string
 	allowSkip   bool
 }
 
@@ -427,6 +434,7 @@ func bindTestFlags(cmd *cobra.Command, f *testCLIFlags) {
 	cmd.Flags().StringVar(&f.file, "file", "", "Type the text of a file (- for stdin)")
 	cmd.Flags().StringVar(&f.text, "text", "", "Type this text")
 	cmd.Flags().BoolVar(&f.noSave, "no-save", false, "Keep this run out of history, bests and replays")
+	cmd.Flags().StringVar(&f.resultFile, "result-file", "", "Write the last run to this file as JSON on exit")
 
 	// Skipping is part of how space works now, so the old flag does nothing.
 	cmd.Flags().BoolVar(&f.allowSkip, "allow-skip", false, "Deprecated, has no effect")
