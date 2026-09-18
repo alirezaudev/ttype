@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -13,8 +14,8 @@ func TestCleanCustomText(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]string{
-		"hello\r\nworld\n":                       "hello world",
-		"a\tb   c\n\n\nd":                        "a b c d",
+		"hello\r\nworld\n":                       "hello\nworld",
+		"a\tb   c\n\n\nd":                        "a b c\n\n\nd",
 		"\x1b[31mred\x1b[0m and \x1b[1;32mgreen": "red and green",
 		"“quoted” ‘single’ – dash — em…":         `"quoted" 'single' - dash - em...`,
 		"  \u00a0padded\u200b\ufeff  ":           "padded",
@@ -45,7 +46,7 @@ func TestReadCustomText(t *testing.T) {
 	}{
 		{"nothing given", CustomInput{Stdin: stdin("ignored")}, "", ""},
 		{"piped", CustomInput{Stdin: stdin("piped\ttext\n"), StdinPiped: true}, "piped text", ""},
-		{"file", CustomInput{File: file}, "from a file", ""},
+		{"file", CustomInput{File: file}, "from a\nfile", ""},
 		{"file dash", CustomInput{Stdin: stdin("dash"), StdinPiped: true, File: "-"}, "dash", ""},
 		{"text", CustomInput{Text: "  given  text ", TextSet: true}, "given text", ""},
 		{"piped and text", CustomInput{Stdin: stdin("x"), StdinPiped: true, Text: "y", TextSet: true}, "", "one way"},
@@ -140,5 +141,23 @@ func TestCustomCannotBeAModeOrADefault(t *testing.T) {
 	mode := "custom"
 	if _, err := applyConfigChanges(domain.Settings{}, ConfigChanges{Mode: &mode}); err == nil {
 		t.Fatal("custom should not be accepted as the default mode")
+	}
+}
+
+func TestCustomSourceKnowsEachWordsLine(t *testing.T) {
+	t.Parallel()
+
+	source := newCustomSource(CleanCustomText("I think\n\nit  is\n"), modeSource{})
+	opts := domain.GenerateOptions{Mode: domain.TextModeCustom}
+
+	text, err := source.Generate(opts)
+	if err != nil || text != "I think it is" {
+		t.Fatalf("Generate = %q, %v", text, err)
+	}
+	if got := source.WordLines(opts); !slices.Equal(got, []int{1, 1, 3, 3}) {
+		t.Fatalf("lines = %v, want [1 1 3 3]", got)
+	}
+	if got := source.WordLines(domain.GenerateOptions{Mode: domain.TextModeWords}); got != nil {
+		t.Fatalf("lines for generated text = %v, want none", got)
 	}
 }

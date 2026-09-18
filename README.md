@@ -140,7 +140,8 @@ ttype --file drill.txt --result-file run.json
 
 `--result-file` writes the last run as JSON when ttype exits, with a
 `status` of `completed`, `quit` or `failed_min_wpm`, the numbers, the words you
-missed and what you typed, and for your own text a `sha256` of it. The result
+missed and what you typed, and for your own text a `sha256` of it and the line
+each word came from. The result
 screen still shows as usual; `--output json` skips it and prints to stdout.
 
 ## More of it

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
+	"github.com/alirezaudev/ttype/internal/engine"
 )
 
 func TestWordsRecordWhatWasTyped(t *testing.T) {
@@ -58,5 +59,26 @@ func TestRestartForgetsMissedWords(t *testing.T) {
 
 	if got := s.Words(); len(got) != 1 || got[0].Missed {
 		t.Fatalf("words = %+v, want one clean word", got)
+	}
+}
+
+type linedSource string
+
+func (s linedSource) Generate(domain.GenerateOptions) (string, error) { return string(s), nil }
+func (s linedSource) WordLines(domain.GenerateOptions) []int          { return []int{1, 1, 2} }
+
+func TestWordsCarryTheirLine(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60}
+	s, err := engine.NewSession(cfg, linedSource("a b c"), engine.NewFakeClock(time.Now()))
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	typeString(s, "a b x")
+
+	got := s.Words()
+	if len(got) != 3 || got[0].Line != 1 || got[2].Line != 2 {
+		t.Fatalf("words = %+v, want lines 1, 1, 2", got)
 	}
 }

@@ -66,7 +66,7 @@ func ReadCustomText(in CustomInput) (string, error) {
 	}
 
 	text := CleanCustomText(raw)
-	if text == "" {
+	if strings.TrimSpace(text) == "" {
 		return "", fmt.Errorf("%s has no text to type", from)
 	}
 	return text, nil
@@ -95,32 +95,52 @@ var typeable = strings.NewReplacer(
 )
 
 // CleanCustomText makes pasted or piped text typeable: colour codes and
-// control characters go, typographic punctuation becomes ASCII, and all
-// whitespace, newlines included, collapses to single spaces.
+// control characters go, typographic punctuation becomes ASCII, and
+// whitespace collapses to single spaces. Line breaks stay, for line numbers.
 func CleanCustomText(raw string) string {
 	text := escapeSequence.ReplaceAllString(raw, "")
 	text = typeable.Replace(text)
-	text = strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) {
-			return ' '
-		}
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, text)
-	return strings.Join(strings.Fields(text), " ")
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		line = strings.Map(func(r rune) rune {
+			if unicode.IsSpace(r) {
+				return ' '
+			}
+			if unicode.IsControl(r) {
+				return -1
+			}
+			return r
+		}, line)
+		lines[i] = strings.Join(strings.Fields(line), " ")
+	}
+	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
 // customSource hands out the custom text, and leaves every other mode to the
 // usual provider, so picking a mode mid-session still works.
 type customSource struct {
 	words    []string
+	lines    []int
 	fallback engine.TextSource
 }
 
 func newCustomSource(text string, fallback engine.TextSource) customSource {
-	return customSource{words: strings.Fields(text), fallback: fallback}
+	s := customSource{fallback: fallback}
+	for i, line := range strings.Split(text, "\n") {
+		for _, word := range strings.Fields(line) {
+			s.words = append(s.words, word)
+			s.lines = append(s.lines, i+1)
+		}
+	}
+	return s
+}
+
+// WordLines gives the line each word came from.
+func (s customSource) WordLines(opts domain.GenerateOptions) []int {
+	if opts.Mode != domain.TextModeCustom {
+		return nil
+	}
+	return s.lines
 }
 
 func (s customSource) Generate(opts domain.GenerateOptions) (string, error) {

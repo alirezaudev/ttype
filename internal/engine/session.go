@@ -32,6 +32,11 @@ type TextSource interface {
 	Generate(opts domain.GenerateOptions) (string, error)
 }
 
+// lineSource knows each word's line.
+type lineSource interface {
+	WordLines(opts domain.GenerateOptions) []int
+}
+
 type secondBucket struct {
 	typed  int
 	errors int
@@ -63,8 +68,9 @@ type Session struct {
 	extras    map[int][]rune
 	extrasRev int
 	// A space belongs to the word before it.
-	wordAt []int
-	missed []bool
+	wordAt    []int
+	missed    []bool
+	wordLines []int
 }
 
 func resolveSeed(config domain.TestConfig) int64 {
@@ -291,16 +297,21 @@ func (s *Session) loadTarget() error {
 		wordLimit = s.config.WordCount
 	}
 
-	target, err := s.source.Generate(domain.GenerateOptions{
+	opts := domain.GenerateOptions{
 		Mode:        s.config.TextMode,
 		Language:    s.config.Language,
 		WordLimit:   wordLimit,
 		Punctuation: s.config.Punctuation,
 		Numbers:     s.config.Numbers,
 		Seed:        s.seed,
-	})
+	}
+	target, err := s.source.Generate(opts)
 	if err != nil {
 		return err
+	}
+	s.wordLines = nil
+	if src, ok := s.source.(lineSource); ok {
+		s.wordLines = src.WordLines(opts)
 	}
 	s.target = target
 	s.targetRunes = []rune(target)
@@ -337,6 +348,9 @@ func (s *Session) Words() []domain.WordResult {
 		}
 		end := wordEndAt(s.targetRunes, start)
 		word := domain.WordResult{Expected: string(s.targetRunes[start:end])}
+		if i := s.wordAt[start]; i < len(s.wordLines) {
+			word.Line = s.wordLines[i]
+		}
 		if s.missed[s.wordAt[start]] {
 			var typed []rune
 			for _, r := range s.input[start:min(end, len(s.input))] {

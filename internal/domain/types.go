@@ -78,6 +78,8 @@ type Result struct {
 }
 
 type WordResult struct {
+	// Line in your own text, from 1.
+	Line     int    `json:"line,omitempty"`
 	Expected string `json:"expected"`
 	// Set only for missed words.
 	Typed string `json:"typed,omitempty"`
