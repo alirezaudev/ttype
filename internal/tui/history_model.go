@@ -50,7 +50,7 @@ func NewHistoryModel(store storage.Store, results []domain.Result, theme Theme) 
 		rows = append(rows, table.Row{
 			r.Timestamp.Local().Format("Jan 2 15:04"),
 			string(r.Config.TextMode),
-			languageColumn(r.Config.Language),
+			languageColumn(r.Config),
 			testLengthLabel(r.Config),
 			fmt.Sprintf("%.0f", r.WPM),
 			fmt.Sprintf("%.0f", r.RawWPM),
@@ -80,8 +80,14 @@ const historyHeaderHeight = 2
 
 const languageColumnWidth = 10
 
-func languageColumn(id string) string {
-	name := []rune(langcache.DisplayName(id))
+func languageColumn(cfg domain.TestConfig) string {
+	if !cfg.UsesLanguage() {
+		return "-"
+	}
+	if cfg.Language == "" {
+		return "english"
+	}
+	name := []rune(langcache.DisplayName(cfg.Language))
 	if len(name) <= languageColumnWidth {
 		return string(name)
 	}

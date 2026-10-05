@@ -60,6 +60,19 @@ func TestPrintHistoryTablePrintsNewestFirst(t *testing.T) {
 	}
 }
 
+func TestHistoryLanguageOnlyForTheWordsMode(t *testing.T) {
+	t.Parallel()
+
+	for _, mode := range []domain.TextMode{domain.TextModeGo, domain.TextModeSentences, domain.TextModeCustom} {
+		if got := historyLanguage(domain.TestConfig{TextMode: mode}); got != "-" {
+			t.Errorf("%s: language = %q, want -", mode, got)
+		}
+	}
+	if got := historyLanguage(domain.TestConfig{}); got != "english" {
+		t.Errorf("no mode: language = %q, want english", got)
+	}
+}
+
 func TestHistoryLanguageFitsTheColumn(t *testing.T) {
 	t.Parallel()
 
@@ -74,7 +87,7 @@ func TestHistoryLanguageFitsTheColumn(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got := historyLanguage(test.id)
+		got := historyLanguage(domain.TestConfig{TextMode: domain.TextModeWords, Language: test.id})
 		if got != test.want {
 			t.Errorf("historyLanguage(%q) = %q, want %q", test.id, got, test.want)
 		}

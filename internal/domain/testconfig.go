@@ -36,6 +36,11 @@ type GenerateOptions struct {
 	Seed        int64
 }
 
+// Only the words mode draws from a word list.
+func (c TestConfig) UsesLanguage() bool {
+	return c.TextMode == "" || c.TextMode == TextModeWords
+}
+
 func (c TestConfig) IsWordsMode() bool {
 	return c.Kind == TestKindWords && c.WordCount > 0
 }

@@ -58,7 +58,11 @@ func listResults(store storage.Store, limit int, tag string) ([]domain.Result, e
 
 const languageColumnWidth = 10
 
-func historyLanguage(id string) string {
+func historyLanguage(cfg domain.TestConfig) string {
+	if !cfg.UsesLanguage() {
+		return "-"
+	}
+	id := cfg.Language
 	if id == "" {
 		return "english"
 	}
@@ -87,6 +91,6 @@ func printHistoryTable(out io.Writer, results []domain.Result) {
 
 		fmt.Fprintf(out, "%-16s  %-10s  %-6s  %6.0f  %6.0f  %4.0f%%  %4d\n",
 			result.Timestamp.Local().Format("Jan 2 15:04"),
-			historyLanguage(result.Config.Language), length, result.WPM, result.RawWPM, result.Accuracy, result.Incorrect)
+			historyLanguage(result.Config), length, result.WPM, result.RawWPM, result.Accuracy, result.Incorrect)
 	}
 }

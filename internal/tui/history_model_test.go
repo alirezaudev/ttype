@@ -34,3 +34,23 @@ func TestHistoryShowsEveryRun(t *testing.T) {
 		}
 	}
 }
+
+func TestHistoryLanguageColumn(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		cfg  domain.TestConfig
+		want string
+	}{
+		{domain.TestConfig{TextMode: domain.TextModeWords}, "english"},
+		{domain.TestConfig{TextMode: domain.TextModeWords, Language: "english_1k"}, "english 1k"},
+		{domain.TestConfig{TextMode: domain.TextModeGo}, "-"},
+		{domain.TestConfig{TextMode: domain.TextModeCustom, Language: "spanish"}, "-"},
+	}
+
+	for _, test := range tests {
+		if got := languageColumn(test.cfg); got != test.want {
+			t.Errorf("languageColumn(%+v) = %q, want %q", test.cfg, got, test.want)
+		}
+	}
+}
