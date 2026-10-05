@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -56,13 +57,18 @@ func (m ModePicker) Update(msg tea.Msg) (ModePicker, tea.Cmd, bool, bool) {
 
 func (m ModePicker) View() string {
 	lines := []string{m.theme.Finished.Render("Mode"), ""}
+	// Same width for every row, so centring moves the list as one block.
+	nameWidth := 0
+	for _, mode := range m.modes {
+		nameWidth = max(nameWidth, len(mode))
+	}
 	for i, mode := range m.modes {
-		row := "  " + string(mode)
+		name := fmt.Sprintf("%-*s", nameWidth, mode)
 		if i == m.idx {
-			lines = append(lines, m.theme.SelectedItem.Render("> "+string(mode)))
+			lines = append(lines, m.theme.SelectedItem.Render("> "+name))
 			continue
 		}
-		lines = append(lines, m.theme.Help.Render(row))
+		lines = append(lines, m.theme.Help.Render("  "+name))
 	}
 	lines = append(lines, "", m.theme.Help.Render(helpLine(pickerKeys.Up, pickerKeys.Confirm, appKeys.Back)))
 
