@@ -106,9 +106,9 @@ ttype --seed 42             # same text, every time
 
 Eight modes: `words` `sentences` `sql` `go` `backend` `python` `shell` `regex`.
 
-In the two word modes, space commits the current word and skips whatever is
-left of it — the same as the reference app. The code modes keep spaces literal,
-because indentation is part of what you are practising.
+Space pressed mid-word skips whatever is left of the word, so a missed letter
+stays inside its word — the same as the reference app. A space the text has is
+typed as itself, so indentation in code is still part of the practice.
 
 Whatever you set in the settings panel (`ctrl+s`, or `S` on the result screen)
 becomes the default for next time, so the flags are for one-offs.

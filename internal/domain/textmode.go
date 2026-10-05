@@ -25,8 +25,8 @@ func AllTextModes() []TextMode {
 	}
 }
 
-func (m TextMode) CommitsWordsOnSpace() bool {
-	return m == "" || m == TextModeWords || m == TextModeSentences || m == TextModeCustom
+func (m TextMode) IsCode() bool {
+	return m != "" && m != TextModeWords && m != TextModeSentences && m != TextModeCustom
 }
 
 func ParseTextMode(s string) (TextMode, error) {

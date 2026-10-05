@@ -24,59 +24,58 @@ func newCodeSession(t *testing.T, target string, mode domain.TextMode) *engine.S
 	return s
 }
 
-// Indentation and runs of spaces are real content in code, so Space has to be
-// an ordinary character there rather than a word commit.
-func TestCodeModeSpaceIsLiteral(t *testing.T) {
+func TestCodeModeMissedLetterStaysInItsWord(t *testing.T) {
 	t.Parallel()
 
-	s := newCodeSession(t, "select id", domain.TextModeSQL)
-	typeString(s, "s ")
+	s := newCodeSession(t, "SELECT id, name FROM users", domain.TextModeSQL)
+	typeString(s, "SELCT id, name FROM users")
 
-	if got := s.Cursor(); got != 2 {
-		t.Fatalf("cursor = %d, want 2 (space must consume one position, not commit a word)", got)
-	}
-	if got := string(s.Input()); got != "s " {
-		t.Fatalf("input = %q, want %q — no skip sentinel belongs in code modes", got, "s ")
+	for _, w := range s.Words() {
+		if w.Missed != (w.Expected == "SELECT") {
+			t.Fatalf("word %q missed = %v", w.Expected, w.Missed)
+		}
 	}
 }
 
-// The sticky separator only exists to stop an overrun cascading between words.
-// With no word commit there is nothing to protect, so the extra letter is
-// buffered as an ordinary error instead of being pinned out.
-func TestCodeModeDoesNotPinExtraCharsAtASpace(t *testing.T) {
+func TestCodeModeIndentationIsTyped(t *testing.T) {
 	t.Parallel()
 
-	s := newCodeSession(t, "a b", domain.TextModeSQL)
-	typeString(s, "ax")
+	s := newCodeSession(t, "if ok:     return x", domain.TextModePython)
+	typeString(s, "if ok: z")
 
-	if got := s.Cursor(); got != 2 {
-		t.Fatalf("cursor = %d, want 2", got)
+	if got := s.Cursor(); got != 7 {
+		t.Fatalf("cursor = %d, want 7", got)
 	}
-	if got := string(s.Input()); got != "ax" {
-		t.Fatalf("input = %q, want %q", got, "ax")
+
+	typeString(s, "    return x")
+	if got := string(s.Input()); got != s.Target() {
+		t.Fatalf("input = %q, want %q", got, s.Target())
+	}
+	if _, incorrect := s.Keystrokes(); incorrect != 1 {
+		t.Fatalf("incorrect keystrokes = %d, want 1", incorrect)
 	}
 }
 
-// Backend reads like prose but is not a word-commit mode — a distinction easy
-// to get wrong from the asset alone.
-func TestModeSpaceCommitClassification(t *testing.T) {
+// Backend reads like prose but is a code mode.
+func TestModeIsCode(t *testing.T) {
 	t.Parallel()
 
 	cases := map[domain.TextMode]bool{
-		domain.TextModeWords:     true,
-		domain.TextModeSentences: true,
-		domain.TextModeSQL:       false,
-		domain.TextModeGo:        false,
-		domain.TextModeBackend:   false,
-		domain.TextModePython:    false,
-		domain.TextModeShell:     false,
-		domain.TextModeRegex:     false,
-		"":                       true,
+		domain.TextModeWords:     false,
+		domain.TextModeSentences: false,
+		domain.TextModeCustom:    false,
+		domain.TextModeSQL:       true,
+		domain.TextModeGo:        true,
+		domain.TextModeBackend:   true,
+		domain.TextModePython:    true,
+		domain.TextModeShell:     true,
+		domain.TextModeRegex:     true,
+		"":                       false,
 	}
 
 	for mode, want := range cases {
-		if got := mode.CommitsWordsOnSpace(); got != want {
-			t.Fatalf("%q commits on space = %v, want %v", mode, got, want)
+		if got := mode.IsCode(); got != want {
+			t.Fatalf("%q is code = %v, want %v", mode, got, want)
 		}
 	}
 }

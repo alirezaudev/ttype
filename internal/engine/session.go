@@ -247,9 +247,9 @@ func countWordsInText(text []rune) int {
 }
 
 func (s *Session) CapsLockSuspected() bool {
-	threshold := 3
-	if s.config.TextMode.CommitsWordsOnSpace() {
-		threshold = 2
+	threshold := 2
+	if s.config.TextMode.IsCode() {
+		threshold = 3
 	}
 	return s.capsInversions >= threshold
 }
@@ -377,17 +377,16 @@ func (s *Session) InputRune(r rune) {
 	}
 
 	pos := len(s.input)
-	commitsWords := s.config.TextMode.CommitsWordsOnSpace()
 
 	skipping := false
-	if commitsWords && r == ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] != ' ' {
+	if r == ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] != ' ' {
 		if pos == wordStartAt(s.targetRunes, pos) {
 			return
 		}
 		skipping = true
 	}
 
-	if commitsWords && r != ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] == ' ' {
+	if r != ' ' && pos < len(s.targetRunes) && s.targetRunes[pos] == ' ' {
 		s.recordEvent(domain.ReplayRune, r)
 		s.keystrokesIncorrect++
 		s.bucketKeystroke(false)
