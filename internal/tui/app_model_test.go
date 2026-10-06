@@ -749,3 +749,33 @@ func TestLastRunKeepsTheFinishedRun(t *testing.T) {
 		t.Fatalf("ran=%v finished=%v, want the finished run", ran, finished)
 	}
 }
+
+type readOnlyStore struct{ *storage.JSONStore }
+
+func (readOnlyStore) SaveSettings(domain.Settings) error {
+	return errors.New("config folder is read-only")
+}
+
+func TestSettingsThatFailToSaveSaySo(t *testing.T) {
+	t.Parallel()
+
+	m, clock, store := appModelWithStore(t, domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration15}, false)
+	m.store = readOnlyStore{store}
+	m = finishTest(m, clock)
+
+	next, _ := m.Update(runeKey('M'))
+	m = next.(AppModel)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = next.(AppModel)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v, want phaseTest", m.phase)
+	}
+	next, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	m = next.(AppModel)
+	if view := stripANSI(m.View()); !strings.Contains(view, "settings not saved: config folder is read-only") {
+		t.Fatalf("no save warning on the test screen:\n%s", view)
+	}
+}

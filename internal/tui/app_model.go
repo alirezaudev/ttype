@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -442,21 +443,29 @@ func (m AppModel) updateWelcome(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.cfg = m.welcome.Config()
 	m.theme = ResolveTheme(m.cfg.Theme)
-	m.persistConfigDefaults()
-	m.markOnboarded()
-	return m, tea.Batch(cmd, m.restartTest())
+	err := errors.Join(m.persistConfigDefaults(), m.markOnboarded())
+	restart := m.restartTest()
+	m.warnNotSaved(err)
+	return m, tea.Batch(cmd, restart)
 }
 
-func (m *AppModel) markOnboarded() {
+func (m *AppModel) markOnboarded() error {
 	if m.store == nil {
-		return
+		return nil
 	}
 	settings, err := m.store.LoadSettings()
 	if err != nil {
-		return
+		return err
 	}
 	settings.Onboarded = true
-	_ = m.store.SaveSettings(settings)
+	return m.store.SaveSettings(settings)
+}
+
+// The restart clears notices, so this goes under the text instead.
+func (m *AppModel) warnNotSaved(err error) {
+	if err != nil {
+		m.test.warning = "settings not saved: " + err.Error()
+	}
 }
 
 func (m AppModel) updateModePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -469,8 +478,10 @@ func (m AppModel) updateModePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, m.popPhase())
 	}
 	m.cfg.TextMode = m.modePicker.Selected()
-	m.persistConfigDefaults()
-	return m, tea.Batch(cmd, m.restartTest())
+	err := m.persistConfigDefaults()
+	restart := m.restartTest()
+	m.warnNotSaved(err)
+	return m, tea.Batch(cmd, restart)
 }
 
 func (m AppModel) updateHelp(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -555,17 +566,19 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.cfg = m.settings.cfg
 	m.theme = ResolveTheme(m.cfg.Theme)
-	m.persistConfigDefaults()
-	return m, m.restartTest()
+	err := m.persistConfigDefaults()
+	restart := m.restartTest()
+	m.warnNotSaved(err)
+	return m, restart
 }
 
-func (m *AppModel) persistConfigDefaults() {
+func (m *AppModel) persistConfigDefaults() error {
 	if m.store == nil {
-		return
+		return nil
 	}
 	settings, err := m.store.LoadSettings()
 	if err != nil {
-		return
+		return err
 	}
 	settings.Theme = m.cfg.Theme
 	settings.DefaultWidth = m.cfg.Width
@@ -575,8 +588,7 @@ func (m *AppModel) persistConfigDefaults() {
 	// Custom text sets the mode and length for this run only; the next plain
 	// ttype would have no text to type.
 	if m.cfg.TextMode == domain.TextModeCustom {
-		_ = m.store.SaveSettings(settings)
-		return
+		return m.store.SaveSettings(settings)
 	}
 	settings.Language = m.cfg.Language
 	settings.DefaultMode = m.cfg.TextMode
@@ -592,7 +604,7 @@ func (m *AppModel) persistConfigDefaults() {
 			settings.DefaultDuration = m.cfg.Duration
 		}
 	}
-	_ = m.store.SaveSettings(settings)
+	return m.store.SaveSettings(settings)
 }
 
 func languageError(id string) error {
