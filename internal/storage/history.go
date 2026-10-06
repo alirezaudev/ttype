@@ -2,9 +2,7 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -212,17 +210,9 @@ func (s *JSONStore) historyLimit() int {
 }
 
 func (s *JSONStore) loadHistory() ([]storedResult, error) {
-	data, err := os.ReadFile(filepath.Join(s.dirs.Data, historyFilename))
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("read history: %w", err)
-	}
-
 	var history []storedResult
-	if err := json.Unmarshal(data, &history); err != nil {
-		return nil, fmt.Errorf("parse history: %w", err)
+	if ok, err := s.readJSON(filepath.Join(s.dirs.Data, historyFilename), &history); !ok {
+		return nil, err
 	}
 	return history, nil
 }

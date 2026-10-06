@@ -27,6 +27,7 @@ func RunDoctor(store storage.Store) error {
 		checkLocale(),
 		checkClipboard(),
 		checkDataDir(store.Paths()),
+		checkStoreFiles(store.Paths()),
 	}
 
 	failed := printChecks(os.Stdout, checks)
@@ -126,6 +127,17 @@ func checkClipboard() checkResult {
 	return checkResult{
 		name: "clipboard", note: "no clipboard tool",
 		hint: "install one of: " + strings.Join(candidates, ", "),
+	}
+}
+
+func checkStoreFiles(dirs storage.Dirs) checkResult {
+	errs := storage.CheckFiles(dirs)
+	if len(errs) == 0 {
+		return checkResult{name: "saved data", ok: true, note: "settings, history and bests parse"}
+	}
+	return checkResult{
+		name: "saved data", note: errs[0].Error(),
+		hint: "ttype moves a broken file aside and starts a new one on the next run",
 	}
 }
 

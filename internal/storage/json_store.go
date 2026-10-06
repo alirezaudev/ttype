@@ -2,11 +2,11 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 )
@@ -16,6 +16,9 @@ const settingFilename = "config.json"
 type JSONStore struct {
 	dirs       Dirs
 	historyCap int
+
+	mu        sync.Mutex
+	recovered []string
 }
 
 func NewJSONStore(dirs Dirs) (*JSONStore, error) {
@@ -51,20 +54,11 @@ func NewDefaultStore() (*JSONStore, error) {
 }
 
 func (s *JSONStore) LoadSettings() (domain.Settings, error) {
-	path := filepath.Join(s.dirs.Config, settingFilename)
 	settings := domain.DefaultSettings()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return settings, nil
-		}
-		return settings, fmt.Errorf("read settings: %w", err)
+	ok, err := s.readJSON(filepath.Join(s.dirs.Config, settingFilename), &settings)
+	if !ok {
+		return domain.DefaultSettings(), err
 	}
-
-	if err := json.Unmarshal(data, &settings); err != nil {
-		return domain.DefaultSettings(), fmt.Errorf("parse settings: %w", err)
-	}
-
 	return settings, nil
 }
 
@@ -89,7 +83,19 @@ func (s *JSONStore) SetHistoryCap(n int) {
 
 func writeFile(path string, data []byte) error {
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	// Synced first, so a crash can't leave an empty file behind the rename.
+	if err == nil {
+		err = f.Sync()
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
 		return err
 	}
 	return os.Rename(tmp, path)

@@ -28,7 +28,11 @@ func main() {
 	}
 	release = releaseVersion.MatchString("v" + version)
 	version = resolveVersion(version, debug.ReadBuildInfo)
-	if err := newRootCmd().Execute(); err != nil {
+	err := newRootCmd().Execute()
+	for _, notice := range app.StoreNotices() {
+		fmt.Fprintln(os.Stderr, notice)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

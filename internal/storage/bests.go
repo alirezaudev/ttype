@@ -2,32 +2,22 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
 )
 
+const bestsFilename = "bests.json"
+
 func (s *JSONStore) bestsPath() string {
-	return filepath.Join(s.dirs.Data, "bests.json")
+	return filepath.Join(s.dirs.Data, bestsFilename)
 }
 
 func (s *JSONStore) LoadBests() (domain.PersonalBests, error) {
-	data, err := os.ReadFile(s.bestsPath())
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return domain.PersonalBests{}, nil
-		}
-		return domain.PersonalBests{}, err
-	}
-
 	var bests domain.PersonalBests
-	if err := json.Unmarshal(data, &bests); err != nil {
-		return domain.PersonalBests{}, fmt.Errorf("parse bests: %w", err)
+	if ok, err := s.readJSON(s.bestsPath(), &bests); !ok {
+		return domain.PersonalBests{}, err
 	}
 	return bests, nil
 }

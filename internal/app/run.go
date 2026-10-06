@@ -16,13 +16,25 @@ import (
 	"golang.org/x/term"
 )
 
+var openedStores []*storage.JSONStore
+
 // OpenStore opens the default JSON store.
 func OpenStore() (storage.Store, error) {
 	store, err := storage.NewDefaultStore()
 	if err != nil {
 		return nil, fmt.Errorf("open store: %w", err)
 	}
+	openedStores = append(openedStores, store)
 	return store, nil
+}
+
+// StoreNotices lists the broken files that were moved aside during this run.
+func StoreNotices() []string {
+	var notices []string
+	for _, store := range openedStores {
+		notices = append(notices, store.Recovered()...)
+	}
+	return notices
 }
 
 // RunOptions are the choices that shape a run beyond its test config.
