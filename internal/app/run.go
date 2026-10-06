@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 
@@ -99,6 +100,19 @@ func RunTest(cfg domain.TestConfig, store storage.Store, build Build, opts RunOp
 		}
 	}
 
+	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion()}
+	// With stdout redirected (--output json > run.json), the test is drawn on
+	// the terminal itself, so stdout only gets the JSON.
+	var terminal io.Writer = os.Stdout
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		terminal = nil
+		if tty, err := os.OpenFile(terminalPath(), os.O_WRONLY, 0); err == nil {
+			defer tty.Close()
+			options = append(options, tea.WithOutput(tty))
+			terminal = tty
+		}
+	}
+
 	model := tui.NewAppModel(tui.Options{
 		// The welcome screen picks a mode, and custom text already has one.
 		Welcome:       !settings.Onboarded && !outputJSON && opts.CustomText == "",
@@ -113,16 +127,8 @@ func RunTest(cfg domain.TestConfig, store storage.Store, build Build, opts RunOp
 		Store:         store,
 		Session:       session,
 		Warning:       warning,
+		Terminal:      terminal,
 	})
-	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion()}
-	// With stdout redirected (--output json > run.json), the test is drawn on
-	// the terminal itself, so stdout only gets the JSON.
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
-		if tty, err := os.OpenFile(terminalPath(), os.O_WRONLY, 0); err == nil {
-			defer tty.Close()
-			options = append(options, tea.WithOutput(tty))
-		}
-	}
 	final, err := tea.NewProgram(model, options...).Run()
 	pending.wait(os.Stderr, installWaitCap)
 	if err != nil {

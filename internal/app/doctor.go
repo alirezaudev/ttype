@@ -109,6 +109,18 @@ func checkLocale() checkResult {
 }
 
 func checkClipboard() checkResult {
+	return clipboardCheck(os.Getenv, exec.LookPath)
+}
+
+func clipboardCheck(getenv func(string) string, lookPath func(string) (string, error)) checkResult {
+	osc52 := "terminal (OSC 52)"
+	if getenv("TMUX") != "" {
+		osc52 += "; in tmux it needs: set -g set-clipboard on"
+	}
+	if getenv("SSH_CONNECTION") != "" || getenv("SSH_TTY") != "" {
+		return checkResult{name: "clipboard", ok: true, note: osc52}
+	}
+
 	var candidates []string
 	switch runtime.GOOS {
 	case "darwin":
@@ -120,14 +132,11 @@ func checkClipboard() checkResult {
 	}
 
 	for _, name := range candidates {
-		if _, err := exec.LookPath(name); err == nil {
+		if _, err := lookPath(name); err == nil {
 			return checkResult{name: "clipboard", ok: true, note: name}
 		}
 	}
-	return checkResult{
-		name: "clipboard", note: "no clipboard tool",
-		hint: "install one of: " + strings.Join(candidates, ", "),
-	}
+	return checkResult{name: "clipboard", ok: true, note: osc52 + "; or install " + strings.Join(candidates, ", ")}
 }
 
 func checkStoreFiles(dirs storage.Dirs) checkResult {

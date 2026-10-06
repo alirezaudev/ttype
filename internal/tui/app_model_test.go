@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -284,7 +285,7 @@ func TestCopyOnResultsReportsClipboardFailureTruthfully(t *testing.T) {
 	t.Cleanup(func() { copyToClipboardFn = original })
 
 	var copied string
-	copyToClipboardFn = func(text string) error {
+	copyToClipboardFn = func(text string, _ io.Writer) error {
 		copied = text
 		return nil
 	}
@@ -304,7 +305,7 @@ func TestCopyOnResultsReportsClipboardFailureTruthfully(t *testing.T) {
 		t.Fatalf("notice = %+v, want an info notice", m.notice)
 	}
 
-	copyToClipboardFn = func(string) error { return errors.New("no clipboard tool") }
+	copyToClipboardFn = func(string, io.Writer) error { return errors.New("no clipboard tool") }
 	next, cmd = m.Update(runeKey('C'))
 	m = next.(AppModel)
 	next, _ = m.Update(cmd())

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/alirezaudev/ttype/internal/domain"
@@ -36,6 +37,7 @@ type AppModel struct {
 	provider       engine.TextSource
 	langCache      *langcache.Cache
 	store          storage.Store
+	terminal       io.Writer
 	phase          appPhase
 	navStack       []appPhase
 	test           TestModel
@@ -86,6 +88,8 @@ type Options struct {
 	NoSave bool
 	// Warning is shown under the text until the first run starts.
 	Warning string
+	// Terminal is where ttype draws; OSC 52 copies are written there.
+	Terminal io.Writer
 }
 
 func NewAppModel(opts Options) AppModel {
@@ -100,6 +104,7 @@ func NewAppModel(opts Options) AppModel {
 		installUpdate: opts.InstallUpdate,
 		quitOnFinish:  opts.QuitOnFinish,
 		noSave:        opts.NoSave,
+		terminal:      opts.Terminal,
 		theme:         theme,
 		test:          NewTestModel(opts.Session, opts.Config, theme, opts.Version),
 	}
@@ -321,7 +326,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, resultsKeys.Replay):
 				return m, m.openReplay()
 			case key.Matches(msg, resultsKeys.Copy):
-				return m, copyResultCmd(m.result)
+				return m, copyResultCmd(m.result, m.terminal)
 			case key.Matches(msg, resultsKeys.Settings):
 				return m, m.openSettings()
 			case key.Matches(msg, resultsKeys.Mode):

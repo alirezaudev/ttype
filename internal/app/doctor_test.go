@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -52,5 +53,25 @@ func TestPrintChecksCountsFailures(t *testing.T) {
 	}
 	if !strings.Contains(out, "try this") {
 		t.Fatalf("hint missing from output: %q", out)
+	}
+}
+
+func TestClipboardCheckFallsBackToOSC52(t *testing.T) {
+	t.Parallel()
+
+	noTools := func(string) (string, error) { return "", errors.New("not found") }
+	env := func(vars map[string]string) func(string) string {
+		return func(key string) string { return vars[key] }
+	}
+
+	if got := clipboardCheck(env(nil), noTools); !got.ok || !strings.Contains(got.note, "OSC 52") {
+		t.Errorf("no tools: %+v, want ok through OSC 52", got)
+	}
+	if got := clipboardCheck(env(map[string]string{"TMUX": "x"}), noTools); !strings.Contains(got.note, "set-clipboard") {
+		t.Errorf("tmux: %+v, want the set-clipboard hint", got)
+	}
+	tool := func(name string) (string, error) { return "/usr/bin/" + name, nil }
+	if got := clipboardCheck(env(map[string]string{"SSH_CONNECTION": "1 2 3 4"}), tool); !strings.Contains(got.note, "OSC 52") {
+		t.Errorf("over ssh: %+v, want OSC 52 even with a tool installed", got)
 	}
 }
