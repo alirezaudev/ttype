@@ -164,3 +164,14 @@ func TestSettingsPanelCoversTheNewOptions(t *testing.T) {
 		t.Fatalf("min wpm = %d, want it to stop at 0", p.cfg.MinWPM)
 	}
 }
+
+func TestSettingsPanelSaysTheLanguageIsForWordsOnly(t *testing.T) {
+	t.Parallel()
+
+	for mode, want := range map[domain.TextMode]bool{domain.TextModeWords: false, domain.TextModeSentences: true, domain.TextModeGo: true} {
+		p := NewSettingsPanel(domain.TestConfig{Kind: domain.TestKindTimed, Duration: 60, TextMode: mode, Language: "spanish"}, defaultTheme())
+		if got := strings.Contains(stripANSI(p.View()), "spanish (words only)"); got != want {
+			t.Errorf("%s: words-only note = %v, want %v", mode, got, want)
+		}
+	}
+}

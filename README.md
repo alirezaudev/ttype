@@ -96,7 +96,7 @@ ttype                       # 60 second timed test
 ttype --time 30             # a shorter one
 ttype --words 25            # race a word count instead of the clock
 ttype --mode go             # Go snippets instead of prose
-ttype --language spanish    # downloaded once, cached after that
+ttype --language spanish    # words mode only; downloaded once, cached after that
 ttype --punctuation --numbers
 ttype --blind               # no feedback until the run ends
 ttype --zen                 # words only, nothing else on screen

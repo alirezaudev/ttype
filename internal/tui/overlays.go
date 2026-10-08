@@ -237,6 +237,14 @@ func (m SettingsPanel) row(label, value string, active bool) string {
 	return prefix + lbl + " " + val
 }
 
+func (m SettingsPanel) languageLabel() string {
+	name := langcache.DisplayName(m.cfg.Language)
+	if !m.cfg.UsesLanguage() {
+		return name + " (words only)"
+	}
+	return name
+}
+
 func (m SettingsPanel) View() string {
 	lines := []string{
 		m.theme.Finished.Render("Settings"),
@@ -244,7 +252,7 @@ func (m SettingsPanel) View() string {
 		m.row("test", m.kindLabel(), m.field == settingsTestKind),
 		m.row(m.lengthFieldLabel(), m.lengthLabel(), m.field == settingsLength),
 		m.row("mode", m.modeLabel(), m.field == settingsMode),
-		m.row("language", langcache.DisplayName(m.cfg.Language), m.field == settingsLanguage),
+		m.row("language", m.languageLabel(), m.field == settingsLanguage),
 		m.row("width", m.widthLabel(), m.field == settingsWidth),
 		m.row("theme", m.themeLabel(), m.field == settingsTheme),
 		m.row("punct", toggleLabel(m.cfg.Punctuation), m.field == settingsPunctuation),

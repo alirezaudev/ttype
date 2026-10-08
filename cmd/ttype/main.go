@@ -517,7 +517,7 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		minWPM = settings.DefaultMinWPM
 	}
 
-	return app.ConfigFromFlags(app.TestFlags{
+	cfg, err := app.ConfigFromFlags(app.TestFlags{
 		TimeSec:     timeSec,
 		WordCount:   wordCount,
 		Language:    language,
@@ -531,4 +531,12 @@ func resolveTestConfig(cmd *cobra.Command, store interface {
 		MinWPM:      minWPM,
 		Seed:        f.seed,
 	})
+	if err != nil {
+		return cfg, err
+	}
+	// Other languages have word lists only, no sentences or code.
+	if cmd.Flags().Changed("language") && !cfg.UsesLanguage() {
+		return domain.TestConfig{}, fmt.Errorf("--language only works with --mode words, not %s", cfg.TextMode)
+	}
+	return cfg, nil
 }

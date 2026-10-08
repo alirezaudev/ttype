@@ -117,6 +117,37 @@ func TestResolveVersion(t *testing.T) {
 	}
 }
 
+func TestLanguageNeedsTheWordsMode(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{
+		{"--language", "spanish", "--mode", "sentences"},
+		{"--language", "spanish", "--mode", "go"},
+	} {
+		cmd := &cobra.Command{}
+		flags := &testCLIFlags{}
+		bindTestFlags(cmd, flags)
+		if err := cmd.ParseFlags(args); err != nil {
+			t.Fatalf("ParseFlags(%v): %v", args, err)
+		}
+		_, err := resolveTestConfig(cmd, fakeStore{}, flags)
+		if err == nil || !strings.Contains(err.Error(), "--language") || !strings.Contains(err.Error(), "--mode") {
+			t.Errorf("%v: err = %v, want it to name --language and --mode", args, err)
+		}
+	}
+
+	// A saved language stays quiet; it applies again once the mode is words.
+	cmd := &cobra.Command{}
+	flags := &testCLIFlags{}
+	bindTestFlags(cmd, flags)
+	if err := cmd.ParseFlags([]string{"--mode", "go"}); err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	if _, err := resolveTestConfig(cmd, fakeStore{settings: domain.Settings{Language: "spanish"}}, flags); err != nil {
+		t.Fatalf("resolveTestConfig: %v", err)
+	}
+}
+
 func TestCustomTextRefusesFlagsThatGenerateText(t *testing.T) {
 	t.Parallel()
 
