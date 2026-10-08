@@ -265,6 +265,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateTold = true
 		}
 		return m, nil
+	case languageLoadedMsg:
+		return m.languageLoaded(msg)
 	case OpenLanguagePickerMsg:
 		return m, m.openLanguagePicker()
 	case OpenSettingsMsg:
@@ -419,18 +421,55 @@ func (m AppModel) updateLanguagePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !done {
 		return m, cmd
 	}
-	if apply {
-		cfg := m.cfg
-		cfg.Language = m.languagePicker.Selected()
-		// A language that can't load must not be picked: saved as the default,
-		// it would stop ttype from starting offline.
-		if _, err := engine.NewSession(cfg, m.provider, nil); err != nil {
-			m.languagePicker.err = languageError(cfg.Language)
-			return m, cmd
-		}
-		m.cfg.Language = cfg.Language
-		m.settings.cfg.Language = m.cfg.Language
+	if !apply {
+		return m, tea.Batch(cmd, m.popPhase())
 	}
+
+	cfg := m.cfg
+	cfg.Language = m.languagePicker.Selected()
+	// A list that isn't on disk yet downloads in the background, so keys keep working.
+	if m.langCache != nil && !m.langCache.Cached(cfg.Language) {
+		m.languagePicker.loading = cfg.Language
+		m.languagePicker.err = nil
+		return m, tea.Batch(cmd, loadLanguageCmd(cfg, m.provider))
+	}
+	// A language that can't load must not be picked: saved as the default,
+	// it would stop ttype from starting offline.
+	if _, err := engine.NewSession(cfg, m.provider, nil); err != nil {
+		m.languagePicker.err = languageError(cfg.Language)
+		return m, cmd
+	}
+	return m.applyLanguage(cfg.Language, cmd)
+}
+
+type languageLoadedMsg struct {
+	id  string
+	err error
+}
+
+func loadLanguageCmd(cfg domain.TestConfig, source engine.TextSource) tea.Cmd {
+	return func() tea.Msg {
+		_, err := engine.NewSession(cfg, source, nil)
+		return languageLoadedMsg{id: cfg.Language, err: err}
+	}
+}
+
+func (m AppModel) languageLoaded(msg languageLoadedMsg) (tea.Model, tea.Cmd) {
+	// The picker may have closed or moved on to another language since.
+	if m.phase != phaseLanguagePicker || m.languagePicker.loading != msg.id {
+		return m, nil
+	}
+	m.languagePicker.loading = ""
+	if msg.err != nil {
+		m.languagePicker.err = languageError(msg.id)
+		return m, nil
+	}
+	return m.applyLanguage(msg.id, nil)
+}
+
+func (m AppModel) applyLanguage(id string, cmd tea.Cmd) (tea.Model, tea.Cmd) {
+	m.cfg.Language = id
+	m.settings.cfg.Language = id
 	return m, tea.Batch(cmd, m.popPhase())
 }
 

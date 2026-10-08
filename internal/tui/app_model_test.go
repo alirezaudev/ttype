@@ -10,6 +10,7 @@ import (
 	"github.com/alirezaudev/ttype/internal/domain"
 	"github.com/alirezaudev/ttype/internal/engine"
 	"github.com/alirezaudev/ttype/internal/storage"
+	"github.com/alirezaudev/ttype/internal/text/langcache"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -777,5 +778,102 @@ func TestSettingsThatFailToSaveSaySo(t *testing.T) {
 	m = next.(AppModel)
 	if view := stripANSI(m.View()); !strings.Contains(view, "settings not saved: config folder is read-only") {
 		t.Fatalf("no save warning on the test screen:\n%s", view)
+	}
+}
+
+// blockingSource stands in for a download that hangs until released.
+type blockingSource struct{ release chan struct{} }
+
+func (b blockingSource) Generate(domain.GenerateOptions) (string, error) {
+	<-b.release
+	return "bonjour monde", nil
+}
+
+func languageLoadFrom(cmd tea.Cmd) tea.Cmd {
+	if cmd == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		var find func(tea.Cmd) tea.Msg
+		find = func(c tea.Cmd) tea.Msg {
+			if c == nil {
+				return nil
+			}
+			switch msg := c().(type) {
+			case languageLoadedMsg:
+				return msg
+			case tea.BatchMsg:
+				for _, inner := range msg {
+					if got := find(inner); got != nil {
+						return got
+					}
+				}
+			}
+			return nil
+		}
+		return find(cmd)
+	}
+}
+
+func pickFrench(t *testing.T) (AppModel, tea.Cmd, blockingSource) {
+	t.Helper()
+
+	m, clock := newAppModel(t)
+	m = finishTest(m, clock)
+	source := blockingSource{release: make(chan struct{})}
+	m.provider = source
+	m.langCache = langcache.New(t.TempDir())
+
+	next, _ := m.Update(runeKey('L'))
+	m = next.(AppModel)
+	m.languagePicker, _, _, _ = m.languagePicker.Update(LanguagesLoadedMsg{IDs: []string{"french"}})
+	m.languagePicker, _, _, _ = m.languagePicker.Update(tea.KeyMsg{Type: tea.KeyDown})
+
+	done := make(chan struct{})
+	var cmd tea.Cmd
+	go func() {
+		next, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("enter blocked on the download")
+	}
+	m = next.(AppModel)
+	if m.phase != phaseLanguagePicker || !strings.Contains(stripANSI(m.languagePicker.View()), "downloading french") {
+		t.Fatalf("phase %v; want the picker open and saying it's downloading", m.phase)
+	}
+	return m, languageLoadFrom(cmd), source
+}
+
+func TestPickingALanguageDownloadsInTheBackground(t *testing.T) {
+	t.Parallel()
+
+	m, load, source := pickFrench(t)
+	close(source.release)
+	next, _ := m.Update(load())
+	m = next.(AppModel)
+
+	if m.cfg.Language != "french" || m.phase == phaseLanguagePicker {
+		t.Fatalf("language %q, phase %v; want french applied and the picker closed", m.cfg.Language, m.phase)
+	}
+}
+
+func TestEscWhileALanguageDownloads(t *testing.T) {
+	t.Parallel()
+
+	m, load, source := pickFrench(t)
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m = next.(AppModel)
+	if m.phase == phaseLanguagePicker {
+		t.Fatal("esc didn't close the picker during the download")
+	}
+
+	close(source.release)
+	next, _ = m.Update(load())
+	m = next.(AppModel)
+	if m.cfg.Language != "" {
+		t.Fatalf("language = %q; a late download must not apply", m.cfg.Language)
 	}
 }

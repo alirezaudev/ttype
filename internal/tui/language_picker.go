@@ -37,11 +37,13 @@ type LanguagePicker struct {
 	// partial is set when only the downloaded languages are known.
 	partial bool
 	// moved is set once the user picks something, so a late list keeps it.
-	moved  bool
-	err    error
-	theme  Theme
-	width  int
-	height int
+	moved bool
+	// loading is the language downloading after enter.
+	loading string
+	err     error
+	theme   Theme
+	width   int
+	height  int
 }
 
 // NewLanguagePicker opens on what is already on disk, so it shows at once
@@ -203,6 +205,8 @@ func (m LanguagePicker) View() string {
 	lines := []string{m.theme.Finished.Render("Pick a language"), ""}
 
 	switch {
+	case m.loading != "":
+		lines = append(lines, m.theme.Help.Render("downloading "+langcache.DisplayName(m.loading)+"…"), "")
 	case m.err != nil:
 		lines = append(lines, m.theme.Incorrect.Render(m.err.Error()), "")
 	case m.partial && m.refreshing:
