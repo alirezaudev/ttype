@@ -116,6 +116,7 @@ func TestDeleteWordClearsSkippedWord(t *testing.T) {
 	}
 }
 
+// One press takes one word, even after two skips in a row.
 func TestDeleteWordAfterConsecutiveSkips(t *testing.T) {
 	t.Parallel()
 
@@ -125,8 +126,25 @@ func TestDeleteWordAfterConsecutiveSkips(t *testing.T) {
 	if !s.DeleteWord() {
 		t.Fatal("DeleteWord() = false, want true")
 	}
-	if got := s.Input(); got != nil {
-		t.Fatalf("input = %q, want empty", string(got))
+	if got := s.Cursor(); got != 3 {
+		t.Fatalf("cursor = %d, want 3", got)
+	}
+}
+
+func TestDeleteWordStopsAtASkippedWord(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newTestSession(t, "help world again", 60*time.Second)
+	typeString(s, "he wo")
+
+	if !s.DeleteWord() {
+		t.Fatal("DeleteWord() = false, want true")
+	}
+	if got := s.Cursor(); got != 5 {
+		t.Fatalf("cursor = %d, want 5", got)
+	}
+	if got := s.Words()[0]; !got.Missed {
+		t.Fatalf("help = %+v, want it still missed", got)
 	}
 }
 

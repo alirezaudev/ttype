@@ -508,18 +508,18 @@ func (s *Session) deleteWord() bool {
 
 	pos := len(s.input)
 	s.dropExtras(pos, 0)
-	start := wordStart(pos, s.input)
+	start := s.wordStart(pos)
 	if start != pos {
 		s.truncateInput(start)
 		return true
 	}
 
-	if s.input[pos-1] != ' ' {
+	if !s.isSeparator(pos - 1) {
 		return false
 	}
 
 	// Right after a separator the space and the word before it go in one press.
-	s.truncateInput(wordStart(pos-1, s.input))
+	s.truncateInput(s.wordStart(pos - 1))
 	return true
 }
 
@@ -558,13 +558,24 @@ func (s *Session) truncateInput(n int) {
 	s.input = s.input[:n]
 }
 
-func wordStart(pos int, input []rune) int {
+func (s *Session) wordStart(pos int) int {
 	for i := pos - 1; i >= 0; i-- {
-		if input[i] == ' ' {
+		if s.isSeparator(i) {
 			return i + 1
 		}
 	}
 	return 0
+}
+
+// A skipped word's space is filled with the skip marker, but still ends the word.
+func (s *Session) isSeparator(i int) bool {
+	switch s.input[i] {
+	case ' ':
+		return true
+	case skipRune:
+		return i < len(s.targetRunes) && s.targetRunes[i] == ' '
+	}
+	return false
 }
 
 func wordStartAt(target []rune, pos int) int {
