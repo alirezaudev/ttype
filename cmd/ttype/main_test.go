@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"runtime/debug"
 	"strings"
@@ -176,5 +177,31 @@ func TestCustomTextRefusesFlagsThatGenerateText(t *testing.T) {
 	}
 	if text, err := readCustomText(cmd, flags, false); err != nil || text != "hello world" {
 		t.Fatalf("readCustomText = %q, %v; want the text, with --blind and --words allowed", text, err)
+	}
+}
+
+// main prints the error, so Cobra itself prints nothing.
+func TestSubcommandErrorsComeOnce(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	run := func(args ...string) string {
+		var out bytes.Buffer
+		root := newRootCmd()
+		root.SetOut(&out)
+		root.SetErr(&out)
+		root.SetArgs(args)
+		if err := root.Execute(); err == nil {
+			t.Fatalf("%v: no error", args)
+		}
+		return out.String()
+	}
+
+	if out := run("stats", "--export", "pdf"); out != "" {
+		t.Fatalf("output = %q, want nothing", out)
+	}
+	if out := run("stats", "--nope"); !strings.Contains(out, "Usage:") {
+		t.Fatalf("a mistyped flag should still show the usage:\n%s", out)
 	}
 }

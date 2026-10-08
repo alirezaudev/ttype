@@ -57,11 +57,11 @@ func newRootCmd() *cobra.Command {
 		Use:   "ttype",
 		Short: "Terminal typing practice",
 		Long:  "A terminal-first typing test. Use --time for timed tests or --words for word count tests.",
+		// main prints every error, the subcommands' too.
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			// Flags parsed fine, so the usage text would only bury the error;
-			// main prints it once.
+			// Flags parsed fine, so the usage text would only bury the error.
 			cmd.SilenceUsage = true
-			cmd.SilenceErrors = true
 
 			store, err := app.OpenStore()
 			if err != nil {
@@ -129,6 +129,7 @@ func newConfigCmd() *cobra.Command {
 		Short:             "Show or change the saved defaults",
 		ValidArgsFunction: cobra.NoFileCompletions,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
 			store, err := app.OpenStore()
 			if err != nil {
 				return err
@@ -202,6 +203,7 @@ func newHistoryCmd() *cobra.Command {
 		Short:             "View past test results (Enter watches a replay)",
 		ValidArgsFunction: cobra.NoFileCompletions,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
 			store, err := app.OpenStore()
 			if err != nil {
 				return err
@@ -234,6 +236,7 @@ func newStatsCmd() *cobra.Command {
 		Short:             "View statistics and personal bests",
 		ValidArgsFunction: cobra.NoFileCompletions,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
 			store, err := app.OpenStore()
 			if err != nil {
 				return err
@@ -282,7 +285,8 @@ func newLanguagesCmd() *cobra.Command {
 		Short:             "Download all language lists to local cache",
 		Long:              "Fetches every available language list once and stores it under the ttype data directory. Shows estimated download size and asks for confirmation unless --yes is passed.",
 		ValidArgsFunction: cobra.NoFileCompletions,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SilenceUsage = true
 			return app.RunDownloadLanguages(os.Stdout, os.Stdin, yes, jobs)
 		},
 	}
@@ -302,8 +306,7 @@ func newUninstallCmd() *cobra.Command {
 		Short:             "Remove ttype from this machine",
 		ValidArgsFunction: cobra.NoFileCompletions,
 		// The error says what to do; usage would bury it, and main prints it.
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		SilenceUsage: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return app.RunUninstall(os.Stdout, os.Stdin, app.Build{Version: version, Release: release}, purge, yes)
 		},
@@ -320,7 +323,6 @@ func newUpdateCmd() *cobra.Command {
 		Short:             "Update ttype to the latest release",
 		ValidArgsFunction: cobra.NoFileCompletions,
 		SilenceUsage:      true,
-		SilenceErrors:     true,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return app.RunUpdate(os.Stdout, app.Build{Version: version, Release: release})
 		},
@@ -335,7 +337,8 @@ func newClearCmd() *cobra.Command {
 		Short:     "Delete saved history or downloaded languages",
 		Args:      cobra.MaximumNArgs(1),
 		ValidArgs: []string{"history", "languages", "all"},
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			target := app.ClearHistory
 			if len(args) == 1 {
 				parsed, err := app.ParseClearTarget(args[0])
