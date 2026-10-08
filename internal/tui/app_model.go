@@ -480,9 +480,10 @@ func (m AppModel) updateWelcome(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	before := m.cfg
 	m.cfg = m.welcome.Config()
 	m.theme = ResolveTheme(m.cfg.Theme)
-	err := errors.Join(m.persistConfigDefaults(), m.markOnboarded())
+	err := errors.Join(m.persistConfigDefaults(before), m.markOnboarded())
 	restart := m.restartTest()
 	m.warnNotSaved(err)
 	return m, tea.Batch(cmd, restart)
@@ -516,8 +517,9 @@ func (m AppModel) updateModePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !apply {
 		return m, tea.Batch(cmd, m.popPhase())
 	}
+	before := m.cfg
 	m.cfg.TextMode = m.modePicker.Selected()
-	err := m.persistConfigDefaults()
+	err := m.persistConfigDefaults(before)
 	restart := m.restartTest()
 	m.warnNotSaved(err)
 	return m, tea.Batch(cmd, restart)
@@ -605,13 +607,16 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	m.cfg = m.settings.cfg
 	m.theme = ResolveTheme(m.cfg.Theme)
-	err := m.persistConfigDefaults()
+	// The language picker writes into m.cfg while the panel is open.
+	err := m.persistConfigDefaults(m.settings.initial)
 	restart := m.restartTest()
 	m.warnNotSaved(err)
 	return m, restart
 }
 
-func (m *AppModel) persistConfigDefaults() error {
+// persistConfigDefaults saves only what changed since before, so the flags a
+// run started with stay one-offs.
+func (m *AppModel) persistConfigDefaults(before domain.TestConfig) error {
 	if m.store == nil {
 		return nil
 	}
@@ -619,28 +624,49 @@ func (m *AppModel) persistConfigDefaults() error {
 	if err != nil {
 		return err
 	}
-	settings.Theme = m.cfg.Theme
-	settings.DefaultWidth = m.cfg.Width
-	settings.Blind = m.cfg.Blind
-	settings.Zen = m.cfg.Zen
-	settings.DefaultMinWPM = m.cfg.MinWPM
+	cfg := m.cfg
+	if cfg.Theme != before.Theme {
+		settings.Theme = cfg.Theme
+	}
+	if cfg.Width != before.Width {
+		settings.DefaultWidth = cfg.Width
+	}
+	if cfg.Blind != before.Blind {
+		settings.Blind = cfg.Blind
+	}
+	if cfg.Zen != before.Zen {
+		settings.Zen = cfg.Zen
+	}
+	if cfg.MinWPM != before.MinWPM {
+		settings.DefaultMinWPM = cfg.MinWPM
+	}
 	// Custom text sets the mode and length for this run only; the next plain
 	// ttype would have no text to type.
-	if m.cfg.TextMode == domain.TextModeCustom {
+	if cfg.TextMode == domain.TextModeCustom {
 		return m.store.SaveSettings(settings)
 	}
-	settings.Language = m.cfg.Language
-	settings.DefaultMode = m.cfg.TextMode
-	settings.Punctuation = m.cfg.Punctuation
-	settings.Numbers = m.cfg.Numbers
-	if m.cfg.IsWordsMode() {
-		settings.DefaultWordCount = m.cfg.WordCount
-	} else {
-		settings.DefaultWordCount = 0
-		if m.cfg.Duration <= 0 {
-			settings.DefaultDuration = domain.Duration60
+	if cfg.Language != before.Language {
+		settings.Language = cfg.Language
+	}
+	if cfg.TextMode != before.TextMode {
+		settings.DefaultMode = cfg.TextMode
+	}
+	if cfg.Punctuation != before.Punctuation {
+		settings.Punctuation = cfg.Punctuation
+	}
+	if cfg.Numbers != before.Numbers {
+		settings.Numbers = cfg.Numbers
+	}
+	if cfg.Kind != before.Kind || cfg.WordCount != before.WordCount || cfg.Duration != before.Duration {
+		if cfg.IsWordsMode() {
+			settings.DefaultWordCount = cfg.WordCount
 		} else {
-			settings.DefaultDuration = m.cfg.Duration
+			settings.DefaultWordCount = 0
+			if cfg.Duration <= 0 {
+				settings.DefaultDuration = domain.Duration60
+			} else {
+				settings.DefaultDuration = cfg.Duration
+			}
 		}
 	}
 	return m.store.SaveSettings(settings)

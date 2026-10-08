@@ -37,15 +37,16 @@ const (
 )
 
 type SettingsPanel struct {
-	cfg    domain.TestConfig
-	theme  Theme
-	field  settingsField
-	width  int
-	height int
+	cfg     domain.TestConfig
+	initial domain.TestConfig
+	theme   Theme
+	field   settingsField
+	width   int
+	height  int
 }
 
 func NewSettingsPanel(cfg domain.TestConfig, theme Theme) SettingsPanel {
-	return SettingsPanel{cfg: cfg, theme: theme}
+	return SettingsPanel{cfg: cfg, initial: cfg, theme: theme}
 }
 
 func (m *SettingsPanel) setSize(width, height int) { m.width, m.height = width, height }

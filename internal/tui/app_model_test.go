@@ -553,7 +553,7 @@ func TestCustomTextIsNotSavedAsTheDefault(t *testing.T) {
 		t.Fatalf("SaveSettings: %v", err)
 	}
 
-	m.persistConfigDefaults()
+	m.persistConfigDefaults(domain.TestConfig{})
 
 	settings, err := store.LoadSettings()
 	if err != nil {
@@ -778,6 +778,59 @@ func TestSettingsThatFailToSaveSaySo(t *testing.T) {
 	m = next.(AppModel)
 	if view := stripANSI(m.View()); !strings.Contains(view, "settings not saved: config folder is read-only") {
 		t.Fatalf("no save warning on the test screen:\n%s", view)
+	}
+}
+
+func TestFlagsStayOneOffsAfterPickingAMode(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindWords, WordCount: 3, Blind: true, MinWPM: 30}
+	m, clock, store := appModelWithStore(t, cfg, false)
+	m = finishTest(m, clock)
+
+	next, _ := m.Update(runeKey('M'))
+	m = next.(AppModel)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = next.(AppModel)
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+
+	settings, err := store.LoadSettings()
+	if err != nil {
+		t.Fatalf("LoadSettings: %v", err)
+	}
+	if settings.DefaultMode == "" || settings.DefaultMode == domain.TextModeWords {
+		t.Fatalf("mode = %q, want the picked mode saved", settings.DefaultMode)
+	}
+	if settings.Blind || settings.DefaultMinWPM != 0 || settings.DefaultWordCount != 0 {
+		t.Fatalf("settings = %+v, want the flags left out", settings)
+	}
+}
+
+func TestFlagsStayOneOffsAfterSettings(t *testing.T) {
+	t.Parallel()
+
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration15, Blind: true, Theme: "default"}
+	m, clock, store := appModelWithStore(t, cfg, false)
+	m = finishTest(m, clock)
+
+	m.openSettings()
+	m.settings.cfg.Theme = "dracula"
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v, want phaseTest", m.phase)
+	}
+
+	settings, err := store.LoadSettings()
+	if err != nil {
+		t.Fatalf("LoadSettings: %v", err)
+	}
+	if settings.Theme != "dracula" {
+		t.Fatalf("theme = %q, want dracula", settings.Theme)
+	}
+	if settings.Blind || settings.DefaultDuration == domain.Duration15 {
+		t.Fatalf("settings = %+v, want the flags left out", settings)
 	}
 }
 
