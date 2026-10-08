@@ -794,6 +794,9 @@ func TestFlagsStayOneOffsAfterPickingAMode(t *testing.T) {
 	m = next.(AppModel)
 	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = next.(AppModel)
+	if m.phase != phaseTest {
+		t.Fatalf("phase = %v, want phaseTest", m.phase)
+	}
 
 	settings, err := store.LoadSettings()
 	if err != nil {
