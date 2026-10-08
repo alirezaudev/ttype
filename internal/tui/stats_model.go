@@ -49,7 +49,7 @@ func RenderStats(summary domain.StatsSummary, trend []float64, theme Theme, widt
 
 	if len(filters) == 0 && summary.PersonalBest.BestWPM > 0 {
 		lines = append(lines, "", "  "+theme.Help.Render("all-time  ")+
-			theme.HUDValue.Render(fmt.Sprintf("%.2f wpm · %.2f%% accuracy",
+			theme.HUDValue.Render(fmt.Sprintf("best %.2f wpm · best %.2f%% accuracy",
 				summary.PersonalBest.BestWPM, summary.PersonalBest.BestAccuracy)))
 	}
 

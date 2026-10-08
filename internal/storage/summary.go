@@ -41,7 +41,8 @@ func (s *JSONStore) Summary(filter domain.StatsFilter) (domain.StatsSummary, err
 	for _, item := range history {
 		wpmSum += item.WPM
 		accSum += item.Accuracy
-		if domain.TextMode(item.TextMode) == domain.TextModeCustom && !onlyCustom {
+		// Same rule as the result screen: failed runs are never a best.
+		if item.Failed || domain.TextMode(item.TextMode) == domain.TextModeCustom && !onlyCustom {
 			continue
 		}
 		if item.WPM > summary.BestWPM {

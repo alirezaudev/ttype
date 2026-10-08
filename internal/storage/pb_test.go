@@ -226,6 +226,28 @@ func TestFailedRunsAreNotPersonalBests(t *testing.T) {
 	}
 }
 
+func TestStatsBestSkipsFailedRuns(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
+	cfg := domain.TestConfig{Kind: domain.TestKindWords, WordCount: 12, TextMode: domain.TextModeWords}
+	if _, err := s.SaveResult(domain.Result{ID: "a", Timestamp: time.Now().UTC(), Config: cfg, WPM: 80}); err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	cfg.MinWPM = 100
+	if _, err := s.SaveResult(domain.Result{ID: "b", Timestamp: time.Now().UTC(), Config: cfg, WPM: 95, Failed: true}); err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+
+	summary, err := s.Summary(domain.StatsFilter{})
+	if err != nil {
+		t.Fatalf("Summary: %v", err)
+	}
+	if summary.TotalTests != 2 || summary.BestWPM != 80 {
+		t.Fatalf("summary = %+v, want both runs counted and a best of 80", summary)
+	}
+}
+
 func TestPersonalBestOutlivesItsRunInHistory(t *testing.T) {
 	t.Parallel()
 
