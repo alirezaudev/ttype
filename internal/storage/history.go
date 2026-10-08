@@ -164,10 +164,20 @@ func (s *JSONStore) SaveResult(result domain.Result) (PBUpdate, error) {
 		return PBUpdate{}, err
 	}
 
+	bests, err := s.LoadBests()
+	if err != nil {
+		return PBUpdate{}, err
+	}
+	seeded := len(bests.ByConfig) == 0 && len(history) > 0
+	if len(bests.ByConfig) == 0 {
+		bests.ByConfig = bestsFromHistory(history)
+	}
+
+	label := configLabel(result.Config)
 	update := PBUpdate{
-		Label:   configLabel(result.Config),
+		Label:   label,
 		NewWPM:  result.WPM,
-		PrevWPM: bestWPMForConfig(history, result.Config),
+		PrevWPM: bests.ByConfig[label].WPM,
 	}
 	update.IsNew = countsForBests(result) && result.WPM > update.PrevWPM
 
@@ -178,7 +188,7 @@ func (s *JSONStore) SaveResult(result domain.Result) (PBUpdate, error) {
 	if err := s.saveHistory(history); err != nil {
 		return PBUpdate{}, err
 	}
-	if err := s.updateBests(result); err != nil {
+	if err := s.updateBests(bests, result, seeded); err != nil {
 		return PBUpdate{}, err
 	}
 	return update, nil

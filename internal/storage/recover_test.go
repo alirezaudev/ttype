@@ -34,7 +34,7 @@ func TestBrokenFilesAreMovedAside(t *testing.T) {
 		}},
 		{"bests", func(s *JSONStore) string { return s.bestsPath() }, func(s *JSONStore) error {
 			got, err := s.LoadBests()
-			if err == nil && got != (domain.PersonalBests{}) {
+			if err == nil && (got.BestWPM != 0 || len(got.ByConfig) != 0) {
 				t.Errorf("bests = %+v, want empty", got)
 			}
 			return err

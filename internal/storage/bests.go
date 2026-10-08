@@ -29,24 +29,21 @@ func countsForBests(result domain.Result) bool {
 	return !result.Failed && result.Config.TextMode != domain.TextModeCustom
 }
 
-func (s *JSONStore) updateBests(result domain.Result) error {
-	if !countsForBests(result) {
-		return nil
-	}
-
-	bests, err := s.LoadBests()
-	if err != nil {
-		return err
-	}
-
-	changed := false
-	if result.WPM > bests.BestWPM {
-		bests.BestWPM = result.WPM
-		changed = true
-	}
-	if result.Accuracy > bests.BestAccuracy {
-		bests.BestAccuracy = result.Accuracy
-		changed = true
+// seeded means bests were just filled from history and need writing.
+func (s *JSONStore) updateBests(bests domain.PersonalBests, result domain.Result, seeded bool) error {
+	changed := seeded
+	if countsForBests(result) {
+		if recordConfigBest(bests.ByConfig, result) {
+			changed = true
+		}
+		if result.WPM > bests.BestWPM {
+			bests.BestWPM = result.WPM
+			changed = true
+		}
+		if result.Accuracy > bests.BestAccuracy {
+			bests.BestAccuracy = result.Accuracy
+			changed = true
+		}
 	}
 	if !changed {
 		return nil

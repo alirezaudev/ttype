@@ -33,20 +33,23 @@ func configLabel(cfg domain.TestConfig) string {
 	return label
 }
 
-func bestWPMForConfig(history []storedResult, cfg domain.TestConfig) float64 {
-	label := configLabel(cfg)
-
-	var best float64
+// Files from before per-configuration bests get them from history once.
+func bestsFromHistory(history []storedResult) map[string]domain.ConfigBest {
+	out := make(map[string]domain.ConfigBest)
 	for _, item := range history {
-		if item.Failed {
-			continue
-		}
-		if configLabel(unmarshalResult(item).Config) != label {
-			continue
-		}
-		if item.WPM > best {
-			best = item.WPM
-		}
+		recordConfigBest(out, unmarshalResult(item))
 	}
-	return best
+	return out
+}
+
+func recordConfigBest(bests map[string]domain.ConfigBest, result domain.Result) bool {
+	if !countsForBests(result) {
+		return false
+	}
+	label := configLabel(result.Config)
+	if result.WPM <= bests[label].WPM {
+		return false
+	}
+	bests[label] = domain.ConfigBest{WPM: result.WPM, Accuracy: result.Accuracy, Date: result.Timestamp.UTC(), ResultID: result.ID}
+	return true
 }

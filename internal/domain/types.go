@@ -92,6 +92,15 @@ type PersonalBests struct {
 	BestWPM      float64   `json:"best_wpm"`
 	BestAccuracy float64   `json:"best_accuracy"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	// Keyed by configuration label, so a record outlives its run in history.
+	ByConfig map[string]ConfigBest `json:"by_config,omitempty"`
+}
+
+type ConfigBest struct {
+	WPM      float64   `json:"wpm"`
+	Accuracy float64   `json:"accuracy"`
+	Date     time.Time `json:"date"`
+	ResultID string    `json:"result_id,omitempty"`
 }
 
 type StatsFilter struct {

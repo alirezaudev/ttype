@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -221,5 +223,56 @@ func TestFailedRunsAreNotPersonalBests(t *testing.T) {
 	}
 	if !pb.IsNew || pb.PrevWPM != 0 {
 		t.Fatalf("pb = %+v, want a first best — the 55 wpm run failed", pb)
+	}
+}
+
+func TestPersonalBestOutlivesItsRunInHistory(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
+	s.SetHistoryCap(3)
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration30, TextMode: domain.TextModeWords}
+
+	for i, wpm := range []float64{100, 50, 50, 50} {
+		if _, err := s.SaveResult(domain.Result{ID: fmt.Sprint(i), Timestamp: time.Now().UTC(), Config: cfg, WPM: wpm}); err != nil {
+			t.Fatalf("SaveResult: %v", err)
+		}
+	}
+
+	pb, err := s.SaveResult(domain.Result{ID: "last", Timestamp: time.Now().UTC(), Config: cfg, WPM: 60})
+	if err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	if pb.IsNew || pb.PrevWPM != 100 {
+		t.Fatalf("pb = %+v, want the 100 wpm record kept", pb)
+	}
+}
+
+// bests.json from before by_config existed fills it from history on the next save.
+func TestPersonalBestsSeededFromHistory(t *testing.T) {
+	t.Parallel()
+
+	s := testStore(t)
+	cfg := domain.TestConfig{Kind: domain.TestKindTimed, Duration: domain.Duration30, TextMode: domain.TextModeWords}
+	if _, err := s.SaveResult(domain.Result{ID: "old", Timestamp: time.Now().UTC(), Config: cfg, WPM: 90}); err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	if err := os.WriteFile(s.bestsPath(), []byte(`{"best_wpm": 90, "best_accuracy": 0}`), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	pb, err := s.SaveResult(domain.Result{ID: "new", Timestamp: time.Now().UTC(), Config: cfg, WPM: 70})
+	if err != nil {
+		t.Fatalf("SaveResult: %v", err)
+	}
+	if pb.IsNew || pb.PrevWPM != 90 {
+		t.Fatalf("pb = %+v, want the 90 wpm run from history", pb)
+	}
+	bests, err := s.LoadBests()
+	if err != nil {
+		t.Fatalf("LoadBests: %v", err)
+	}
+	if got := bests.ByConfig["words/30s"]; got.WPM != 90 || got.ResultID != "old" {
+		t.Fatalf("by_config = %+v, want the 90 wpm run saved", bests.ByConfig)
 	}
 }
