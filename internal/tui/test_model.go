@@ -132,7 +132,9 @@ func (m TestModel) View() string {
 	out.WriteString(m.hintLine())
 	if !m.cfg.Zen {
 		out.WriteString("\n\n")
-		out.WriteString(m.theme.Help.Render(testHelpLine()))
+		if m.session.State() == domain.SessionReady {
+			out.WriteString(m.theme.Help.Render(testHelpLine()))
+		}
 	}
 	block := lipgloss.NewStyle().Width(m.typingWidth()).Render(out.String())
 	return composeWithBottomFooter(

@@ -107,7 +107,7 @@ func helpLine(bindings ...key.Binding) string {
 }
 
 func testHelpLine() string {
-	return helpLine(testKeys.Help, testKeys.Restart, appKeys.Exit, testKeys.DeleteWord, testKeys.ToggleLive)
+	return helpLine(testKeys.Help)
 }
 
 // The least important bindings go first when the line will not fit. Letting

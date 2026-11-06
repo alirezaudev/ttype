@@ -56,7 +56,7 @@ func TestEveryBindingHasKeysAndHelp(t *testing.T) {
 func TestHelpLinesComeFromTheBindings(t *testing.T) {
 	t.Parallel()
 
-	if got, want := testHelpLine(), "? help - tab/enter restart - esc/ctrl+c quit - ctrl+bksp/ctrl+w delete word - ctrl+o live stats"; got != want {
+	if got, want := testHelpLine(), "? help"; got != want {
 		t.Fatalf("testHelpLine() = %q, want %q", got, want)
 	}
 	if got := resultsHelpLine(0); !strings.Contains(got, "C copy result") {
