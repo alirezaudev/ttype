@@ -1,6 +1,6 @@
 <div align="center">
 
-# ttype
+<h1><img src="docs/wordmark.svg" alt="ttype" height="72"></h1>
 
 **Terminal typing practice with code modes, replays, and a wpm chart.**
 Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your terminal.
