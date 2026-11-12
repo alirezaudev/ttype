@@ -46,10 +46,10 @@ demo: build
 	@python3 -c "import pyte" 2>/dev/null || { echo "pyte not installed: pip install pyte"; exit 1; }
 	@for t in $(if $(TAPE),$(TAPE),$(TAPES)); do \
 		test -f docs/tapes/$$t.tape || { echo "no such tape: $$t"; exit 1; }; \
-		case $$t in demo) size="80 22";; help) size="96 40";; *) size="96 28";; esac; \
+		case $$t in demo) size="80 22"; zoom="--zoom-typing 1.4";; help) size="96 40"; zoom="";; *) size="96 28"; zoom="";; esac; \
 		cast=$$(mktemp); \
 		python3 docs/tapes/tape2cast.py docs/tapes/$$t.tape $$cast $$size $(CURDIR)/bin && \
-		python3 docs/tapes/cast2svg.py $$cast docs/$$t.svg || exit 1; \
+		python3 docs/tapes/cast2svg.py $$cast docs/$$t.svg $$zoom || exit 1; \
 		rm -f $$cast; \
 	done
 

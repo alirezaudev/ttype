@@ -6,12 +6,13 @@
 # The flag and the typed text are one unit: change either without the other
 # and the demo records a screen full of red.
 #
-# --seed only keeps the seed on the results screen short.
+# --seed only keeps the seed on the results screen short, and --width keeps the
+# test narrow enough for the recording to zoom in on it while it is typed.
 
 Output docs/demo.svg
 
 Set TypingSpeed 35ms
-Type `ttype --seed 7 --text "it doesn't matter where I am, it's all in my mind"`
+Type `ttype --seed 7 --width 50 --text "it doesn't matter where I am, it's all in my mind"`
 Enter
 Sleep 1200ms
 Set TypingSpeed 120ms
