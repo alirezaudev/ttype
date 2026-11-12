@@ -107,7 +107,7 @@ ttype --seed 42             # same text, every time
 Eight modes: `words` `sentences` `sql` `go` `backend` `python` `shell` `regex`.
 
 Space pressed mid-word skips whatever is left of the word, so a missed letter
-stays inside its word — the same as the reference app. A space the text has is
+stays inside its word, the same as Monkeytype. A space the text has is
 typed as itself, so indentation in code is still part of the practice.
 
 Whatever you set in the settings panel (`ctrl+s`, or `S` on the result screen)
@@ -116,7 +116,7 @@ becomes the default for next time, so the flags are for one-offs.
 ### Your own text
 
 ```sh
-cat "the quick brown fox" | ttype  # anything piped in
+echo "the quick brown fox" | ttype # anything piped in
 ttype --file notes.txt             # a file (--file - reads stdin)
 ttype --text "the quick brown fox"
 ttype --file notes.txt --words 50  # just the first 50 words
@@ -143,8 +143,8 @@ ttype stats --tag drill --trend
 `status` of `completed`, `quit` or `failed_min_wpm`, the numbers, the words you
 missed and what you typed, and for your own text a `sha256` of it and the line
 each word came from. `--tag` labels a run so `history` and `stats` can filter by
-it. The result
-screen still shows as usual; `--output json` skips it and prints to stdout.
+it. The result screen still shows as usual; `--output json` skips it and prints
+to stdout.
 
 ## More of it
 
@@ -283,3 +283,7 @@ terminals that do it themselves (GNOME Terminal and other VTE ones, Konsole,
 mlterm); if the words still come out backwards, set `TTYPE_BIDI=ttype`, or
 `TTYPE_BIDI=terminal` if they are reversed twice. `man ttype` has the long
 version of all of this.
+
+## License
+
+[MIT](LICENSE).
