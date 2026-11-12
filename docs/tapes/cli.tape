@@ -5,9 +5,6 @@
 
 Output docs/cli.svg
 
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
-
 Set TypingSpeed 35ms
 Type "ttype --help"
 Enter

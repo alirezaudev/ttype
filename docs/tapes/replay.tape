@@ -7,16 +7,13 @@
 # The hidden block runs three real tests to fill history — there is no fixture
 # to fake, because the replay is the recording. Each one types at a different
 # speed so the table shows three different scores instead of the same number
-# three times (VHS types at a fixed interval, so the interval is the wpm).
+# three times (keys are typed at a fixed interval, so the interval is the wpm).
 #
 #   seed 101  n=8  dynamics sexual green movie machines surprise advisory notify
 #   seed 102  n=8  correct optimization settings until processor heaven mark sensitive
 #   seed 103  n=8  reality reg directly gb disorders zealand too britain
 
 Output docs/replay.svg
-
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
 
 Hide
 Set TypingSpeed 35ms

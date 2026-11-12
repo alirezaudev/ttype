@@ -15,9 +15,6 @@
 
 Output docs/stats.svg
 
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
-
 Hide
 Set TypingSpeed 35ms
 Type "ttype --words 8 --seed 101 --width 58"

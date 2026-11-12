@@ -15,9 +15,6 @@
 
 Output docs/modes.svg
 
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
-
 Set TypingSpeed 35ms
 Type "ttype --mode go --words 2 --seed 13 --width 60"
 Enter

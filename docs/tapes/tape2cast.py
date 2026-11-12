@@ -2,10 +2,14 @@
 # This file written by AI :)
 """Play a VHS tape through a pty running bash and write an asciicast v2 file.
 
-Understands the subset the ttype tapes use: Type, Enter, Sleep, Ctrl+C, Down, Up,
-Left, Right, Escape, Backspace, Tab, Space, Hide, Show, Set TypingSpeed. Output,
-Source and the other Set lines are ignored: geometry comes from the command line,
-and isolation (throwaway config and data dirs) is done here instead of by typing.
+Tapes use a small subset of the VHS format: Type, Enter, Sleep, Ctrl+C, Down, Up,
+Left, Right, Escape, Backspace, Tab, Space, Hide, Show, Set TypingSpeed. Output
+and the other Set lines are ignored: the size comes from the command line.
+
+Every run gets throwaway config and data dirs, so recording never shows or
+touches real settings, history and bests, and the welcome screen stays closed.
+Keys are typed at a fixed interval, and that interval is the wpm the recording
+shows: wpm = (60000 / interval_ms) / 5, so the default 120ms is about 100 wpm.
 
 Needs Linux and nothing outside the standard library. `make demo` runs it.
 

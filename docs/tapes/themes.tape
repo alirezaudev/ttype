@@ -12,9 +12,6 @@
 
 Output docs/themes.svg
 
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
-
 Set TypingSpeed 35ms
 Type "ttype --theme default --words 6 --seed 35 --width 56"
 Enter

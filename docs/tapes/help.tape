@@ -5,15 +5,10 @@
 # Both are built from the keymaps in internal/tui/keys.go, so this one goes
 # stale the moment a binding changes. Re-record it whenever keys.go changes.
 
-Output docs/help.svg
+# Recorded taller than the others (96x40, set in the Makefile): the overlay
+# drops whole sections to fit a short terminal.
 
-Source docs/tapes/_settings.tape
-# Taller than the shared default on purpose. The overlay drops whole sections
-# to fit a short terminal — during test, then results, then the flag examples —
-# and at the usual 31 rows only the first section survives. This is the height
-# where it stops apologising with "more in man ttype".
-Set Height 940
-Source docs/tapes/_isolate.tape
+Output docs/help.svg
 
 Set TypingSpeed 35ms
 Type "ttype --words 5 --seed 42"

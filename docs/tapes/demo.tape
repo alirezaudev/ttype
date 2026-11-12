@@ -10,9 +10,6 @@
 
 Output docs/demo.svg
 
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
-
 Set TypingSpeed 35ms
 Type `ttype --seed 7 --text "it doesn't matter where I am, it's all in my mind"`
 Enter

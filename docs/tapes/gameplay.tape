@@ -12,9 +12,6 @@
 
 Output docs/gameplay.svg
 
-Source docs/tapes/_settings.tape
-Source docs/tapes/_isolate.tape
-
 # Blind: characters stay dots until the cursor is past the word, and the live
 # line drops to raw speed. Net wpm and accuracy would leak the mistakes blind
 # mode exists to hide.
