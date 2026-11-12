@@ -5,7 +5,7 @@
 # Both are built from the keymaps in internal/tui/keys.go, so this one goes
 # stale the moment a binding changes. Re-record it whenever keys.go changes.
 
-Output docs/help.gif
+Output docs/help.svg
 
 Source docs/tapes/_settings.tape
 # Taller than the shared default on purpose. The overlay drops whole sections

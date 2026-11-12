@@ -38,16 +38,19 @@ run: build
 	./bin/$(BINARY)
 
 .PHONY: demo
-# Record docs/tapes/*.tape into docs/*.gif. `make demo TAPE=modes` for one.
-# Tapes run from the repo root and point PATH at ./bin, and they isolate the
-# config and data dirs so recording never touches real history — which only
-# works on Linux.
+# Record docs/tapes/*.tape into docs/*.svg. `make demo TAPE=modes` for one.
+# Each tape is played in a pty and the recording is turned into an animated
+# SVG. The recorder isolates the config and data dirs so recording never
+# touches real history, which only works on Linux.
 demo: build
-	@command -v vhs >/dev/null || { echo "vhs not installed: https://github.com/charmbracelet/vhs"; exit 1; }
+	@python3 -c "import pyte" 2>/dev/null || { echo "pyte not installed: pip install pyte"; exit 1; }
 	@for t in $(if $(TAPE),$(TAPE),$(TAPES)); do \
 		test -f docs/tapes/$$t.tape || { echo "no such tape: $$t"; exit 1; }; \
-		echo "recording $$t"; \
-		vhs docs/tapes/$$t.tape || exit 1; \
+		case $$t in demo) size="80 22";; help) size="96 40";; *) size="96 28";; esac; \
+		cast=$$(mktemp); \
+		python3 docs/tapes/tape2cast.py docs/tapes/$$t.tape $$cast $$size $(CURDIR)/bin && \
+		python3 docs/tapes/cast2svg.py $$cast docs/$$t.svg || exit 1; \
+		rm -f $$cast; \
 	done
 
 .PHONY: clean

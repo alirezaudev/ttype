@@ -10,7 +10,7 @@
 # A different seed per theme on purpose. The same six words three times reads
 # as a stutter rather than a comparison.
 
-Output docs/themes.gif
+Output docs/themes.svg
 
 Source docs/tapes/_settings.tape
 Source docs/tapes/_isolate.tape

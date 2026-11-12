@@ -13,7 +13,7 @@
 #   seed 105  apart display reader gps winter flood anderson falls
 #   seed 106  customers bowl organization ct till catering popular home
 
-Output docs/stats.gif
+Output docs/stats.svg
 
 Source docs/tapes/_settings.tape
 Source docs/tapes/_isolate.tape

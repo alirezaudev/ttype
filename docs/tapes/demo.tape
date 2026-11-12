@@ -1,49 +1,35 @@
 # This file written by AI :)
 #
-# The README hero: one word test, one real typo, the results screen.
+# The README hero: one sentence, one real typo, the results screen.
 #
-# --seed 35 pins the words, and every Type line below is that text verbatim.
-# The seed and the typed text are one unit — change either without the other
-# and the demo records a screen full of red. To re-derive:
+# --text pins what is typed, and the Type lines below are that text verbatim.
+# The flag and the typed text are one unit: change either without the other
+# and the demo records a screen full of red.
 #
-#   ttype --words 12 --seed 35 --width 62
-#
-# and copy what is on screen. Seed 35 gives:
-#
-#   file farmers evolution sections so account ringtones design resume semi
-#   additional spent
-#
-# --words rather than --time so the run ends on the last keystroke instead of
-# on a clock the tape would have to stay in sync with.
+# --seed only keeps the seed on the results screen short.
 
-Output docs/demo.gif
+Output docs/demo.svg
 
 Source docs/tapes/_settings.tape
-# Twice the pixels of the other tapes and a larger font (about 96x26 cells): shown
-# full width at the top of the README, where small text on a mostly empty screen reads as blur.
-Set FontSize 38
-Set Width 2280
-Set Height 1280
-Set Padding 40
 Source docs/tapes/_isolate.tape
 
 Set TypingSpeed 35ms
-Type "ttype --words 12 --seed 35 --width 62"
+Type `ttype --seed 7 --text "it doesn't matter where I am, it's all in my mind"`
 Enter
 Sleep 1200ms
 Set TypingSpeed 120ms
 
-Type "file farmers evolution sections so account ringtones "
+Type "it doesn't matter where I am, it's all in my "
 
 # A mistake, caught and corrected. This is what puts a red cell in the results
 # chart, a row in the character heatmap, and accuracy under 100%.
-Type "desi"
+Type "mi"
 Sleep 150ms
-Type "n"
+Type "m"
 Sleep 500ms
 Backspace
 Sleep 250ms
-Type "gn resume semi additional spent"
+Type "nd"
 
 # The last keystroke ends the run. Results ignore input for 700ms so a
 # keystroke still in flight cannot trigger a shortcut; let that settle.

@@ -10,7 +10,7 @@ Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your termi
 [![Go](https://img.shields.io/github/go-mod/go-version/alirezaudev/ttype)](go.mod)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey)](#install)
 
-<img src="https://github.com/alirezaudev/ttype/releases/download/v1.3.2/demo-2x.gif" alt="A twelve word test, one typo, and the results screen">
+<img src="docs/demo.svg" alt="One sentence typed with one typo, and the results screen">
 
 </div>
 
@@ -151,49 +151,49 @@ screen still shows as usual; `--output json` skips it and prints to stdout.
 <details>
 <summary><b>Code modes</b> — Go, SQL and shell, then the mode picker</summary>
 
-![Typing Go, SQL and shell snippets, then the mode picker](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/modes.gif)
+![Typing Go, SQL and shell snippets, then the mode picker](docs/modes.svg)
 
 </details>
 
 <details>
 <summary><b>Replays</b> — watch a past run play itself back</summary>
 
-![Browsing history and watching a run replay at 1x and 2x](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/replay.gif)
+![Browsing history and watching a run replay at 1x and 2x](docs/replay.svg)
 
 </details>
 
 <details>
 <summary><b>Blind, zen and min-wpm</b></summary>
 
-![Blind mode, zen mode, and a run that fails the min-wpm threshold](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/gameplay.gif)
+![Blind mode, zen mode, and a run that fails the min-wpm threshold](docs/gameplay.svg)
 
 </details>
 
 <details>
 <summary><b>Themes</b> — default, monokai, dracula</summary>
 
-![The same test in the default, monokai and dracula themes](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/themes.gif)
+![The same test in the default, monokai and dracula themes](docs/themes.svg)
 
 </details>
 
 <details>
 <summary><b>Stats</b> — averages, a trend sparkline, CSV out</summary>
 
-![The stats screen, the trend sparkline and a CSV export](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/stats.gif)
+![The stats screen, the trend sparkline and a CSV export](docs/stats.svg)
 
 </details>
 
 <details>
 <summary><b>Help and settings</b></summary>
 
-![The help overlay and the settings panel](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/help.gif)
+![The help overlay and the settings panel](docs/help.svg)
 
 </details>
 
 <details>
 <summary><b>The CLI</b> — the command list, doctor, and saved defaults</summary>
 
-![ttype --help, ttype doctor and ttype config](https://github.com/alirezaudev/ttype/releases/download/v1.0.0/cli.gif)
+![ttype --help, ttype doctor and ttype config](docs/cli.svg)
 
 </details>
 

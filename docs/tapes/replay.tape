@@ -13,7 +13,7 @@
 #   seed 102  n=8  correct optimization settings until processor heaven mark sensitive
 #   seed 103  n=8  reality reg directly gb disorders zealand too britain
 
-Output docs/replay.gif
+Output docs/replay.svg
 
 Source docs/tapes/_settings.tape
 Source docs/tapes/_isolate.tape

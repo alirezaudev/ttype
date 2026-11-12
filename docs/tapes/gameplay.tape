@@ -10,7 +10,7 @@
 # checked once five seconds have passed, and the check runs on the tick, so
 # letting it fire while idle keeps stray keystrokes off the results screen.
 
-Output docs/gameplay.gif
+Output docs/gameplay.svg
 
 Source docs/tapes/_settings.tape
 Source docs/tapes/_isolate.tape

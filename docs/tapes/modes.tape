@@ -13,7 +13,7 @@
 # Space is a literal character in code modes — it does not commit a word — so
 # these are typed exactly as they appear.
 
-Output docs/modes.gif
+Output docs/modes.svg
 
 Source docs/tapes/_settings.tape
 Source docs/tapes/_isolate.tape

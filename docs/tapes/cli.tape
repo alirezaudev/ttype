@@ -3,7 +3,7 @@
 # The CLI surface: the command list, the environment check, and the saved
 # defaults that every run starts from.
 
-Output docs/cli.gif
+Output docs/cli.svg
 
 Source docs/tapes/_settings.tape
 Source docs/tapes/_isolate.tape
