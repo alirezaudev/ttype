@@ -19,6 +19,12 @@
 Output docs/demo.gif
 
 Source docs/tapes/_settings.tape
+# Twice the pixels of the other tapes and a larger font (about 96x26 cells): shown
+# full width at the top of the README, where small text on a mostly empty screen reads as blur.
+Set FontSize 38
+Set Width 2280
+Set Height 1280
+Set Padding 40
 Source docs/tapes/_isolate.tape
 
 Set TypingSpeed 35ms
