@@ -10,7 +10,7 @@ Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your termi
 [![Go](https://img.shields.io/github/go-mod/go-version/alirezaudev/ttype)](go.mod)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey)](#install)
 
-<img src="https://github.com/alirezaudev/ttype/releases/download/v1.0.0/demo.gif" alt="A twelve word test, one typo, and the results screen">
+<img src="https://github.com/alirezaudev/ttype/releases/download/v1.3.2/demo.gif" alt="A twelve word test, one typo, and the results screen">
 
 </div>
 
