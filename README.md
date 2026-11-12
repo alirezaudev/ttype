@@ -10,13 +10,19 @@ Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your termi
 [![Go](https://img.shields.io/github/go-mod/go-version/alirezaudev/ttype)](go.mod)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey)](#install)
 
+[Install](#install) · [Typing](#typing) · [Demos](#demos) · [Keys](#keys) · [Commands](#commands)
+
 <img src="docs/demo.svg" alt="One sentence typed with one typo, and the results screen">
 
 </div>
 
 ## Why
 
-- **For fun.** I wanted to stop tabbing out to a browser to warm up, so I wrote the thing I kept opening.
+For fun. I wanted to stop tabbing out to a browser to warm up, so I wrote the
+thing I kept opening.
+
+## Features
+
 - Eight text modes, including **Go, SQL, Python, shell and regex** snippets, where spaces and brackets are part of the practice.
 - Every run is **recorded keystroke by keystroke** and can be watched back at the speed it was typed.
 - A per-second **wpm chart**, a consistency score, and a heatmap of the characters you actually miss.
@@ -26,42 +32,29 @@ Inspired by [Monkeytype](https://monkeytype.com), but it never leaves your termi
 
 ## Install
 
-### Linux and macOS
-
 ```sh
 curl -fsSL https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
 ```
 
-Or, if you would rather use wget:
+Linux and macOS. The script picks the right build, checks it against
+`checksums.txt`, and installs under `/usr/local`, or `~/.local` if that is
+where it can write. After that, ttype keeps itself up to date.
 
-```sh
-wget -qO- https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
-```
-
-The script picks the right build for your machine, checks it against
-`checksums.txt`, and installs the binary and the man page under `/usr/local` —
-or `~/.local`, if that is where it can write.
-
-After that, ttype keeps itself up to date. Once a day it looks for a new
-release in the background, and when there is one it downloads it, checks it
-against `checksums.txt`, makes sure it runs, and swaps it in; the new version
-starts the next time you open ttype. Nothing waits on the network, so it works
-the same offline. `ttype update` does it on the spot.
-
-It never touches a copy installed by a package manager or `go install`, and it
-won't jump to a new major version, install into a folder you can't write to,
-or replace itself on Windows yet — in those cases the footer marks the update
-and `u` on the result screen tells you what to run. `ttype config --update
-notify` keeps the notice without installing, `--update off` stops checking,
-and `TTYPE_UPDATE` does the same for one run.
-
-### Windows
+<details>
+<summary><b>Windows</b></summary>
 
 Download `ttype_<version>_windows_amd64.tar.gz` (or `_arm64`) from the
 [latest release](https://github.com/alirezaudev/ttype/releases/latest), unpack
 it, and put `ttype.exe` somewhere on your `PATH`.
 
-### With Go
+</details>
+
+<details>
+<summary><b>With wget, Go, or from source</b></summary>
+
+```sh
+wget -qO- https://raw.githubusercontent.com/alirezaudev/ttype/main/install.sh | sh
+```
 
 ```sh
 go install github.com/alirezaudev/ttype/cmd/ttype@latest
@@ -69,9 +62,7 @@ go install github.com/alirezaudev/ttype/cmd/ttype@latest
 
 The binary lands in `$(go env GOPATH)/bin`, so make sure that is on your `PATH`.
 
-### From source
-
-Needs Go 1.26:
+From source, with Go 1.26:
 
 ```sh
 git clone https://github.com/alirezaudev/ttype.git
@@ -80,7 +71,28 @@ make build
 ./bin/ttype
 ```
 
-### Uninstall
+</details>
+
+<details>
+<summary><b>How updates work</b></summary>
+
+Once a day ttype looks for a new release in the background. When there is one
+it downloads it, checks it against `checksums.txt`, makes sure it runs, and
+swaps it in; the new version starts the next time you open ttype. Nothing waits
+on the network, so it works the same offline. `ttype update` does it on the
+spot.
+
+It never touches a copy installed by a package manager or `go install`, and it
+won't jump to a new major version, install into a folder you can't write to,
+or replace itself on Windows yet. In those cases the footer marks the update
+and `u` on the result screen tells you what to run. `ttype config --update
+notify` keeps the notice without installing, `--update off` stops checking,
+and `TTYPE_UPDATE` does the same for one run.
+
+</details>
+
+<details>
+<summary><b>Uninstall</b></summary>
 
 `ttype uninstall` removes the binary and the man page, and `--purge` takes your
 history with it. If the binary is already gone:
@@ -88,6 +100,8 @@ history with it. If the binary is already gone:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/alirezaudev/ttype/main/uninstall.sh | sh
 ```
+
+</details>
 
 ## Typing
 
@@ -132,7 +146,8 @@ never count as personal bests. Add `--no-save` to keep a run out of history
 and replays altogether — worth it before piping in anything private, since a
 replay stores the text.
 
-### For scripts
+<details>
+<summary><b>For scripts</b> — JSON results and tags</summary>
 
 ```sh
 ttype --file drill.txt --result-file run.json --tag drill
@@ -146,9 +161,11 @@ each word came from. `--tag` labels a run so `history` and `stats` can filter by
 it. The result screen still shows as usual; `--output json` skips it and prints
 to stdout.
 
-## More of it
+</details>
 
-<details>
+## Demos
+
+<details open>
 <summary><b>Code modes</b> — Go, SQL and shell, then the mode picker</summary>
 
 ![Typing Go, SQL and shell snippets, then the mode picker](docs/modes.svg)
@@ -212,7 +229,8 @@ to stdout.
 | `?` | Help — before the first keystroke; after that it is just a character |
 | `esc` `ctrl+c` | Quit |
 
-**On the result screen**
+<details>
+<summary><b>On the result screen</b></summary>
 
 | Key | Action |
 | --- | --- |
@@ -225,7 +243,10 @@ to stdout.
 | `u` | Update now, or say what to run when ttype can't |
 | `esc` `q` | Quit |
 
-**Watching a replay** (`p` on the result screen, or `enter` on a row in `ttype history`)
+</details>
+
+<details>
+<summary><b>Watching a replay</b> — <code>p</code> on the result screen, or <code>enter</code> on a row in <code>ttype history</code></summary>
 
 | Key | Action |
 | --- | --- |
@@ -233,6 +254,8 @@ to stdout.
 | `1` `2` `4` | Speed |
 | `r` | Start over |
 | `esc` `q` | Back |
+
+</details>
 
 ## Commands
 
@@ -251,7 +274,10 @@ to stdout.
 Shell completions are also generated into `contrib/completions/`, and
 `contrib/zsh/` has a plugin that sets them up along with a `tt` alias.
 
-## What the numbers mean
+## Reference
+
+<details>
+<summary><b>What the numbers mean</b></summary>
 
 - **wpm** — correct characters ÷ 5, over the time taken.
 - **raw** — every character typed, right or wrong.
@@ -267,7 +293,10 @@ Shell completions are also generated into `contrib/completions/`, and
 Personal bests are tracked per configuration, so a 60 second English run is
 never measured against a 15 second Spanish one with punctuation on.
 
-## Where things live
+</details>
+
+<details>
+<summary><b>Where things live</b></summary>
 
 | Path | Contents |
 | --- | --- |
@@ -283,6 +312,14 @@ terminals that do it themselves (GNOME Terminal and other VTE ones, Konsole,
 mlterm); if the words still come out backwards, set `TTYPE_BIDI=ttype`, or
 `TTYPE_BIDI=terminal` if they are reversed twice. `man ttype` has the long
 version of all of this.
+
+</details>
+
+## Contributing
+
+Issues and pull requests are welcome. `make test` runs the tests, `make lint`
+runs the linter, and `make demo` re-records the animations in this README from
+the scripts in `docs/tapes/`.
 
 ## License
 
